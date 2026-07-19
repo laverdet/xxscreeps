@@ -23,239 +23,65 @@ export interface StrongholdTemplate {
 	structures: StrongholdStructure[];
 }
 
+// Structures stacked on each picture cell below. Offsets anchor at `x`, the existing core, which
+// spawns only the rampart over it.
+const legend: Record<string, readonly StrongholdStructure['type'][]> = {
+	x: [ C.STRUCTURE_RAMPART ],
+	t: [ C.STRUCTURE_TOWER, C.STRUCTURE_RAMPART ],
+	c: [ C.STRUCTURE_CONTAINER, C.STRUCTURE_ROAD, C.STRUCTURE_RAMPART ],
+	'.': [ C.STRUCTURE_ROAD, C.STRUCTURE_RAMPART ],
+};
+
+function parseTemplate(rewardLevel: number, picture: string): StrongholdTemplate {
+	const rows = picture.split('\n').map(row => row.replace(/^\t+/, ''));
+	const originRow = rows.findIndex(row => row.includes('x'));
+	const originCol = rows[originRow]!.indexOf('x');
+	return {
+		rewardLevel,
+		structures: [ ...function*(): Iterable<StrongholdStructure> {
+			for (const [ rowIndex, row ] of rows.entries()) {
+				for (const [ colIndex, cell ] of [ ...row ].entries()) {
+					for (const type of legend[cell] ?? []) {
+						yield { type, dx: colIndex - originCol, dy: rowIndex - originRow };
+					}
+				}
+			}
+		}() ],
+	};
+}
+
 export const templates = {
-	bunker1: {
-		rewardLevel: 1,
-		structures: [
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 0 },
-		],
-	},
-	bunker2: {
-		rewardLevel: 2,
-		structures: [
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 0 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_CONTAINER, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 0 },
-		],
-	},
-	bunker3: {
-		rewardLevel: 3,
-		structures: [
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 0 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_CONTAINER, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 2 },
-		],
-	},
-	bunker4: {
-		rewardLevel: 4,
-		structures: [
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 0 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 2, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 0 },
-			{ type: C.STRUCTURE_CONTAINER, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 0, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -2 },
-		],
-	},
-	bunker5: {
-		rewardLevel: 5,
-		structures: [
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 0 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -1 },
-			{ type: C.STRUCTURE_TOWER, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 1 },
-			{ type: C.STRUCTURE_TOWER, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -1 },
-			{ type: C.STRUCTURE_TOWER, dx: 0, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -2 },
-			{ type: C.STRUCTURE_TOWER, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -3 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -3 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: -3 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -3 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -3 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: -3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -3 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: -3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: -3 },
-			{ type: C.STRUCTURE_ROAD, dx: -3, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -3, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 3, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 3, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: -3, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -3, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: 3, dy: -1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 3, dy: -1 },
-			{ type: C.STRUCTURE_ROAD, dx: -3, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -3, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: 3, dy: 0 },
-			{ type: C.STRUCTURE_RAMPART, dx: 3, dy: 0 },
-			{ type: C.STRUCTURE_ROAD, dx: -3, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -3, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: 3, dy: 1 },
-			{ type: C.STRUCTURE_RAMPART, dx: 3, dy: 1 },
-			{ type: C.STRUCTURE_ROAD, dx: -3, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -3, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 3, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 3, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 3 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 3 },
-			{ type: C.STRUCTURE_ROAD, dx: -1, dy: 3 },
-			{ type: C.STRUCTURE_RAMPART, dx: -1, dy: 3 },
-			{ type: C.STRUCTURE_ROAD, dx: 0, dy: 3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 0, dy: 3 },
-			{ type: C.STRUCTURE_ROAD, dx: 1, dy: 3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 1, dy: 3 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 3 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 3 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 2, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: 2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: -2, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: -2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: 2, dy: -2 },
-			{ type: C.STRUCTURE_ROAD, dx: 2, dy: -2 },
-			{ type: C.STRUCTURE_RAMPART, dx: 2, dy: -2 },
-			{ type: C.STRUCTURE_CONTAINER, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_ROAD, dx: -2, dy: 2 },
-			{ type: C.STRUCTURE_RAMPART, dx: -2, dy: 2 },
-		],
-	},
+	bunker1: parseTemplate(1, `
+		xc
+		.t
+	`),
+	bunker2: parseTemplate(2, `
+		t..
+		cxc
+		..t
+	`),
+	bunker3: parseTemplate(3, `
+		.t.c
+		c.x.
+		.t.t
+		..c.
+	`),
+	bunker4: parseTemplate(4, `
+		..c..
+		.t.t.
+		c.x.c
+		.t.t.
+		..c..
+	`),
+	bunker5: parseTemplate(5, `
+		 .....
+		.c.t.c.
+		..t.t..
+		...x...
+		..t.t..
+		.c.t.c.
+		 .....
+	`),
 } satisfies Record<string, StrongholdTemplate>;
 
 // Weighted resource table for the loot in a stronghold's containers, keyed by reward level into
