@@ -1,96 +1,55 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
 import type { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
-import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
-import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 
 interface MapStatsRequest {
 	rooms: string[];
+	statName?: string | null;
 }
 
 const mapStatsSchema: JSONSchemaType<MapStatsRequest> = {
 	type: 'object',
 	properties: {
 		rooms: { type: 'array', items: { type: 'string' } },
+		statName: { type: 'string', nullable: true },
 	},
 	required: [ 'rooms' ],
 };
+
+const decorateMapStats = hooks.makeMapped('mapStats');
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
 	path: '/api/game/map-stats',
 
 	execute: makeValidatedPayloadRoute(mapStatsSchema, async context => {
-		const { rooms: roomNames } = context.request.body;
+		const { rooms: roomNames, statName } = context.request.body;
 		if (!roomNames.every(room => /^[EW][0-9]+[NS][0-9]+$/.test(room))) {
 			throw new Error('Invalid room payload');
 		}
 
-		const { time } = context.backend.shard;
-		const userIds = new Set<string>();
-		const stats = Fn.fromEntries(Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
+		// TODO: A room status blob that doesn't change every tick would be good
+		const rooms = [ ...Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
 			// The client spams requests for rooms that don't exist
-			if (!context.backend.world.map.getRoomStatus(roomName, true)) {
-				return;
+			if (context.backend.world.map.getRoomStatus(roomName, true)) {
+				return context.backend.shard.loadRoom(roomName, undefined, true);
 			}
+		}))) ];
 
-			// TODO: A room status blob that doesn't change every tick would be good
-			const room = await context.backend.shard.loadRoom(roomName, undefined, true);
-
-			// Build rooms payload
-			return [ room.name, {
-				status: 'normal',
-				// Owner, level information
-				...function() {
-					const user = room['#user'];
-					if (user != null) {
-						userIds.add(user);
-						return {
-							own: {
-								user,
-								level: room['#level'],
-							},
-						};
-					}
-				}(),
-				// Sign
-				...function() {
-					const sign = room['#sign'];
-					if (sign) {
-						userIds.add(sign.userId);
-						return {
-							sign: {
-								datetime: sign.datetime,
-								text: sign.text,
-								time: sign.time,
-								user: sign.userId,
-							},
-						};
-					}
-				}(),
-				// Mineral info
-				...function() {
-					const mineral = room['#objects'].find(instanceOfPredicate(Mineral));
-					if (mineral) {
-						return {
-							minerals0: {
-								type: mineral.mineralType,
-								density: mineral.density,
-							},
-						};
-					}
-				}(),
-				...room['#safeModeUntil'] > time && {
-					safeMode: true,
-				},
-			} ] as const;
-		}))));
+		// Mods decorate the per-room payloads via `mapStats` hooks
+		const payload = {
+			...statName != null && { statName },
+			rooms: rooms.map(room => ({ room, stats: { status: 'normal' } })),
+			userIds: new Set<string>(),
+		};
+		await Promise.all(decorateMapStats(context, payload));
+		const stats = Fn.fromEntries(payload.rooms, ({ room, stats }) => [ room.name, stats ]);
 
 		// Read users
-		const userObjects = await Promise.all(Fn.map(userIds, async id =>
+		const userObjects = await Promise.all(Fn.map(payload.userIds, async id =>
 			({ id, info: await context.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]) })));
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {

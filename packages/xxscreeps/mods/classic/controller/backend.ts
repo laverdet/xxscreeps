@@ -41,6 +41,27 @@ hooks.register('sendUserInfo', async (db, userId, userInfo) => {
 	userInfo.gcl = Number(await db.data.hGet(User.infoKey(userId), 'gcl')) || 0;
 });
 
+// Owner / level, sign, and safe-mode world-map decorations; these fields live on this mod's room
+// schema.
+hooks.register('mapStats', (context, { rooms, userIds }) => {
+	const { time } = context.backend.shard;
+	for (const { room, stats } of rooms) {
+		const user = room['#user'];
+		if (user != null) {
+			userIds.add(user);
+			stats.own = { user, level: room['#level'] };
+		}
+		const sign = room['#sign'];
+		if (sign) {
+			userIds.add(sign.userId);
+			stats.sign = { datetime: sign.datetime, text: sign.text, time: sign.time, user: sign.userId };
+		}
+		if (room['#safeModeUntil'] > time) {
+			stats.safeMode = true;
+		}
+	}
+});
+
 interface RoomStatusQuery {
 	id: string;
 }
