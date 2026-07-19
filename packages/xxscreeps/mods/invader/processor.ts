@@ -27,7 +27,7 @@ import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
-import { calcReward, containerAmounts, containerRewards, templates } from './strongholds.js';
+import { calcReward, templates } from './strongholds.js';
 
 // Register invader NPC
 registerNPC('2', loop);
@@ -273,7 +273,7 @@ function createPeer(type: StrongholdStructure['type'], pos: RoomPosition, reward
 		}
 		case C.STRUCTURE_CONTAINER: {
 			const container = createContainer(pos);
-			for (const [ resource, amount ] of calcReward(containerRewards, containerAmounts[rewardLevel]!, 3)) {
+			for (const [ resource, amount ] of calcReward(rewardLevel)) {
 				container.store['#add'](resource, amount);
 			}
 			// Reward containers are withdraw-only

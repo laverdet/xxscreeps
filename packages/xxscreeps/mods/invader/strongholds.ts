@@ -1,6 +1,4 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import {
 	RESOURCE_BATTERY, RESOURCE_COMPOSITE, RESOURCE_CRYSTAL, RESOURCE_GHODIUM_MELT,
@@ -84,9 +82,9 @@ export const templates = {
 	`),
 } satisfies Record<string, StrongholdTemplate>;
 
-// Weighted resource table for the loot in a stronghold's containers, keyed by reward level into
-// `containerAmounts`.
-export const containerRewards: Record<string, number> = {
+// Weighted resource table for the loot in a stronghold's containers; `containerAmounts` maps a
+// template's reward level to the total density distributed across the rolled resources.
+const containerRewards: Record<string, number> = {
 	[RESOURCE_UTRIUM_BAR]: 5,
 	[RESOURCE_LEMERGIUM_BAR]: 5,
 	[RESOURCE_ZYNTHIUM_BAR]: 5,
@@ -101,26 +99,22 @@ export const containerRewards: Record<string, number> = {
 	[RESOURCE_LIQUID]: 30,
 };
 
-export const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
+const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
 
 /**
- * Roll `itemsLimit` resources at random from a weighted table and distribute `targetDensity` units
- * of weight across them. The chosen resources sum (in weighted density) to roughly the target.
+ * Roll three resources at random from the weighted table and distribute the reward level's density
+ * across them. The chosen resources sum (in weighted density) to roughly the target.
  */
-export function *calcReward(
-	weights: Record<string, number>,
-	targetDensity: number,
-	itemsLimit: number,
-): Generator<[ ResourceType, number ]> {
-	const picks = Fn.pipe(
-		Object.entries(weights),
-		$$ => Fn.map($$, entry => ({ entry, order: Math.random() })),
-		$$ => [ ...$$ ],
-	);
-	picks.sort(mappedNumericComparator(pick => pick.order));
-	picks.length = Math.min(picks.length, itemsLimit);
+export function *calcReward(rewardLevel: number): Generator<[ ResourceType, number ]> {
+	const targetDensity = containerAmounts[rewardLevel]!;
+	const picks = Object.entries(containerRewards);
+	for (let ii = picks.length - 1; ii > 0; --ii) {
+		const jj = Math.floor(Math.random() * (ii + 1));
+		[ picks[ii], picks[jj] ] = [ picks[jj]!, picks[ii]! ];
+	}
+	picks.length = 3;
 	let currentDensity = 0;
-	for (const [ ii, { entry: [ resource, density ] } ] of picks.entries()) {
+	for (const [ ii, [ resource, density ] ] of picks.entries()) {
 		const remaining = targetDensity - currentDensity;
 		// Divergence from Screeps, whose final item divides by a positional density index (a bug)
 		// rather than the chosen resource's own density.
