@@ -9,7 +9,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
-import { makeSectorRadiusPredicate } from 'xxscreeps/mods/sector/sector.js';
+import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';

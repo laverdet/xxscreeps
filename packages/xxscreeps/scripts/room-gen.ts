@@ -7,7 +7,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
-import { computeRoomMeta } from 'xxscreeps/mods/sector/sector.js';
+import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 
 type ExitSide = 'top' | 'right' | 'bottom' | 'left';

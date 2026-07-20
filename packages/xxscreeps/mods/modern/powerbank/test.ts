@@ -8,7 +8,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
-import { iterateSectors } from 'xxscreeps/mods/sector/sector.js';
+import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';

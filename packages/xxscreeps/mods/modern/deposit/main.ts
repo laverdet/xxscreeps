@@ -5,7 +5,7 @@ import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { iterateSectors, makeSectorRadiusPredicate } from 'xxscreeps/mods/sector/sector.js';
+import { iterateSectors, makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
 

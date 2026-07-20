@@ -28,6 +28,8 @@ import { StructureController } from 'xxscreeps/mods/classic/controller/controlle
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import { StructureWall } from 'xxscreeps/mods/classic/defense/wall.js';
+import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
+import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { StructureRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { StructureKeeperLair } from 'xxscreeps/mods/classic/source/keeper-lair.js';
@@ -35,10 +37,8 @@ import { Source } from 'xxscreeps/mods/classic/source/source.js';
 import { StructureExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { StructureSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { saveMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
-import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
-import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
+import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
-import { computeRoomMeta } from 'xxscreeps/mods/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 

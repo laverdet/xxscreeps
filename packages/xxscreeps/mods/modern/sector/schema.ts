@@ -18,6 +18,8 @@ const sectorSchema = registerStruct('RoomIntrinsics', {
 	sectorControl: sectorControlFormat,
 });
 
+// ---
+
 declare module 'xxscreeps/game/map.js' {
 	interface Schema { sector: [ typeof sectorSchema ] }
 }
