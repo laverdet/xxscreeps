@@ -267,12 +267,14 @@ export function flush() {
 	if (_parsed) {
 		// Typical case: user accessed `Memory`, so we simulate vanilla reconstruction and save the
 		// string.
-		crunch(previousJson = _parsed as MemoryRecord);
 		try {
+			crunch(previousJson = _parsed as MemoryRecord);
 			string = JSON.stringify(previousJson);
 			isBufferOutOfDate = true;
 		} catch (err) {
 			console.error(err);
+			// The save was skipped, so the object may hold mutations the saved string never received
+			previousJson = undefined;
 			return { size: memoryLength };
 		}
 	} else if (!isBufferOutOfDate || string === undefined) {
