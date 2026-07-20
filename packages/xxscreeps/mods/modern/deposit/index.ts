@@ -6,7 +6,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/classic/harvestable',
 		'xxscreeps/mods/classic/resource',
-		'xxscreeps/mods/sector',
+		'xxscreeps/mods/modern/sector',
 	],
 	provides: [ 'backend', 'constants', 'game', 'main', 'processor', 'schema', 'test' ],
 	types,

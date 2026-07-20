@@ -1,5 +1,3 @@
-// Mod schema registrants must evaluate before the World reader in 'game/map.js' is built.
-import 'xxscreeps:mods/schema';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as util from 'node:util';

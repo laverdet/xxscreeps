@@ -20,7 +20,7 @@ import * as Terrain from './terrain.js';
 // module.
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Schema {}
-const roomIntrinsics = () => struct(...structForPath<Schema>()('RoomIntrinsics', {
+const roomIntrinsics = struct(...structForPath<Schema>()('RoomIntrinsics', {
 	exits: 'uint8',
 	terrain: Terrain.format,
 }));
