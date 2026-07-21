@@ -1,6 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { ActionLog, RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
+import type { AnyRoomObject } from 'xxscreeps/game/room/room.js';
 import type { Resource, ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -32,6 +33,7 @@ hooks.register('flushContext', () => {
 	pulledToPuller.clear();
 	pullerToPulled.clear();
 });
+export const kRetainActionsTime = 10;
 
 export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
@@ -87,7 +89,6 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 }
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
-	const kRetainActionsTime = 10;
 	const timeLimit = Game.time - kRetainActionsTime;
 
 	const length = actionLog.length;
@@ -154,18 +155,114 @@ function recalculateBody(creep: Creep) {
 	dropOverflowResources(creep);
 }
 
+//
+// Intent processor arms shared with `PowerCreep`
+export function processDrop(creep: CreepLib.Carrier, context: ProcessorContext, resourceType: ResourceType, amount: number) {
+	if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {
+		creep.store['#subtract'](resourceType, amount);
+		ResourceIntent.drop(creep.pos, resourceType, amount);
+		context.didUpdate();
+	}
+}
+
+export function processPickup(creep: CreepLib.Carrier, context: ProcessorContext, id: string) {
+	const resource = Game.getObjectById<Resource>(id)!;
+	if (CreepLib.checkPickup(creep, resource) === C.OK) {
+		const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
+		creep.store['#add'](resource.resourceType, amount);
+		resource.amount -= amount;
+		context.didUpdate();
+	}
+}
+
+export function processSay(creep: CreepLib.Carrier, context: ProcessorContext, message: string, isPublic: boolean) {
+	if (CreepLib.checkCarrier(creep) === C.OK) {
+		creep['#saying'] = {
+			isPublic,
+			message: String(message).substring(0, 10),
+			time: Game.time,
+		};
+		context.didUpdate();
+	}
+}
+
+export function processTransfer(creep: CreepLib.Carrier, context: ProcessorContext, id: string, resourceType: ResourceType, amount: number) {
+	const target = Game.getObjectById<RoomObject & WithStore>(id)!;
+	if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
+		creep.store['#subtract'](resourceType, amount);
+		target.store['#add'](resourceType, amount);
+		appendEventLog(creep.room, {
+			event: C.EVENT_TRANSFER,
+			objectId: creep.id,
+			targetId: target.id,
+			resourceType,
+			amount,
+		});
+		context.didUpdate();
+	}
+}
+
+export function processWithdraw(creep: CreepLib.Carrier, context: ProcessorContext, id: string, resourceType: ResourceType, amount: number) {
+	const target = Game.getObjectById<Structure & WithStore>(id)!;
+	if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
+		target.store['#subtract'](resourceType, amount);
+		creep.store['#add'](resourceType, amount);
+		appendEventLog(creep.room, {
+			event: C.EVENT_TRANSFER,
+			objectId: target.id,
+			targetId: creep.id,
+			resourceType,
+			amount,
+		});
+		context.didUpdate();
+	}
+}
+
+/** Safe mode suppresses hostile movement priority and construction-site stomping. */
+export function isHostileInSafeMode(mover: CreepLib.Carrier) {
+	const { controller } = mover.room;
+	return controller?.safeMode !== undefined && controller['#user'] !== mover['#user'];
+}
+
+/** Complete a resolved move; returns the destination tile's base fatigue. */
+export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearout: number) {
+	mover.room['#moveObject'](mover, pos);
+	const baseFatigue = function() {
+		const road = lookForStructureAt(mover.room, pos, C.STRUCTURE_ROAD);
+		if (road) {
+			// Wear-out advances decay but must not slip past `Game.time` — the road's Tick handler throws
+			// on overdue `ticksToDecay`.
+			road['#nextDecayTime'] = Math.max(Game.time, road['#nextDecayTime'] - roadWearout);
+			return 1;
+		}
+		const terrain = mover.room.getTerrain().get(pos.x, pos.y);
+		if (terrain === C.TERRAIN_MASK_SWAMP) {
+			return 10;
+		} else {
+			return 2;
+		}
+	}();
+	if (!isHostileInSafeMode(mover)) {
+		for (const object of mover.room['#lookAt'](pos)) {
+			if (object['#lookType'] === 'constructionSite' && object['#user'] !== mover['#user']) {
+				const { progress } = object;
+				if (progress > 1) {
+					ResourceIntent.drop(pos, C.RESOURCE_ENERGY, Math.floor(progress / 2));
+				}
+				mover.room['#removeObject'](object);
+				break;
+			}
+		}
+	}
+	return baseFatigue;
+}
+
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { creep: typeof intents }
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
-	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, (creep, context, resourceType: ResourceType, amount: number) => {
-		if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {
-			creep.store['#subtract'](resourceType, amount);
-			ResourceIntent.drop(creep.pos, resourceType, amount);
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, processDrop),
 
 	registerIntentProcessor(Creep, 'move', {}, (creep, context, param: Direction | string) => {
 		const target = typeof param === 'string' ? Game.getObjectById<Creep>(param) : param;
@@ -219,56 +316,11 @@ const intents = [
 
 				// Deduct priority from hostile creeps in safe mode
 				const basePriority = weight ? -weight / power : power;
-				const priority = basePriority + function() {
-					if (
-						creep.room.controller?.safeMode === undefined ||
-						creep.room.controller['#user'] === creep['#user']
-					) {
-						return 0;
-					} else {
-						return -500;
-					}
-				}();
+				const priority = basePriority + (isHostileInSafeMode(creep) ? -500 : 0);
 
 				// Dispatch movement request
 				return commit(priority, pos => {
-					// Move resolved successfully
-					creep.room['#moveObject'](creep, pos);
-
-					// Calculate base fatigue from plain/road/swamp
-					const baseFatigue = (() => {
-						const road = lookForStructureAt(creep.room, pos, C.STRUCTURE_ROAD);
-						if (road) {
-							// Wear-out advances decay but must not slip past `Game.time` — the road's
-							// Tick handler throws on overdue `ticksToDecay`.
-							road['#nextDecayTime'] =
-								Math.max(Game.time, road['#nextDecayTime'] - C.ROAD_WEAROUT * creep.body.length);
-							return 1;
-						}
-						const terrain = creep.room.getTerrain().get(pos.x, pos.y);
-						if (terrain === C.TERRAIN_MASK_SWAMP) {
-							return 10;
-						} else {
-							return 2;
-						}
-					})();
-
-					// Stomp hostile construction sites
-					if (
-						creep.room.controller?.safeMode === undefined ||
-						creep.room.controller['#user'] === creep['#user']
-					) {
-						for (const object of creep.room['#lookAt'](pos)) {
-							if (object['#lookType'] === 'constructionSite' && object['#user'] !== creep['#user']) {
-								const { progress } = object;
-								if (progress > 1) {
-									ResourceIntent.drop(pos, C.RESOURCE_ENERGY, Math.floor(progress / 2));
-								}
-								creep.room['#removeObject'](object);
-								break;
-							}
-						}
-					}
+					const baseFatigue = commitMove(creep, pos, C.ROAD_WEAROUT * creep.body.length);
 
 					// Add adjusted fatigue to first creep in chain
 					let receiver = creep;
@@ -282,15 +334,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'pickup', {}, (creep, context, id: string) => {
-		const resource = Game.getObjectById<Resource>(id)!;
-		if (CreepLib.checkPickup(creep, resource) === C.OK) {
-			const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
-			creep.store['#add'](resource.resourceType, amount);
-			resource.amount -= amount;
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(Creep, 'pickup', {}, processPickup),
 
 	registerIntentProcessor(Creep, 'pull', { before: 'move' }, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id);
@@ -300,16 +344,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'say', {}, (creep, context, message: string, isPublic: boolean) => {
-		if (CreepLib.checkCommon(creep) === C.OK) {
-			creep['#saying'] = {
-				isPublic,
-				message: String(message).substring(0, 10),
-				time: Game.time,
-			};
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(Creep, 'say', {}, processSay),
 
 	registerIntentProcessor(Creep, 'suicide', {}, (creep, context) => {
 		if (CreepLib.checkCommon(creep) === C.OK) {
@@ -318,37 +353,9 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'transfer', { before: 'withdraw' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
-		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
-		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
-			creep.store['#subtract'](resourceType, amount);
-			target.store['#add'](resourceType, amount);
-			appendEventLog(creep.room, {
-				event: C.EVENT_TRANSFER,
-				objectId: creep.id,
-				targetId: target.id,
-				resourceType,
-				amount,
-			});
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(Creep, 'transfer', { before: 'withdraw' }, processTransfer),
 
-	registerIntentProcessor(Creep, 'withdraw', { before: 'pickup' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
-		const target = Game.getObjectById<Structure & WithStore>(id)!;
-		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
-			target.store['#subtract'](resourceType, amount);
-			creep.store['#add'](resourceType, amount);
-			appendEventLog(creep.room, {
-				event: C.EVENT_TRANSFER,
-				objectId: target.id,
-				targetId: creep.id,
-				resourceType,
-				amount,
-			});
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(Creep, 'withdraw', { before: 'pickup' }, processWithdraw),
 ];
 
 registerObjectPreTickProcessor(Creep, (creep, context) => {
@@ -413,28 +420,35 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 
 	// Move creep to next room
 	if (isBorder(creep.pos.x, creep.pos.y) && creep['#user'].length > 2) {
-		const { rx, ry } = parseRoomName(creep.pos.roomName);
-		const next = function() {
-			if (creep.pos.x === 0) {
-				return new RoomPosition(49, creep.pos.y, makeRoomName(rx - 1, ry));
-			} else if (creep.pos.x === 49) {
-				return new RoomPosition(0, creep.pos.y, makeRoomName(rx + 1, ry));
-			} else if (creep.pos.y === 0) {
-				return new RoomPosition(creep.pos.x, 49, makeRoomName(rx, ry - 1));
-			} else {
-				return new RoomPosition(creep.pos.x, 0, makeRoomName(rx, ry + 1));
-			}
-		}();
-		teleportCreep(creep, next, context);
+		teleportCreep(creep, borderExitPosition(creep.pos), context);
 	} else {
 		context.wakeAt(creep['#ageTime']);
 	}
 });
 
+/** The mirrored position in the adjacent room for an object standing on a border tile. */
+export function borderExitPosition(pos: RoomPosition) {
+	const { rx, ry } = parseRoomName(pos.roomName);
+	if (pos.x === 0) {
+		return new RoomPosition(49, pos.y, makeRoomName(rx - 1, ry));
+	} else if (pos.x === 49) {
+		return new RoomPosition(0, pos.y, makeRoomName(rx + 1, ry));
+	} else if (pos.y === 0) {
+		return new RoomPosition(pos.x, 49, makeRoomName(rx, ry - 1));
+	} else {
+		return new RoomPosition(pos.x, 0, makeRoomName(rx, ry + 1));
+	}
+}
+
+interface Teleportable extends RoomObject {
+	fatigue?: number;
+	'#actionLog': ActionLog;
+}
+
 // Move a creep to another room. Used by border crossing and by structures that transport creeps
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
-export function teleportCreep(creep: Creep, next: RoomPosition, context: ProcessorContext) {
+export function teleportCreep(creep: AnyRoomObject & Teleportable, next: RoomPosition, context: ProcessorContext) {
 	if (creep.room === undefined as never) {
 		return;
 	}
@@ -452,7 +466,9 @@ export function teleportCreep(creep: Creep, next: RoomPosition, context: Process
 	creep.pos = next;
 	creep.room = undefined as never;
 	// Creeps are revitalized when moving to a new room
-	creep.fatigue = 0;
+	if (creep.fatigue !== undefined) {
+		creep.fatigue = 0;
+	}
 	// Reset actionLog since the actions were in the previous room
 	creep['#actionLog'] = [];
 	const importPayload = writeRoomObject(creep);

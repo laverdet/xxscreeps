@@ -1,9 +1,16 @@
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { roomObjectShape } from 'xxscreeps/game/schema.js';
-import { declare, enumerated, struct, vector } from 'xxscreeps/schema/index.js';
+import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
+import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
+import { declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 
+// One serialized format whether the creep is sitting in the account roster or spawned into a room.
+// Unspawned creeps live at `RoomPosition(0, 0, 'E0S0')` (the all-zero signed position); spawning
+// copies the object into a room.
 /** @internal */
 export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
+	...variant('powerCreep'),
+
 	/**
 	 * Power creep’s name. You can choose the name while creating a new power creep, and it cannot be
 	 * changed later. This name is a hash key to access the creep via the
@@ -26,6 +33,7 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @public
 	 * @see https://docs.screeps.com/api/#PowerCreep.spawnCooldownTime
 	 */
+	// Wall-clock ms, not game ticks
 	spawnCooldownTime: 'double',
 
 	/**
@@ -35,4 +43,27 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @see https://docs.screeps.com/api/#PowerCreep.deleteTime
 	 */
 	deleteTime: 'double',
+
+	// Room presence — empty until a spawn fills them in
+	/**
+	 * The current amount of hit points of the creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.hits
+	 */
+	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.store
+	 */
+	store: openStoreFormat,
+	'#actionLog': actionLogFormat,
+	'#ageTime': 'int32',
+	'#saying': optional(struct({
+		isPublic: 'bool',
+		message: 'string',
+		time: 'int32',
+	})),
+	'#user': Id.format,
 }));

@@ -3,8 +3,10 @@ import * as types from 'xxscreeps/tsroot.js';
 
 export const manifest: Manifest = {
 	dependencies: [
+		'xxscreeps/mods/classic/creep',
+		'xxscreeps/mods/modern/powerbank',
 		'xxscreeps/mods/modern/powerspawn',
 	],
-	provides: [ 'backend', 'constants', 'driver', 'game', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'driver', 'game', 'processor', 'schema', 'test' ],
 	types,
 };
