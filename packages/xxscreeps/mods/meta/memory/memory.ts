@@ -273,7 +273,10 @@ export function flush() {
 			isBufferOutOfDate = true;
 		} catch (err) {
 			console.error(err);
-			// The save was skipped, so the object may hold mutations the saved string never received
+			// The user's memory object cannot be serialized. Probably, it is circular or contains some
+			// other `toJSON` error. It will be reparsed from `string` or `memory` next tick.
+			// TODO: Does it make sense to do a sandbox reset here instead of attempt to continue
+			// gracefully?
 			previousJson = undefined;
 			return { size: memoryLength };
 		}
