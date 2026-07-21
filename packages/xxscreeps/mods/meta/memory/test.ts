@@ -1,7 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import * as Spawn from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { publicSegmentChannel, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import { describe, simulate, test } from 'xxscreeps/test/index.js';
+import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 // nb: Try not to include too much in this file because `sandbox` uses a fake function that gets
 // stringified. So includes here confuse the seen globals.
 
@@ -150,5 +152,22 @@ describe('mod/meta/memory', () => {
 			assert.equal(global.Memory.test, 'bar');
 		});
 		await tick(1);
+	}));
+
+	test('Out-of-band segment write reaches an active segment', () => sim(async ({ shard, sandbox, tick }) => {
+		await using player = await sandbox('200', global => {
+			// The shard's starting time is an implementation detail; count ticks explicitly
+			const tickCount = global.Memory.tick = (global.Memory.tick as number | undefined ?? 0) + 1;
+			switch (tickCount) {
+				case 1: global.RawMemory.setActiveSegments([ 0 ]); break;
+				case 2: assert.equal(global.RawMemory.segments[0], ''); break;
+				case 4: assert.equal(global.RawMemory.segments[0], 'foo'); break;
+			}
+		});
+		await tick(2);
+		// Simulates the memory-segment API endpoint: write the blob, then notify
+		await saveMemorySegmentBlob(shard, '200', 0, utf16ToBuffer('foo'));
+		await publicSegmentChannel(shard, '200').publish({ type: 'segment', id: 0 });
+		await tick(2);
 	}));
 });
