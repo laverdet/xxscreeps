@@ -171,15 +171,18 @@ export function checkActiveStructures(room: Room) {
 	const level = controller?.level ?? 0;
 	const userId = controller?.['#user'];
 	const controllerStructures = C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>;
-	// Single pass: collect owned structures by type
+	// Single pass: collect the controller owner's structures by type; other users' structures
+	// never rank against the cap
 	const byType: Record<string, OwnedStructure[]> = {};
 	for (const object of room['#immediateObjects']()) {
 		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
 			if (object['#user'] === null) {
 				// Owner-less structures are always active and count against no one's quota
 				object['#active'] = true;
-			} else {
+			} else if (object['#user'] === userId) {
 				(byType[object.structureType] ??= []).push(object);
+			} else {
+				object['#active'] = false;
 			}
 		}
 	}
@@ -188,12 +191,12 @@ export function checkActiveStructures(room: Room) {
 		const maxCount = controllerStructures[type]![level] ?? 0;
 		if (maxCount === 0 || structures.length <= maxCount) {
 			for (const structure of structures) {
-				structure['#active'] = maxCount > 0 && structure['#user'] === userId;
+				structure['#active'] = maxCount > 0;
 			}
 		} else {
 			structures.sort(mappedNumericComparator(structure => structure.pos.getRangeTo(controller!.pos)));
 			for (const [ ii, structure ] of structures.entries()) {
-				structure['#active'] = ii < maxCount && structure['#user'] === userId;
+				structure['#active'] = ii < maxCount;
 			}
 		}
 	}
