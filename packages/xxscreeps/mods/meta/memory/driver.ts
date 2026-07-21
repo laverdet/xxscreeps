@@ -5,7 +5,7 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { kMaxActiveSegments } from './memory.js';
-import { getPublicSegmentChannel, isPublicSegment, loadActiveForeignSegment, loadMemorySegmentBlob, loadUserMemoryBlob, saveActiveForeignSegment, saveDefaultPublicSegment, saveMemoryBlob, saveMemorySegmentBlob, savePublicSegments } from './model.js';
+import { isPublicSegment, loadActiveForeignSegment, loadMemorySegmentBlob, loadUserMemoryBlob, publicSegmentChannel, saveActiveForeignSegment, saveDefaultPublicSegment, saveMemoryBlob, saveMemorySegmentBlob, savePublicSegments } from './model.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface InitializationPayload {
@@ -31,7 +31,7 @@ hooks.register('runnerConnector', player => {
 	let activeSegments: Set<number>;
 	let nextSegments: Set<number> | undefined;
 	const dirtySegments = new Set<number>();
-	let ownSubscription: SubscriptionFor<ReturnType<typeof getPublicSegmentChannel>> | undefined;
+	let ownSubscription: SubscriptionFor<ReturnType<typeof publicSegmentChannel>> | undefined;
 	let activeForeignSegment: StoredForeignSegmentRequest | null = null;
 	let subscribedUserId: string | null = null;
 	let subscriptionEffect: Effect | undefined;
@@ -47,7 +47,7 @@ hooks.register('runnerConnector', player => {
 		subscribedUserId = target;
 		foreignDirty = true;
 		if (target !== null) {
-			const subscription = await getPublicSegmentChannel(shard, target).subscribe();
+			const subscription = await publicSegmentChannel(shard, target).subscribe();
 			subscription.listen(message => {
 				if (message.type === 'publicSet' || message.id === activeForeignSegment?.segmentId) {
 					foreignDirty = true;
@@ -70,7 +70,7 @@ hooks.register('runnerConnector', player => {
 			// subscription, so they are not echoed back.
 			[ ownSubscription, activeForeignSegment ] = await Promise.all([
 				ownSubscription ?? async function() {
-					const subscription = await getPublicSegmentChannel(shard, userId).subscribe();
+					const subscription = await publicSegmentChannel(shard, userId).subscribe();
 					subscription.listen(message => {
 						if (message.type === 'segment' && (activeSegments.has(message.id) || nextSegments?.has(message.id) === true)) {
 							dirtySegments.add(message.id);
