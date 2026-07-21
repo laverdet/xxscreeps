@@ -13,7 +13,10 @@ function roomQuadrant(size: number): ReadonlySet<string> {
 	));
 }
 
-describe('computeRoomMeta', () => {
+describe('mods/modern/sector', () => {
+	//
+	// computeRoomMeta
+
 	// A 2x2 block of sectors; the corner room W10N10 rings all four centers.
 	const quadrant = roomQuadrant(21);
 
@@ -61,9 +64,9 @@ describe('computeRoomMeta', () => {
 		assert.strictEqual(sectorControl.members.length, 25, 'interior clipped to the present 5x5 corner');
 		assert.ok(!sectorControl.edges.includes('W10N5'), 'absent ring rooms are clipped');
 	});
-});
 
-describe('makeSectorRadiusPredicate', () => {
+	//
+	// makeSectorRadiusPredicate
 	test('a single-sector room belongs wholly to its sector', () => {
 		const inSector = makeSectorRadiusPredicate('W5N5', 'W10N10', [ 'W5N5' ]);
 		assert.ok(inSector(0, 0), 'even the far corner is claimed');
@@ -91,9 +94,9 @@ describe('makeSectorRadiusPredicate', () => {
 		assert.ok(!inSector(49, 0), 'the far quadrants do not');
 		assert.ok(!inSector(0, 0), 'the far quadrants do not');
 	});
-});
 
-describe('World sector metadata', () => {
+	//
+	// World sector metadata
 	test('reads the stamped sector record', () => {
 		// The test world is exactly W0..W10 x N0..N10 — one full sector.
 		const sectors = [ ...iterateSectors(testWorld) ];

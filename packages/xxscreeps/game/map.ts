@@ -14,10 +14,11 @@ import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
 import { RoomPosition } from './position.js';
 import * as Terrain from './terrain.js';
-
-// Room metadata, extensible by mods through the `RoomIntrinsics` path.
 // TODO: The World reader is built at module load, so a registrant must be evaluated before this
 // module.
+import 'xxscreeps:mods/schema';
+
+// Room metadata, extensible by mods through the `RoomIntrinsics` path.
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Schema {}
 const roomIntrinsics = struct(...structForPath<Schema>()('RoomIntrinsics', {
