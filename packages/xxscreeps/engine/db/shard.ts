@@ -96,13 +96,14 @@ export class Shard extends AsyncDisposableResource {
 	async loadWorld() {
 		const [ terrainBlob, rooms ] = await Promise.all([
 			loadUpgradedWithWriteBack(
+				this.db,
+				upgradeTerrain,
 				() => this.data.req('terrain', { blob: true }),
 				blob => this.data.set('terrain', blob),
-				upgradeTerrain,
 			),
 			this.data.sMembers('rooms'),
 		]);
-		return new World(this.name, await upgradeTerrain(terrainBlob), new Set(rooms));
+		return new World(this.name, await upgradeTerrain(this.db, terrainBlob), new Set(rooms));
 	}
 
 	/**
@@ -121,7 +122,7 @@ export class Shard extends AsyncDisposableResource {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		await this.checkTime(time, -1);
-		return RoomSchema.upgrade(await this.data.req(this.roomKeyForTime(name, time), { blob: true }));
+		return RoomSchema.upgrade(this.db, await this.data.req(this.roomKeyForTime(name, time), { blob: true }));
 	}
 
 	/**

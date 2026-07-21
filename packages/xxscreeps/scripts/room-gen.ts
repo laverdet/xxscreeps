@@ -1,4 +1,6 @@
+import type { ExitMap, GenerateRoomOptions, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
@@ -6,22 +8,17 @@ import * as MapSchema from 'xxscreeps/game/map.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
-import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
+import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { hooks } from './symbols.js';
+import 'xxscreeps:mods/terrain';
 
-type ExitSide = 'top' | 'right' | 'bottom' | 'left';
-type ExitMap = Record<ExitSide, number[]>;
+export type { GenerateRoomOptions } from './symbols.js';
 
 // The world's per-room terrain map, as returned by `shard.loadWorld()`. The generation entry points
 // accumulate freshly built rooms into one of these and serialize it once, rather than once per room.
 type WorldTerrain = Awaited<ReturnType<Shard['loadWorld']>>['terrain'];
-
-export interface GenerateRoomOptions {
-	exits?: Partial<ExitMap>;
-	terrainType?: number;
-	swampType?: number;
-}
 
 interface TerrainTypeParams {
 	fill: number;
@@ -294,6 +291,68 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 	return grid;
 }
 
+function hasPassableNeighbor(grid: Grid, xx: number, yy: number): boolean {
+	return Fn.some(iterateGridInRange(xx, yy, 1), ([ nxx, nyy ]) => !grid[nyy]![nxx]!.wall);
+}
+
+// Rolls uniformly random tiles within [min, min + span) on both axes until one satisfies `accept`,
+// returning undefined after 1000 failed rolls to signal terrain that can't host the object.
+function findRandomTile(min: number, span: number, accept: (xx: number, yy: number) => boolean) {
+	for (let ii = 0; ii < 1000; ++ii) {
+		const xx = min + Math.floor(Math.random() * span);
+		const yy = min + Math.floor(Math.random() * span);
+		if (accept(xx, yy)) {
+			return [ xx, yy ] as const;
+		}
+	}
+}
+
+const kNoTags: ReadonlySet<string> = new Set();
+
+function makeGeneratorContext(room: Room, grid: Grid, options: GenerateRoomOptions): RoomGeneratorContext {
+	const tags = new Map<number, Set<string>>();
+	const tagsAt = (xx: number, yy: number): ReadonlySet<string> => tags.get(yy * 50 + xx) ?? kNoTags;
+	const isWall = (xx: number, yy: number) => grid[yy]![xx]!.wall;
+	return {
+		options,
+		room,
+		findRandomTile,
+		isPlaceable: (xx, yy) => isWall(xx, yy) && tagsAt(xx, yy).size === 0 && hasPassableNeighbor(grid, xx, yy),
+		isWall,
+		place(object, ...objectTags) {
+			room['#insertObject'](object);
+			const key = object.pos.y * 50 + object.pos.x;
+			const tileTags = tags.get(key) ?? new Set();
+			for (const tag of objectTags) {
+				tileTags.add(tag);
+			}
+			tags.set(key, tileTags);
+		},
+		tagsAt,
+	};
+}
+
+const kMaxGenerateAttempts = 50;
+
+// Generates the room's terrain and object placements, retrying with a fresh wall type when the
+// layout can't satisfy every generator's placement constraints, and giving up (rather than looping
+// forever) after a bounded number of attempts.
+function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions) {
+	const generators = [ ...hooks.map('roomGenerator') ].sort(mappedNumericComparator(generator => generator.order));
+	const swampType = options.swampType ?? Math.floor(Math.random() * 14);
+	for (let attempt = 0; attempt < kMaxGenerateAttempts; ++attempt) {
+		const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
+		const grid = buildBaseTerrain(exits, wallType, swampType);
+		const room = new Room();
+		room.name = roomName;
+		const context = makeGeneratorContext(room, grid, options);
+		if (generators.every(generator => generator.generate(context))) {
+			return { room, terrain: gridToTerrain(grid) };
+		}
+	}
+	throw new Error(`Failed to generate room terrain after ${kMaxGenerateAttempts} attempts`);
+}
+
 function gridToTerrain(grid: Grid): TerrainWriter {
 	const terrain = new TerrainWriter();
 	for (const [ yy, row ] of grid.entries()) {
@@ -322,8 +381,8 @@ function gridToTerrain(grid: Grid): TerrainWriter {
 	return terrain;
 }
 
-// Builds a room's terrain entirely in memory; performs no storage I/O. `lookupTerrain` resolves an
-// already-built neighbor's terrain so shared exits line up.
+// Builds a room's terrain and objects entirely in memory; performs no storage I/O. `lookupTerrain`
+// resolves an already-built neighbor's terrain so shared exits line up.
 function buildRoom(
 	roomName: string,
 	options: GenerateRoomOptions | undefined,
@@ -362,16 +421,7 @@ function buildRoom(
 		}
 	}
 
-	const wallType = options?.terrainType ?? randomWallType();
-	const swampType = options?.swampType ?? Math.floor(Math.random() * 14);
-
-	const grid = buildBaseTerrain(exits, wallType, swampType);
-	const terrain = gridToTerrain(grid);
-
-	const room = new Room();
-	room.name = roomName;
-	room['#user'] = null;
-	room['#level'] = -1;
+	const { room, terrain } = genRoom(roomName, exits, options ?? {});
 	room['#flushObjects'](null);
 	flushUsers(room);
 

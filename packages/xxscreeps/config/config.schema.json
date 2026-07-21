@@ -237,8 +237,7 @@
       "description": "Runner settings"
     },
     "schemaArchive": {
-      "default": "./screeps/archive",
-      "description": "Where to save descriptions of the binary format used to write game data.",
+      "description": "Optional location to save archived binary format and Kaitai descriptors for inspection or troubleshooting.",
       "type": "string"
     },
     "shards": {

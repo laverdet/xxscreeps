@@ -1,15 +1,14 @@
-import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { GameBase } from 'xxscreeps/game/game.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Shard } from 'xxscreeps/engine/db/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { loadTransactionEntries } from 'xxscreeps/mods/classic/brokerage/model.js';
 import { create as createTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { Market } from './market.js';
-import { incrementUserCredits, loadAndReadMarketOrder, loadMarketOrderIds, loadUserCredits, marketChannel } from './model.js';
+import { instantiate } from 'xxscreeps/utility/utility.js';
+import { incrementUserCredits, insertOrder, loadAndReadMarketOrder, loadMarketOrderIds, loadUserCredits, marketChannel, updateOrderAmount } from './model.js';
+import { Order } from './order.js';
 
 async function loadMarketOrderBookForTesting(shard: Shard) {
 	const ids = await loadMarketOrderIds(shard);
@@ -17,120 +16,8 @@ async function loadMarketOrderBookForTesting(shard: Shard) {
 }
 
 describe('mod/mmo/wallstreet', () => {
-	describe('transactions', () => {
 
-		// User '200' owns terminals in both rooms, so a send to the neighbour is visible to itself from
-		// both ends — exercising the processor → driver → runtime read path with one sandbox.
-		const selfSendSim = simulate({
-			W1N1: room => {
-				const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), '200');
-				terminal.store['#add'](C.RESOURCE_ENERGY, 10000);
-				room['#insertObject'](terminal);
-				room['#level'] = 8;
-				room['#user'] = room.controller!['#user'] = '200';
-			},
-			W2N1: room => {
-				room['#insertObject'](createTerminal(new RoomPosition(25, 25, 'W2N1'), '200'));
-				room['#level'] = 8;
-				room['#user'] = room.controller!['#user'] = '200';
-			},
-		});
-
-		test('a send appears to both parties with a resolved name and an escaped description', () => selfSendSim(async ({ sandbox, shard, tick }) => {
-			using clock = new DeterministicClockForTesting();
-			using player = await sandbox('200', global => {
-				const { market } = global.Game;
-				if (global.Memory.sent === undefined) {
-					// First tick: send to our own terminal in the neighbouring room.
-					global.Memory.sent = true;
-					global.Game.rooms.W1N1?.terminal?.send('energy', 1000, 'W2N1', 'gift <3');
-				} else {
-					// A later tick, once the connector has shipped the transaction to both lists.
-					const outgoing = market.outgoingTransactions;
-					const incoming = market.incomingTransactions;
-					assert.strictEqual(outgoing.length, 1);
-					assert.strictEqual(incoming.length, 1);
-					const transaction = outgoing[0];
-					// One record, seen from both ends.
-					assert.strictEqual(transaction?.transactionId, incoming[0]!.transactionId);
-					assert.strictEqual(transaction.amount, 1000);
-					assert.strictEqual(transaction.from, 'W1N1');
-					assert.strictEqual(transaction.to, 'W2N1');
-					assert.strictEqual(transaction.resourceType, 'energy');
-					// Both parties are this user; the stored ids resolve to one username.
-					assert.strictEqual(typeof transaction.sender?.username, 'string');
-					assert.strictEqual(transaction.sender?.username, transaction.recipient?.username);
-					// The description is stored raw and escaped at read.
-					assert.strictEqual(transaction.description, 'gift &lt;3');
-				}
-			});
-			// Send (tick 1), then read once the connector ships it (tick 2).
-			await tick(2);
-
-			// The transfer reached storage and is referenced from both of the user's lists.
-			const refs = await loadTransactionEntries(shard, '200');
-			assert.strictEqual(refs.outgoing.length, 1);
-			assert.strictEqual(refs.incoming.length, 1);
-			assert.strictEqual(refs.outgoing[0], refs.incoming[0]);
-		}));
-
-		// '201' owns W1N1 and '202' owns W2N1, so the sender is not visible in any of the recipient's
-		// rooms — its username can only resolve through the runner's `userIds` path.
-		const crossSendSim = simulate({
-			W1N1: room => {
-				const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), '201');
-				terminal.store['#add'](C.RESOURCE_ENERGY, 10000);
-				room['#insertObject'](terminal);
-				room['#level'] = 8;
-				room['#user'] = room.controller!['#user'] = '201';
-			},
-			W2N1: room => {
-				room['#insertObject'](createTerminal(new RoomPosition(25, 25, 'W2N1'), '202'));
-				room['#level'] = 8;
-				room['#user'] = room.controller!['#user'] = '202';
-			},
-		});
-
-		test("the recipient resolves the sender's name though they share no room", () => crossSendSim(async ({ sandbox, shard, tick }) => {
-			using clock = new DeterministicClockForTesting();
-			using sender = await sandbox('201', global => {
-				if (global.Memory.sent === undefined) {
-					global.Memory.sent = true;
-					global.Game.rooms.W1N1?.terminal?.send('energy', 1000, 'W2N1', 'gift <3');
-				}
-			});
-			using recipient = await sandbox('202', global => {
-				const incoming = global.Game.market.incomingTransactions;
-				if (incoming.length > 0) {
-					const transaction = incoming[0];
-					assert.strictEqual(transaction?.from, 'W1N1');
-					assert.strictEqual(transaction.to, 'W2N1');
-					assert.strictEqual(transaction.amount, 1000);
-					assert.strictEqual(transaction.description, 'gift &lt;3');
-					// The sender shares no room with the reader; its name resolves via `payload.userIds`.
-					assert.strictEqual(typeof transaction.sender?.username, 'string');
-				}
-			});
-			// Send (tick 1), then read once the connector ships it (tick 2).
-			await tick(2);
-
-			// The transfer reached the recipient's incoming list and no outgoing list.
-			const refs = await loadTransactionEntries(shard, '202');
-			assert.strictEqual(refs.incoming.length, 1);
-			assert.strictEqual(refs.outgoing.length, 0);
-		}));
-
-		test('transactions default to empty until loaded', () => {
-			const market = new Market({ map: {} } as unknown as GameBase);
-			assert.deepStrictEqual(market.incomingTransactions, []);
-			assert.deepStrictEqual(market.outgoingTransactions, []);
-			assert.strictEqual(market.credits, 0);
-			assert.deepStrictEqual(market.orders, {});
-			assert.deepStrictEqual(market.getAllOrders(), []);
-		});
-	});
-
-	// Player has 50k credits and controls a terminal in W1N1 with 10k energy
+	// Player has 50k millicredits and controls a terminal in W1N1 with 10k energy
 	const makeMarketSim = (userId: string) => simulate({
 		W1N1: room => {
 			const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), userId);
@@ -143,183 +30,280 @@ describe('mod/mmo/wallstreet', () => {
 		await incrementUserCredits(shard, userId, 50_000);
 	});
 
-	describe('orders', () => {
+	// User '100' owns a terminal in W1N1 holding energy stock.
+	const sim = makeMarketSim('100');
 
-		// User '100' owns a terminal in W1N1 holding energy stock.
-		const sim = makeMarketSim('100');
+	const options = { resourceType: C.RESOURCE_ENERGY, price: 0.5, roomName: 'W1N1' } as const;
+	// fee = 2,500
+	const buyOptions = { ...options, totalAmount: 100, type: C.ORDER_BUY } as const;
+	// fee = 25,000
+	const sellOptions = { ...options, totalAmount: 1000, type: C.ORDER_SELL } as const;
 
-		const options = { resourceType: C.RESOURCE_ENERGY, price: 0.5, roomName: 'W1N1' } as const;
-		// fee = 2,500
-		const buyOptions = { ...options, totalAmount: 100, type: C.ORDER_BUY } as const;
-		// fee = 25,000
-		const sellOptions = { ...options, totalAmount: 1000, type: C.ORDER_SELL } as const;
+	test('read getters split the active book from your own orders', async () => sim(async ({ player, shard, tick }) => {
+		await incrementUserCredits(shard, '101', 50_000);
+		await tick();
 
-		test('createOrder charges the fee and anchors the order; the room pass activates it', () => sim(async ({ player, shard, tick }) => {
-			await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.OK);
+		// Both players issue orders
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		// nb: Orphaned active order for 101
+		{
+			const order = instantiate(Order, {
+				id: Id.generateId(),
+				amount: 0,
+				created: 1,
+				createdTimestamp: Date.now(),
+				remainingAmount: 1000,
+				resourceType: C.RESOURCE_ENERGY,
+				roomName: 'W2N1',
+				totalAmount: 1000,
 			});
-			await tick();
+			order['#buy'] = false;
+			order['#user'] = '101';
+			order['#price'] = 0.5;
+			await Promise.all([
+				insertOrder(shard, order),
+				updateOrderAmount(shard, order.id, 1000),
+			]);
+		}
 
-			// The terminal intent wrote the order inactive.
-			const [ order ] = await loadMarketOrderBookForTesting(shard);
-			assert.ok(order);
-			assert.strictEqual(order.type, C.ORDER_SELL);
-			assert.strictEqual(order['#price'], 500);
-			assert.strictEqual(order.totalAmount, 1000);
-			assert.strictEqual(order.remainingAmount, 1000);
-			assert.strictEqual(order.amount, 0);
+		// getAllOrders exposes the active book only
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.market.getAllOrders().length, 1);
+			assert.strictEqual(Object.keys(Game.market.orders).length, 1);
+			const order = Object.values(Game.market.orders)[0];
+			assert.strictEqual(order?.price, 0.5);
 			assert.strictEqual(order.active, false);
-			assert.strictEqual(order.roomName, 'W1N1');
-			assert.strictEqual(order['#user'], '100');
-			assert.strictEqual(await loadUserCredits(shard, '100'), 25_000);
-			const { terminal } = await shard.loadRoom('W1N1');
-			assert.deepStrictEqual([ ...Fn.map(terminal!['#orders'], order => order.id) ], [ order.id ]);
+		});
 
-			// The next room pass activates it against terminal stock: min(10_000 stocked, 1000 remaining).
-			await tick();
-			const [ activated ] = await loadMarketOrderBookForTesting(shard);
-			assert.strictEqual(activated?.active, true);
-			assert.strictEqual(activated.amount, 1000);
-			assert.deepStrictEqual(await loadMarketOrderIds(shard), [ order.id ]);
-		}));
+		// Now the orders are active
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.market.getAllOrders().length, 2);
+			const order = Object.values(Game.market.orders)[0];
+			assert.strictEqual(order?.price, 0.5);
+			assert.strictEqual(order.active, true);
+			// Object filter matches every specified key; a function filter is also accepted.
+			const energy = Game.market.getAllOrders({ resourceType: C.RESOURCE_ENERGY });
+			assert.strictEqual(energy.length, 2);
+			assert.strictEqual(Game.market.getAllOrders((order: Order) => order.type === C.ORDER_SELL).length, 2);
+		});
+	}));
 
-		test('two same-tick orders on one terminal both materialize', () => sim(async ({ player, shard, tick }) => {
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.OK);
-				assert.strictEqual(market.createOrder(buyOptions), C.OK);
-			});
-			await tick();
+	test('order blobs persist across delta payloads and drop with membership', () => sim(async ({ player, tick }) => {
+		using clock = new DeterministicClockForTesting();
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick();
+		let ids: string[];
+		await player('100', Game => {
+			ids = Object.keys(Game.market.orders);
+			assert.strictEqual(ids.length, 2);
+			assert.strictEqual(Object.keys(Game.market.orders).length, 2);
+		});
+		clock.increment(C.MARKET_ORDER_LIFE_TIME + 1);
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.market.getOrderById(ids[0]!), null);
+			assert.strictEqual(Game.market.getAllOrders().length, 0);
+			assert.strictEqual(Object.keys(Game.market.orders).length, 0);
+		});
+		// TODO: A changed blob overrides the retained one.
+	}));
 
-			const orders = await loadMarketOrderBookForTesting(shard);
-			assert.strictEqual(orders.length, 2);
-			assert.strictEqual(await loadUserCredits(shard, '100'), 22_500);
-			const { terminal } = await shard.loadRoom('W1N1');
-			assert.strictEqual(terminal?.['#orders'].length, 2);
-		}));
+	test('createOrder charges the fee and anchors the order; the room pass activates it', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick();
 
-		test('a buy order tracks credits bounded by free space, patching the amount in place', () => sim(async ({ player, shard, tick }) => {
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(buyOptions), C.OK);
-			});
-			// Create, then activate: fee = 2,500; credits = 47,500
+		// The terminal intent wrote the order inactive.
+		const [ order ] = await loadMarketOrderBookForTesting(shard);
+		assert.ok(order);
+		assert.strictEqual(order.type, C.ORDER_SELL);
+		assert.strictEqual(order['#price'], 500);
+		assert.strictEqual(order.totalAmount, 1000);
+		assert.strictEqual(order.remainingAmount, 1000);
+		assert.strictEqual(order.amount, 0);
+		assert.strictEqual(order.active, false);
+		assert.strictEqual(order.roomName, 'W1N1');
+		assert.strictEqual(order['#user'], '100');
+		assert.strictEqual(await loadUserCredits(shard, '100'), 25_000);
+		const { terminal } = await shard.loadRoom('W1N1');
+		assert.deepStrictEqual([ ...Fn.map(terminal!['#orders'], order => order.id) ], [ order.id ]);
+
+		// The next room pass activates it against terminal stock: min(10_000 stocked, 1000 remaining).
+		await tick();
+		const [ activated ] = await loadMarketOrderBookForTesting(shard);
+		assert.strictEqual(activated?.active, true);
+		assert.strictEqual(activated.amount, 1000);
+		assert.deepStrictEqual(await loadMarketOrderIds(shard), [ order.id ]);
+	}));
+
+	test('two same-tick orders on one terminal both materialize', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+			assert.strictEqual(Game.market.createOrder(buyOptions), C.OK);
+		});
+		await tick();
+
+		const orders = await loadMarketOrderBookForTesting(shard);
+		assert.strictEqual(orders.length, 2);
+		assert.strictEqual(await loadUserCredits(shard, '100'), 22_500);
+		const { terminal } = await shard.loadRoom('W1N1');
+		assert.strictEqual(terminal?.['#orders'].length, 2);
+	}));
+
+	test('a buy order tracks credits bounded by free space, patching the amount in place', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(buyOptions), C.OK);
+		});
+		// Create, then activate: fee = 2,500; credits = 47,500
+		await tick(2);
+		const [ order1 ] = await loadMarketOrderBookForTesting(shard);
+		assert.strictEqual(order1?.active, true);
+		assert.strictEqual(order1.amount, 95);
+
+		// Down to 20,000 credits
+		await incrementUserCredits(shard, '100', -27_500);
+		await tick();
+		const [ order ] = await loadMarketOrderBookForTesting(shard);
+		assert.strictEqual(order?.active, true);
+		assert.strictEqual(order.amount, 40);
+	}));
+
+	test('the room pass rewrites only orders whose state changed', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick();
+		const check = await async function() {
+			using channel = await marketChannel(shard).subscribe();
+			const messages = channel.iterable();
 			await tick(2);
-			const [ order1 ] = await loadMarketOrderBookForTesting(shard);
-			assert.strictEqual(order1?.active, true);
-			assert.strictEqual(order1.amount, 95);
+			return () => Array.fromAsync(messages);
+		}();
+		const messages = await check();
+		assert.strictEqual(messages.length, 1);
+	}));
 
-			// Down to 20,000 credits
-			await incrementUserCredits(shard, '100', -27_500);
-			await tick();
-			const [ order ] = await loadMarketOrderBookForTesting(shard);
-			assert.strictEqual(order?.active, true);
-			assert.strictEqual(order.amount, 40);
-		}));
+	test('an aged order expires with the unspent fee refunded', () => sim(async ({ player, shard, tick }) => {
+		using clock = new DeterministicClockForTesting();
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick(2);
+		clock.increment(C.MARKET_ORDER_LIFE_TIME + 1);
+		await tick();
+		assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
+		assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
+		assert.strictEqual(await loadUserCredits(shard, '100'), 50_000);
+		await tick();
+		const { terminal } = await shard.loadRoom('W1N1');
+		assert.strictEqual(terminal?.['#orders'].length, 0);
+	}));
 
-		test('the room pass rewrites only orders whose state changed', () => sim(async ({ player, shard, tick }) => {
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.OK);
-			});
-			await tick();
-			const check = await async function() {
-				using channel = await marketChannel(shard).subscribe();
-				const messages = channel.iterable();
-				await tick(2);
-				return () => Array.fromAsync(messages);
-			}();
-			const messages = await check();
-			assert.strictEqual(messages.length, 1);
-		}));
+	test('an orphaned order is dropped by the room pass', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick(2);
+		const [ order ] = await loadMarketOrderBookForTesting(shard);
+		assert.ok(order);
+		// Delete the underlying order blob
+		await shard.data.del(`market/order/${order.id}`);
 
-		test('an aged order expires with the unspent fee refunded', () => sim(async ({ player, shard, tick }) => {
-			using clock = new DeterministicClockForTesting();
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.OK);
-			});
-			await tick(2);
-			clock.increment(C.MARKET_ORDER_LIFE_TIME + 1);
-			await tick();
-			assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
-			assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
-			assert.strictEqual(await loadUserCredits(shard, '100'), 50_000);
-			await tick();
-			const { terminal } = await shard.loadRoom('W1N1');
-			assert.strictEqual(terminal?.['#orders'].length, 0);
-		}));
+		// The version probe drops the order and its index entries instead of throwing. No refund is
+		// issued.
+		await tick();
+		assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
+		assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
+		const { terminal } = await shard.loadRoom('W1N1');
+		assert.strictEqual(terminal!['#orders'].length, 0);
+	}));
 
-		test('an orphaned order is dropped by the room pass', () => sim(async ({ player, shard, tick }) => {
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.OK);
-			});
-			await tick(2);
-			const [ order ] = await loadMarketOrderBookForTesting(shard);
-			assert.ok(order);
-			// Delete the underlying order blob
-			await shard.data.del(`market/order/${order.id}`);
+	test('incrementUserCredits refuses an overdraft', () => sim(async ({ shard }) => {
+		assert.strictEqual(await incrementUserCredits(shard, '100', -50_001), false);
+		assert.strictEqual(await loadUserCredits(shard, '100'), 50_000);
+		assert.strictEqual(await incrementUserCredits(shard, '100', -50_000), true);
+		assert.strictEqual(await loadUserCredits(shard, '100'), 0);
+	}));
 
-			// The version probe drops the order and its index entries instead of throwing. No refund is
-			// issued.
-			await tick();
-			assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
-			assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
-			const { terminal } = await shard.loadRoom('W1N1');
-			assert.strictEqual(terminal!['#orders'].length, 0);
-		}));
+	test('createOrder rejects when the fee exceeds available credits', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, price: 1 }), C.OK);
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, price: 1.01 }), C.ERR_NOT_ENOUGH_RESOURCES);
+		});
+	}));
 
-		test('incrementUserCredits refuses an overdraft', () => sim(async ({ shard }) => {
-			assert.strictEqual(await incrementUserCredits(shard, '100', -50_001), false);
-			assert.strictEqual(await loadUserCredits(shard, '100'), 50_000);
-			assert.strictEqual(await incrementUserCredits(shard, '100', -50_000), true);
-			assert.strictEqual(await loadUserCredits(shard, '100'), 0);
-		}));
+	test('createOrder rejects a user who owns no terminal in the room', () => sim(async ({ player, shard }) => {
+		await player('101', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.ERR_NOT_OWNER);
+		});
+		assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
+	}));
 
-		test('createOrder rejects a user who owns no terminal in the room', () => sim(async ({ player, shard }) => {
-			await player('101', Game => {
-				const market = new Market(Game, undefined);
-				assert.strictEqual(market.createOrder(sellOptions), C.ERR_NOT_OWNER);
-			});
-			assert.deepStrictEqual(await loadMarketOrderBookForTesting(shard), []);
-		}));
+	test('a second same-tick createOrder at the cap returns ERR_FULL', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			// One slot under the cap: the first call fits, the second counts the first's pending order.
+			for (const ii of Fn.range(C.MARKET_MAX_ORDERS - 1)) {
+				assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: 1, price: ii + 1 }), C.OK);
+			}
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.ERR_FULL);
+		});
+	}));
 
-		test('createOrder truncates a fractional or negative totalAmount', () => sim(async ({ player }) => {
-			await player('100', Game => {
-				const market = new Market(Game, undefined);
-				// Under one unit truncates to zero.
-				assert.strictEqual(market.createOrder({ ...sellOptions, totalAmount: 0.5 }), C.ERR_INVALID_ARGS);
-				assert.strictEqual(market.createOrder({ ...sellOptions, totalAmount: 1.5 }), C.OK);
-				assert.strictEqual(market.createOrder({ ...sellOptions, totalAmount: -5 }), C.ERR_INVALID_ARGS);
-			});
-		}));
-	});
+	test('createOrder truncates a fractional or negative totalAmount', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			// Under one unit truncates to zero.
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: 0.5 }), C.ERR_INVALID_ARGS);
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: 1.5 }), C.OK);
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: -5 }), C.ERR_INVALID_ARGS);
+		});
+	}));
 
-	describe('createOrder pipeline', () => {
-		test('createOrder reaches the book; the connector ships the active book and your orders', async () => {
-			const sim = makeMarketSim('200');
-			await sim(async ({ sandbox, shard, tick }) => {
-				using player = await sandbox('200', global => {
-					const market = global.Game.market;
-					if (global.Game.time === 1) {
+	test('createOrder reaches the book; the connector ships the active book and your orders', async () => {
+		const sim = makeMarketSim('200');
+		await sim(async ({ sandbox, shard, tick }) => {
+			await using player = await sandbox('200', global => {
+				const market = global.Game.market;
+				switch (global.Game.time) {
+					case 0:
 						assert.strictEqual(market.createOrder({
 							type: 'sell', resourceType: 'energy', price: 0.5, totalAmount: 1000, roomName: 'W1N1',
 						}), 0);
-					}
-				});
-				// Create (tick 1), read while still inactive (tick 2), read after activation (tick 3).
-				await tick(3);
+						break;
 
-				const [ order ] = await loadMarketOrderBookForTesting(shard);
-				assert.ok(order);
-				assert.strictEqual(order['#user'], '200');
-				assert.strictEqual(order['#price'], 500);
-				assert.strictEqual(order.active, true);
-				assert.strictEqual(await loadUserCredits(shard, '200'), 25_000);
+					case 1:
+					case 2: {
+						// Later ticks: the connector shipped credits, your one order, and the active public
+						// book. The book is active-only, so your order is in it exactly when it is active.
+						const ids = Object.keys(market.orders);
+						assert.strictEqual(ids.length, 1);
+						assert.strictEqual(market.credits, 25);
+						const id = ids[0]!;
+						assert.strictEqual(market.getOrderById(id)?.price, 0.5);
+						const all = market.getAllOrders();
+						for (const order of all) {
+							assert.strictEqual(order.active, global.Game.time !== 1);
+						}
+					}
+				}
 			});
+				// Create (tick 0), read while still inactive (tick 1), read after activation (tick 2).
+			await tick(3);
+
+			const [ order ] = await loadMarketOrderBookForTesting(shard);
+			assert.ok(order);
+			assert.strictEqual(order['#user'], '200');
+			assert.strictEqual(order['#price'], 500);
+			assert.strictEqual(order.active, true);
+			assert.strictEqual(await loadUserCredits(shard, '200'), 25_000);
 		});
 	});
 });

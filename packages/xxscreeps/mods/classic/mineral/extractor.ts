@@ -37,7 +37,7 @@ export class StructureExtractor extends withOverlay(OwnedStructure, extractorSha
 	override get structureType() { return C.STRUCTURE_EXTRACTOR; }
 }
 
-export function create(pos: RoomPosition, owner: string) {
+export function create(pos: RoomPosition, owner: string | null) {
 	const extractor = assign(createRoomObject(new StructureExtractor(), pos), {
 		hits: C.EXTRACTOR_HITS,
 	});

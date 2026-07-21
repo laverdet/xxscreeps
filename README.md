@@ -167,14 +167,21 @@ await using shard = await Shard.connect(db, 'shard0');
 
 await generateRoom(shard, 'W12N5');
 await generateRoom(shard, 'W11N5', { terrainType: 3, swampType: 2 });
+await generateRoom(shard, 'W10N5', { sources: 1, mineral: 'H' });
 await Promise.all([ db.save(), shard.save() ]);
 ```
 
-`generateRoom` adds a room with procedurally generated terrain to the shard's
-terrain blob and `rooms` set. Like `npx xxscreeps import`, it is an offline
-operation — stop the server before running it so cached world state in the
-backend, processor, and runner workers doesn't go stale. Exits are read from
-any already-generated neighbor, so adjacent generated rooms connect.
+`generateRoom` adds a room with procedurally generated terrain and objects to
+the shard's terrain blob and `rooms` set. The default loadout is a controller,
+1–2 sources, and a mineral; a source-keeper room is
+`{ controller: false, sources: 3, keeperLairs: true }` and a center room the
+same without the lairs — controller-less rooms hold keeper-capacity sources
+and a prebuilt extractor. `terrainType` picks one of 28 wall layouts and
+`swampType` one of 14 swamp layouts (0 for no swamp); both roll randomly when
+omitted. Like `npx xxscreeps import`, it is an offline operation — stop the
+server before running it so cached world state in the backend, processor, and
+runner workers doesn't go stale. Exits are read from any already-generated
+neighbor, so adjacent generated rooms connect.
 
 ## Docker
 

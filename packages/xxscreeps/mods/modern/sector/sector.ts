@@ -1,6 +1,18 @@
+import type { SectorControl } from './schema.js';
+import type { World } from 'xxscreeps/game/map.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeAbstractIterateWithRangeTo, makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
-import { makeSignedRoomName, parseSignedRoomName, roomLinearDistance } from './name.js';
+import { makeSignedRoomName, parseSignedRoomName, roomLinearDistance } from 'xxscreeps/game/room/name.js';
+
+// Iterates the sector-control records stamped on the world's center rooms.
+export function *iterateSectors(world: World): IterableIterator<[ center: string, sector: SectorControl ]> {
+	for (const [ roomName, entry ] of world.terrain) {
+		const { sectorControl } = entry;
+		if (sectorControl) {
+			yield [ roomName, sectorControl ];
+		}
+	}
+}
 
 // Sector centers are the rooms numbered `{..}5` on each axis; the highway ring sits on the `{..}0`
 // boundary rooms +-5 away. Keyed off the sign of the signed coordinate (W/N use the negative

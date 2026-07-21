@@ -19,4 +19,6 @@ export const powerSpawnShape = declare('PowerSpawn', struct(ownedStructureShape,
 	 * @see https://docs.screeps.com/api/#StructurePowerSpawn.store
 	 */
 	store: powerSpawnStoreFormat,
+
+	'#spawnTime': 'int32',
 }));

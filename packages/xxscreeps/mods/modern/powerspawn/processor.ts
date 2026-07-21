@@ -15,6 +15,7 @@ const intents = [
 		powerSpawn.store['#subtract'](C.RESOURCE_POWER, 1);
 		powerSpawn.store['#subtract'](C.RESOURCE_ENERGY, C.POWER_SPAWN_ENERGY_RATIO);
 		context.task(incrementGlobalPowerLevel(context.shard, powerSpawn['#user']!, 1));
+		context.incrementRoomStat?.(powerSpawn['#user'], 'powerProcessed', 1);
 		context.didUpdate();
 	}),
 ];

@@ -1,3 +1,4 @@
+import type { NullMessage } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -10,6 +11,15 @@ import { Order, orderAmountOffsetOf, orderSchemaVersion, readOrder, upgradeOrder
 // Stored on the user info hash
 const userCreditsField = 'credits';
 
+// Channel for user credit changes
+export const userCreditsChannel =
+	(shard: Shard, userId: string): UserCreditsChannel => new Channel(shard.pubsub, `user/${userId}/market/credits`);
+
+export type UserCreditsChannel = Channel<
+	NullMessage |
+	{ type: 'changed'; amount: number }
+>;
+
 // User credit balance in millicredits; `Game.market.credits` divides by 1000.
 export async function loadUserCredits(shard: Shard, userId: string) {
 	return Number(await shard.db.data.hGet(User.infoKey(userId), userCreditsField)) || 0;
@@ -19,10 +29,21 @@ export async function loadUserCredits(shard: Shard, userId: string) {
 // credits would have been decremented below zero.
 export async function incrementUserCredits(shard: Shard, userId: string, amount: number) {
 	if (amount < 0) {
-		const [ , delta ] = await shard.db.data.hIncrByEx(User.infoKey(userId), userCreditsField, amount, { lBound: 0 });
-		return delta === amount;
+		const [ [ , delta ] ] = await Promise.all([
+			shard.db.data.hIncrByEx(User.infoKey(userId), userCreditsField, amount, { lBound: 0 }),
+			userCreditsChannel(shard, userId).publish({ type: 'changed', amount }),
+		]);
+		if (delta === amount) {
+			return true;
+		} else {
+			await userCreditsChannel(shard, userId).publish({ type: 'changed', amount: delta - amount });
+			return false;
+		}
 	} else {
-		await shard.db.data.hincrBy(User.infoKey(userId), userCreditsField, amount);
+		await Promise.all([
+			shard.db.data.hincrBy(User.infoKey(userId), userCreditsField, amount),
+			userCreditsChannel(shard, userId).publish({ type: 'changed', amount }),
+		]);
 		return true;
 	}
 }
@@ -33,19 +54,19 @@ export async function incrementUserCredits(shard: Shard, userId: string, amount:
 const allOrdersKey = 'market/orders';
 
 // Active orders, as a plain set
-const activeOrdersKey = 'market/orders/active';
+export const activeOrdersKey = 'market/orders/active';
 
 // A user's own orders, as a plain set
-const userOrdersKey = (userId: string) => `user/${userId}/market/orders`;
+export const userOrdersKey = (userId: string) => `user/${userId}/market/orders`;
 
 // Schema blob for a market order
 const orderBlobKey = (id: string) => `market/order/${id}`;
 
 // Global market channel which receives events for market changes
 export const marketChannel = (shard: Shard): MarketChannel => new Channel(shard.pubsub, 'market/orders');
-type MarketChannel = Channel<
+export type MarketChannel = Channel<
 	{ type: 'inserted'; id: string; userId: string } |
-	{ type: 'removed'; id: string; userId?: string } |
+	{ type: 'removed'; id: string; userId: string | undefined } |
 	{ type: 'updated'; id: string; amount: number }
 >;
 
@@ -59,9 +80,10 @@ export function loadMarketOrderIds(shard: Shard) {
 // probably only theoretical.
 export function loadMarketOrderBlob(shard: Shard, id: string) {
 	return loadUpgradedWithWriteBack(
+		shard.db,
+		upgradeOrder,
 		() => shard.data.get(orderBlobKey(id), { blob: true }),
 		blob => shard.data.set(orderBlobKey(id), blob),
-		upgradeOrder,
 	);
 }
 
@@ -94,6 +116,9 @@ export async function updateOrderAmount(shard: Shard, orderId: string, amount: n
 			UpdateSchemaBlob,
 			[ orderBlobKey(orderId) ],
 			[ orderSchemaVersion, orderAmountOffsetOf, 'int32', amount, 'set' ]),
+		amount === 0
+			? shard.data.sRem(activeOrdersKey, [ orderId ])
+			: shard.data.sAdd(activeOrdersKey, [ orderId ]),
 		marketChannel(shard).publish({ type: 'updated', id: orderId, amount }),
 	]);
 }
@@ -101,7 +126,7 @@ export async function updateOrderAmount(shard: Shard, orderId: string, amount: n
 // Deletes the order blob and index fields. No refund takes place.
 export function deleteOrder(shard: Shard, orderId: string, userId?: string) {
 	return Promise.all([
-		marketChannel(shard).publish({ type: 'removed', id: orderId }),
+		marketChannel(shard).publish({ type: 'removed', id: orderId, userId }),
 		userId !== undefined &&
 			shard.data.sRem(userOrdersKey(userId), [ orderId ]),
 		shard.data.sRem(activeOrdersKey, [ orderId ]),
@@ -115,7 +140,7 @@ export async function expireOrder(shard: Shard, order: Order) {
 	const refund = Math.floor(order.remainingAmount * order['#price'] * C.MARKET_FEE);
 	await Promise.all([
 		refund > 0 &&
-			shard.db.data.hincrBy(User.infoKey(order['#user']), userCreditsField, refund),
+			incrementUserCredits(shard, order['#user'], refund),
 		deleteOrder(shard, order.id, order['#user']),
 	]);
 }

@@ -1,6 +1,7 @@
 import type { LocalPayloadPort, UnknownMessage, WorkerConnectMessage } from './port.js';
 import type { Worker } from 'node:worker_threads';
 import type { MaybePromise } from 'xxscreeps/utility/types.js';
+import * as fs from 'node:fs/promises';
 import { parentPort } from 'node:worker_threads';
 import { config, configPath } from 'xxscreeps/config/index.js';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
@@ -24,6 +25,7 @@ export const isSiblingProcess = runOnce(async () => {
 		} else {
 			try {
 				const path = new URL(lock, configPath);
+				await fs.mkdir(new URL('.', path), { recursive: true });
 				process.on('exit', disposableToEffect(await FileSystemLock.acquire(path)));
 				return false;
 			} catch {

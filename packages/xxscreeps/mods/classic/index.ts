@@ -14,6 +14,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/meta/flag',
 		'xxscreeps/mods/meta/messages',
 		'xxscreeps/mods/meta/notifications',
+		'xxscreeps/mods/meta/stats',
 		'xxscreeps/mods/meta/visual',
 
 		'xxscreeps/mods/modern/deposit',

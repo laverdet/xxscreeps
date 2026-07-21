@@ -52,6 +52,12 @@ export interface ProcessorContext {
 	wakeAt: (time: number) => void;
 
 	/**
+	 * Attribute a gameplay statistic to a user's activity in this room. Implemented by a stats mod;
+	 * without one this is `undefined` and contributions are dropped.
+	 */
+	incrementRoomStat?: (userId: string | null | undefined, stat: string, amount: number) => void;
+
+	/**
 	 * Send an intent to another room
 	 */
 	sendRoomIntent: <Intent extends IntentsForReceiver<Room>>(

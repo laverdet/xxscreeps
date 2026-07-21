@@ -5,7 +5,7 @@ import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
-import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
+import { PlayerInstance, acquireRunnerContext } from 'xxscreeps/engine/runner/instance.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
@@ -45,6 +45,9 @@ const { migrationTimeout } = config.runner;
 // Load shared terrain data
 const world = await shard.loadWorld();
 loadTerrain(world); // pathfinder
+
+// Shared worker context
+await using runner = await acquireRunnerContext(shard);
 
 // Persistent player instances
 const playerInstances = disposable.adopt(
@@ -93,7 +96,7 @@ loop: for await (const message of Async.breakable(runnerMessages, breaker => bre
 						// Get or create player instance
 						seen.add(userId);
 						const instance = playerInstances.get(userId) ?? await async function() {
-							const instance = await PlayerInstance.create(shard, world, userId);
+							const instance = await PlayerInstance.create(runner, world, userId);
 							playerInstances.set(userId, instance);
 							return instance;
 						}();

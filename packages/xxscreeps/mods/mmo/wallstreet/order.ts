@@ -1,4 +1,6 @@
+import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { BufferObject, compose, declare, withOverlay } from 'xxscreeps/schema/index.js';
 import { orderShape } from './schema.js';
@@ -18,7 +20,9 @@ export class Order extends withOverlay(BufferObject, orderShape) {
 	 * depending on the resource/credits availability.
 	 * @public
 	 */
-	@enumerable get active() { return this.amount > 0; }
+	@enumerable get active() {
+		return this.amount > 0;
+	}
 
 	/**
 	 * The current price per unit.
@@ -45,3 +49,63 @@ const {
 
 const orderAmountOffsetOf = orderOffsetOf('MarketOrder', 'amount');
 export { orderAmountOffsetOf, readOrder, orderSchemaVersion, upgradeOrder, writeOrder };
+
+// Internal `Game.market` helper
+export class Orders {
+	readonly #active;
+	readonly #mine;
+	readonly #blobs: Map<string, Readonly<Uint8Array>> | undefined;
+
+	constructor(payload?: TickPayload, previous?: Orders) {
+		const marketBook = payload?.marketBook;
+		if (marketBook) {
+			const { active, mine } = marketBook;
+			this.#active = active;
+			this.#mine = mine;
+			const ids = new Set(Fn.concat([ active, mine ]));
+			const previousBlobs = Fn.pipe(
+				(previous && previous.#blobs)?.entries() ?? [],
+				$$ => Fn.filter($$, ([ id ]) => ids.has(id)),
+			);
+			this.#blobs = new Map(Fn.concat([ previousBlobs, marketBook.blobs ]));
+		}
+	}
+
+	@cached get active(): Order[] {
+		return Fn.pipe(
+			this.#active ?? [],
+			$$ => Fn.map($$, id => this.#blobs?.get(id)),
+			$$ => Fn.filter($$),
+			$$ => Fn.map($$, readOrder),
+			$$ => [ ...$$ ]);
+	}
+
+	@cached get mine(): Record<string, Order> {
+		return Fn.pipe(
+			this.#mine ?? [],
+			$$ => Fn.map($$, id => {
+				const blob = this.#blobs?.get(id);
+				if (blob) {
+					return [ id, readOrder(blob) ] as const;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => Fn.fromEntries($$));
+	}
+
+	get(id: string) {
+		const blob = this.#blobs?.get(id);
+		if (blob) {
+			return readOrder(blob);
+		}
+	}
+}
+
+export interface OrderPayload {
+	// Active market book orders
+	active: string[];
+	// Player's order ids (active & inactive)
+	mine: string[];
+	// Unseen market blobs
+	blobs: (readonly [ string, Readonly<Uint8Array> ])[];
+}

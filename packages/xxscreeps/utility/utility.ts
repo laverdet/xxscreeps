@@ -60,10 +60,10 @@ export function disposableToEffect(disposable: Disposable) {
 	return () => dispose.call(disposable);
 }
 
-// Convert an AsyncDisposable to a plain `Effect` (which must not reject)
-export function asyncDisposableToEffect(disposable: AsyncDisposable): Effect {
+// Convert an AsyncDisposable to an async callback
+export function asyncDisposableToEffect(disposable: AsyncDisposable) {
 	const dispose = disposable[Symbol.asyncDispose];
-	return () => mustNotReject(dispose.call(disposable));
+	return () => dispose.call(disposable);
 }
 
 // Replace a value on an object with a new one, and returns the old one.
@@ -161,13 +161,21 @@ export function hashCombine(left: number, right: number) {
 	return hashMix((seed + right) | 0);
 }
 
-export function removeOne<Type>(list: Type[], element: Type) {
+export function maybeRemoveOne<Type>(list: Type[], element: Type) {
 	const index = list.indexOf(element);
 	if (index === -1) {
+		return false;
+	} else {
+		list[index] = list.at(-1)!;
+		list.pop();
+		return true;
+	}
+}
+
+export function removeOne<Type>(list: Type[], element: Type) {
+	if (!maybeRemoveOne(list, element)) {
 		throw new Error('Element was not found');
 	}
-	list[index] = list.at(-1)!;
-	list.pop();
 }
 
 export function throttle(fn: () => void) {
@@ -217,4 +225,3 @@ export function asUnion<Type>(_value: Type): asserts _value is Union<Type> {}
 export function hackyIterableToArray<Type>(value: Iterable<Type>): asserts value is Type[] {
 	return value as never;
 }
-

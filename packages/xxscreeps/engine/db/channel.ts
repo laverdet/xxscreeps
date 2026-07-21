@@ -1,6 +1,6 @@
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import { AsyncDisposableResource, DisposableResource } from 'xxscreeps/utility/utility.js';
+import { DisposableResource } from 'xxscreeps/utility/utility.js';
 
 export interface NullMessage {
 	type?: never;
@@ -8,7 +8,7 @@ export interface NullMessage {
 
 type Listener<Message> = (message: Message) => void;
 export type DeferListener<Message> = (listener: Listener<Message>) => void;
-export type MessageFor<Type extends Channel<unknown>> = Type extends Channel<infer Message> ? Message : never;
+export type MessageFor<Type extends Channel<any>> = Type extends Channel<infer Message> ? Message : never;
 export type SubscriptionFor<Type extends Channel<any>> = Subscription<MessageFor<Type>>;
 
 export class Channel<Message = string> {

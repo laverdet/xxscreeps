@@ -96,6 +96,27 @@ describe('mod/classic/structure', () => {
 			});
 		}));
 
+		// Owner-less extractor: always active, so the RCL gate doesn't apply
+		const unownedExtractorSim = simulate({
+			W6N1: room => {
+				const mineral = room.find(C.FIND_MINERALS)[0]!;
+				mineral.mineralAmount = 1000;
+				room['#insertObject'](createExtractor(mineral.pos, null));
+				room['#insertObject'](createCreep(mineral.pos, [ C.WORK, C.CARRY, C.MOVE ], 'miner', '100'));
+				room['#level'] = 5;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('owner-less extractor is active below required RCL', () => unownedExtractorSim(async ({ player }) => {
+			await player('100', Game => {
+				const creep = Game.creeps.miner;
+				const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];
+				assert.ok(mineral, 'mineral should exist');
+				assert.strictEqual(creep?.harvest(mineral), C.OK);
+			});
+		}));
+
 		// 6 extensions in a row, controller at (33, 32). RCL3 cap = 10; RCL2 cap = 5.
 		// After downgrade to RCL2 the farthest extension (distance 6) drops to inactive.
 		const downgradeSim = simulate({

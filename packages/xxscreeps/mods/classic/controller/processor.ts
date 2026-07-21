@@ -7,8 +7,8 @@ import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/classic/creep/creep.js';
-import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
 import { checkActiveStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
 import { controlledRoomsKey, incrementGlobalControlLevel, insertControlledRoom, insertReservedRoom, removeControlledRoom, removeReservedRoom } from './model.js';
@@ -37,6 +37,9 @@ export function release(context: ProcessorContext, controller: StructureControll
 	controller['#reservationEndTime'] = 0;
 	controller['#safeModeCooldownTime'] = 0;
 	controller['#user'] = null;
+	// TODO: Power needs to be moved to the powercreep mod
+	controller.isPowerEnabled = false;
+	controller.safeModeAvailable = 0;
 	room['#safeModeUntil'] = 0;
 	updateRoomStatus(room, 0, null);
 	context.didUpdate();
@@ -263,6 +266,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
 			context.task(incrementGlobalControlLevel(context.shard, controller['#user']!, upgradePower));
+			context.incrementRoomStat?.(controller['#user'], 'energyControl', upgradePower);
 			context.didUpdate();
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;

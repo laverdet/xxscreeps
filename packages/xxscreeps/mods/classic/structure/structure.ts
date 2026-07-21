@@ -176,7 +176,10 @@ export function checkActiveStructures(room: Room) {
 	const byType: Record<string, OwnedStructure[]> = {};
 	for (const object of room['#immediateObjects']()) {
 		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
-			if (object['#user'] === userId) {
+			if (object['#user'] === null) {
+				// Owner-less structures are always active and count against no one's quota
+				object['#active'] = true;
+			} else if (object['#user'] === userId) {
 				(byType[object.structureType] ??= []).push(object);
 			} else {
 				object['#active'] = false;
