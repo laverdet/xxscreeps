@@ -105,9 +105,10 @@ const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
  * Roll three resources at random from the weighted table and distribute the reward level's density
  * across them. The chosen resources sum (in weighted density) to roughly the target.
  */
-export function *calcReward(rewardLevel: number): Generator<[ ResourceType, number ]> {
+export function *calcReward(rewardLevel: number): Iterable<[ ResourceType, number ]> {
 	const targetDensity = containerAmounts[rewardLevel]!;
 	const picks = Object.entries(containerRewards);
+	// TODO: abstract out fisher-yates shuffle
 	for (let ii = picks.length - 1; ii > 0; --ii) {
 		const jj = Math.floor(Math.random() * (ii + 1));
 		[ picks[ii], picks[jj] ] = [ picks[jj]!, picks[ii]! ];

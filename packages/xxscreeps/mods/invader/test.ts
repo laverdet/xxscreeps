@@ -633,7 +633,7 @@ describe('mod/invader', () => {
 				const rampart = ramparts[0]!;
 				const container = containers[0]!;
 				assert.strictEqual(tower.store.getUsedCapacity(C.RESOURCE_ENERGY), C.TOWER_CAPACITY, 'tower deploys at full energy');
-				assert.strictEqual(rampart.hits, C.STRONGHOLD_RAMPART_HITS[2]!, 'rampart hits scale with the template reward level');
+				assert.strictEqual(rampart.hits, C.STRONGHOLD_RAMPART_HITS[2], 'rampart hits scale with the template reward level');
 				assert.ok(container.store.getUsedCapacity() > 0, 'container deploys carrying a resource reward');
 				assert.strictEqual(container.store.getCapacity(), 0, 'reward container is withdraw-only');
 
@@ -743,8 +743,8 @@ describe('mod/invader', () => {
 			await peekRoom('W1N1', room => {
 				assert.strictEqual(findRoomCore(room), undefined, 'core removed on collapse');
 				assert.strictEqual(room['#user'], null, 'room ownership released');
-				assert.strictEqual(room.controller!.level, 0, 'controller downgraded to neutral');
-				assert.strictEqual(room.controller!.effects, undefined, 'controller invulnerability cleared');
+				assert.strictEqual(room.controller?.level, 0, 'controller downgraded to neutral');
+				assert.strictEqual(room.controller.effects, undefined, 'controller invulnerability cleared');
 			});
 		}));
 	});
