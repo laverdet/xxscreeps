@@ -2,17 +2,15 @@ import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
-import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { checkCarrier } from 'xxscreeps/mods/classic/creep/creep.js';
-import { borderExitPosition, commitMove, flushActionLog, isHostileInSafeMode, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
+import { borderExitPosition, commitMove, flushActionLog, isHostileInSafeMode, kRetainActionsTime, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
 import { Tombstone } from 'xxscreeps/mods/classic/creep/tombstone.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
-import { checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import * as Model from './model.js';
@@ -48,20 +46,18 @@ function killPowerCreep(creep: PowerCreep, context: ProcessorContext) {
 	context.setActive();
 }
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { powerCreep: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	// The intent carries only the roster id; `claimSpawn` validates it against the authoritative
 	// roster and returns the stored entry that seeds the room object.
 	registerIntentProcessor(StructurePowerSpawn, 'spawnPowerCreep', {}, (spawn, context, id: string) => {
-		if (checkMyStructure(spawn, StructurePowerSpawn) !== C.OK) {
+		if (checkMyStructure(spawn, StructurePowerSpawn) !== C.OK || checkIsActive(spawn) !== C.OK) {
 			return;
 		}
-		if (Fn.some(spawn.room['#lookAt'](spawn.pos), instanceOfPredicate(PowerCreep))) {
+		if (spawn['#spawnTime'] === Game.time) {
 			return;
 		}
+		spawn['#spawnTime'] = Game.time;
 		const ageTime = Game.time + C.POWER_CREEP_LIFE_TIME;
 		context.task(Model.claimSpawn(context.shard.db, spawn['#user']!, id, ageTime), entry => {
 			if (entry) {
@@ -111,11 +107,11 @@ registerObjectPreTickProcessor(PowerCreep, (creep, context) => {
 	flushActionLog(creep['#actionLog'], context);
 	const saying = creep['#saying'];
 	if (saying) {
-		if (saying.time <= Game.time - 10) {
+		if (saying.time <= Game.time - kRetainActionsTime) {
 			creep['#saying'] = undefined;
 			context.didUpdate();
 		} else {
-			context.wakeAt(saying.time + 10);
+			context.wakeAt(saying.time + kRetainActionsTime);
 		}
 	}
 });
@@ -136,3 +132,9 @@ registerObjectTickProcessor(PowerCreep, (creep, context) => {
 		context.wakeAt(creep['#ageTime']);
 	}
 });
+
+// ---
+
+declare module 'xxscreeps/engine/processor/index.js' {
+	interface Intent { powerCreep: typeof intents }
+}

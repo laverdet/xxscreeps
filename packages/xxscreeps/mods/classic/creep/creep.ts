@@ -632,16 +632,16 @@ export function checkCarrier(creep: Carrier) {
 }
 
 export function checkCommon(creep: Creep, part?: PartType) {
-	if (!creep.my) {
-		return C.ERR_NOT_OWNER;
-	} else if (creep.spawning) {
-		return C.ERR_BUSY;
-	} else if (part && creep.getActiveBodyparts(part) === 0) {
-		return C.ERR_NO_BODYPART;
-	} else if (!(creep.room as unknown)) {
-		return C.ERR_INVALID_ARGS;
-	}
-	return C.OK;
+	return chainIntentChecks(
+		() => checkCarrier(creep),
+		() => {
+			if (part && creep.getActiveBodyparts(part) === 0) {
+				return C.ERR_NO_BODYPART;
+			} else if (!(creep.room as unknown)) {
+				return C.ERR_INVALID_ARGS;
+			}
+		},
+	);
 }
 
 function checkFatigue(creep: Creep) {

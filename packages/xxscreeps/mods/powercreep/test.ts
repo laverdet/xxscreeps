@@ -44,9 +44,9 @@ describe('mod/powercreep', () => {
 		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
 		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
 		assert.strictEqual(await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 }), C.OK);
-		const updated = (await Model.loadRoster(shard.db, owner))[0]!;
-		assert.strictEqual(updated.level, 1);
-		assert.strictEqual(updated.powers[C.PWR_GENERATE_OPS]!.level, 1);
+		const updated = (await Model.loadRoster(shard.db, owner))[0];
+		assert.strictEqual(updated?.level, 1);
+		assert.strictEqual(updated.powers[C.PWR_GENERATE_OPS]?.level, 1);
 	}));
 
 	test('upgrade rejects an unreachable rank jump', () => sim(async ({ shard }) => {
@@ -159,9 +159,9 @@ describe('PowerCreep spawned', () => {
 		});
 		await tick();
 		await player(owner, Game => {
-			const alice = Game.powerCreeps.Alice!;
+			const alice = Game.powerCreeps.Alice;
 			assert.strictEqual(Game.powerCreeps.Forged, undefined);
-			assert.strictEqual(alice.room.name, 'W1N1');
+			assert.strictEqual(alice?.room.name, 'W1N1');
 			assert.strictEqual(alice.pos.isEqualTo(spawnPos), true);
 			assert.strictEqual(alice.ticksToLive, C.POWER_CREEP_LIFE_TIME);
 			assert.strictEqual(alice.hits, 1000);
@@ -178,7 +178,7 @@ describe('PowerCreep spawned', () => {
 		await tick();
 		await player(owner, Game => {
 			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
-			assert.strictEqual(Game.powerCreeps.Alice!.spawn(powerSpawn), C.ERR_BUSY);
+			assert.strictEqual(Game.powerCreeps.Alice?.spawn(powerSpawn), C.ERR_BUSY);
 		});
 	}));
 
@@ -191,7 +191,7 @@ describe('PowerCreep spawned', () => {
 		await tick();
 		await player(owner, Game => {
 			// Step off the power spawn so the tile guard can't mask the roster claim.
-			assert.strictEqual(Game.powerCreeps.Alice!.move(C.TOP), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.move(C.TOP), C.OK);
 		});
 		await tick();
 		await player(owner, Game => {
@@ -221,7 +221,7 @@ describe('PowerCreep spawned', () => {
 		});
 		await tick();
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.pos.isEqualTo(target), true);
+			assert.strictEqual(Game.powerCreeps.Alice?.pos.isEqualTo(target), true);
 		});
 	}));
 
@@ -241,8 +241,8 @@ describe('PowerCreep spawned', () => {
 			assert.strictEqual(room['#lookFor'](C.LOOK_POWER_CREEPS).length, 0);
 		});
 		await peekRoom('W2N1', room => {
-			const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!;
-			assert.strictEqual(alice.pos.isEqualTo(49, 25), true);
+			const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0];
+			assert.strictEqual(alice?.pos.isEqualTo(49, 25), true);
 		});
 	}));
 
@@ -261,12 +261,12 @@ describe('PowerCreep spawned', () => {
 			room['#insertObject'](road);
 		});
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.move(C.TOP), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.move(C.TOP), C.OK);
 		});
 		await tick();
 		await peekRoom('W1N1', room => {
-			const road = lookForStructureAt(room, target, C.STRUCTURE_ROAD)!;
-			assert.strictEqual(road['#nextDecayTime'], decayTime - C.ROAD_WEAROUT_POWER_CREEP);
+			const road = lookForStructureAt(room, target, C.STRUCTURE_ROAD);
+			assert.strictEqual(road?.['#nextDecayTime'], decayTime - C.ROAD_WEAROUT_POWER_CREEP);
 		});
 	}));
 
@@ -290,8 +290,8 @@ describe('PowerCreep spawned', () => {
 		await peekRoom('W1N1', room => {
 			assert.strictEqual(room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).length, 0);
 			// Half the progress hits the ground, minus the decay step of the tick it dropped in.
-			const dropped = room['#lookFor'](C.LOOK_RESOURCES)[0]!;
-			assert.strictEqual(dropped.amount, 49);
+			const dropped = room['#lookFor'](C.LOOK_RESOURCES)[0];
+			assert.strictEqual(dropped?.amount, 49);
 			assert.strictEqual(dropped.pos.isEqualTo(target), true);
 		});
 	}));
@@ -307,11 +307,11 @@ describe('PowerCreep spawned', () => {
 			room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!.store['#add'](C.RESOURCE_ENERGY, 50);
 		});
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.drop(C.RESOURCE_ENERGY), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.drop(C.RESOURCE_ENERGY), C.OK);
 		});
 		await tick();
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.store[C.RESOURCE_ENERGY], 0);
+			assert.strictEqual(Game.powerCreeps.Alice?.store[C.RESOURCE_ENERGY], 0);
 		});
 	}));
 
@@ -329,11 +329,11 @@ describe('PowerCreep spawned', () => {
 		await player(owner, Game => {
 			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
 			assert.ok(Game.powerCreeps.Alice!.ticksToLive! < C.POWER_CREEP_LIFE_TIME);
-			assert.strictEqual(Game.powerCreeps.Alice!.renew(powerSpawn), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.renew(powerSpawn), C.OK);
 		});
 		await tick();
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.ticksToLive, C.POWER_CREEP_LIFE_TIME);
+			assert.strictEqual(Game.powerCreeps.Alice?.ticksToLive, C.POWER_CREEP_LIFE_TIME);
 		});
 	}));
 
@@ -345,7 +345,7 @@ describe('PowerCreep spawned', () => {
 		});
 		await tick();
 		await player(owner, Game => {
-			assert.strictEqual(Game.powerCreeps.Alice!.suicide(), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.suicide(), C.OK);
 		});
 		await tick();
 		await peekRoom('W1N1', room => {

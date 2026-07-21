@@ -26,13 +26,13 @@ bindRenderer(PowerCreep, (creep, next, previousTime) => {
 		...next(),
 		...renderStore(creep.store),
 		actionLog,
-		name: creep.name,
+		ageTime: creep['#ageTime'],
 		className: creep.className,
-		level: creep.level,
-		powers: creep.powers,
 		hits: creep.hits,
 		hitsMax: creep.hitsMax,
-		ageTime: creep['#ageTime'],
+		level: creep.level,
+		name: creep.name,
+		powers: creep.powers,
 		user: creep['#user'],
 	};
 });

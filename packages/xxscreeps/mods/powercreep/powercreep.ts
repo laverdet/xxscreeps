@@ -15,7 +15,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { checkCarrier, checkDrop, checkPickup, checkTransfer, checkWithdraw } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OpenStore, calculateChecked } from 'xxscreeps/mods/classic/resource/store.js';
-import { checkIsActive } from 'xxscreeps/mods/classic/structure/structure.js';
+import { checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
@@ -293,8 +293,8 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	spawn(powerSpawn: StructurePowerSpawn) {
 		return chainIntentChecks(
 			() => isSpawned(this) ? C.ERR_BUSY : C.OK,
-			() => checkTarget(powerSpawn, StructurePowerSpawn),
-			() => this.my && powerSpawn.my ? C.OK : C.ERR_NOT_OWNER,
+			() => checkMyStructure(powerSpawn, StructurePowerSpawn),
+			() => this.my ? C.OK : C.ERR_NOT_OWNER,
 			() => checkIsActive(powerSpawn),
 			() => this.spawnCooldownTime > Date.now() ? C.ERR_TIRED : C.OK,
 			() => intents.save(powerSpawn, 'spawnPowerCreep', this.id));
@@ -332,7 +332,8 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 }
 
 // The overlay type of `room` lies for player ergonomics — an unspawned roster member has none.
-const isSpawned = (creep: PowerCreep) => (creep.room as unknown) !== undefined;
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+const isSpawned = (creep: PowerCreep) => creep.room !== undefined;
 
 /** Room verbs act only on a spawned creep; the account-only roster form is busy. */
 function checkSpawned(creep: PowerCreep) {

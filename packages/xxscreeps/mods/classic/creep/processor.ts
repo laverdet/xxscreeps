@@ -1,6 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { ActionLog, RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
+import type { AnyRoomObject } from 'xxscreeps/game/room/room.js';
 import type { Resource, ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -32,6 +33,7 @@ hooks.register('flushContext', () => {
 	pulledToPuller.clear();
 	pullerToPulled.clear();
 });
+export const kRetainActionsTime = 10;
 
 export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
@@ -87,7 +89,6 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 }
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
-	const kRetainActionsTime = 10;
 	const timeLimit = Game.time - kRetainActionsTime;
 
 	const length = actionLog.length;
@@ -226,11 +227,11 @@ export function isHostileInSafeMode(mover: CreepLib.Carrier) {
 /** Complete a resolved move; returns the destination tile's base fatigue. */
 export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearout: number) {
 	mover.room['#moveObject'](mover, pos);
-	const baseFatigue = (() => {
+	const baseFatigue = function() {
 		const road = lookForStructureAt(mover.room, pos, C.STRUCTURE_ROAD);
 		if (road) {
-			// Wear-out advances decay but must not slip past `Game.time` — the road's Tick handler
-			// throws on overdue `ticksToDecay`.
+			// Wear-out advances decay but must not slip past `Game.time` — the road's Tick handler throws
+			// on overdue `ticksToDecay`.
 			road['#nextDecayTime'] = Math.max(Game.time, road['#nextDecayTime'] - roadWearout);
 			return 1;
 		}
@@ -240,7 +241,7 @@ export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearo
 		} else {
 			return 2;
 		}
-	})();
+	}();
 	if (!isHostileInSafeMode(mover)) {
 		for (const object of mover.room['#lookAt'](pos)) {
 			if (object['#lookType'] === 'constructionSite' && object['#user'] !== mover['#user']) {
@@ -443,7 +444,7 @@ interface Teleportable extends RoomObject {
 // Move a creep to another room. Used by border crossing and by structures that transport creeps
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
-export function teleportCreep(creep: Teleportable & Parameters<typeof writeRoomObject>[0], next: RoomPosition, context: ProcessorContext) {
+export function teleportCreep(creep: AnyRoomObject & Teleportable, next: RoomPosition, context: ProcessorContext) {
 	if (creep.room === undefined as never) {
 		return;
 	}
