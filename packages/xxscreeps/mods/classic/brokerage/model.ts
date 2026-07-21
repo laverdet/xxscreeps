@@ -30,9 +30,10 @@ export type UserBrokerageChannel = Channel<
 
 export function loadTransactionBlob(shard: Shard, id: string) {
 	return loadUpgradedWithWriteBack(
+		shard.db,
+		upgrade,
 		() => shard.data.req(blobKey(id), { blob: true }),
 		blob => shard.data.set(blobKey(id), blob),
-		upgrade,
 	);
 }
 

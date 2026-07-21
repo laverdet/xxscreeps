@@ -245,8 +245,8 @@ export interface Config {
 	runner?: RunnerConfig;
 
 	/**
-	 * Where to save descriptions of the binary format used to write game data.
-	 * @default ./screeps/archive
+	 * Optional location to save archived binary format and Kaitai descriptors for inspection or
+	 * troubleshooting.
 	 */
 	schemaArchive?: string | undefined;
 
@@ -294,7 +294,6 @@ export const defaults = {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 		sandbox: 'isolated' as RunnerConfig['sandbox'],
 	},
-	schemaArchive: './screeps/archive',
 	database: {
 		data: './screeps/db?socket=.db',
 		lock: './screeps/.lock',

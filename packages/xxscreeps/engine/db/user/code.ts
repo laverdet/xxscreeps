@@ -27,14 +27,16 @@ export type CodePayload = Map<string, string | Uint8Array>;
 export async function loadBlobs(db: Database, userId: string, branchName: string): Promise<Schema.CodeBlobs | undefined> {
 	const [ buffers, strings ] = await Promise.all([
 		loadUpgradedWithWriteBack(
+			db,
+			Schema.upgradeBuffers,
 			() => db.data.get(buffersKey(userId, branchName), { blob: true }),
 			blob => db.data.set(buffersKey(userId, branchName), blob),
-			Schema.upgradeBuffers,
 		),
 		loadUpgradedWithWriteBack(
+			db,
+			Schema.upgradeStrings,
 			() => db.data.get(stringsKey(userId, branchName), { blob: true }),
 			blob => db.data.set(stringsKey(userId, branchName), blob),
-			Schema.upgradeStrings,
 		),
 	]);
 	if (buffers || strings) {
