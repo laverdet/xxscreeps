@@ -4,11 +4,11 @@ import { gzip } from 'node:zlib';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
-import { isValidSegmentId, kMaxMemorySegmentLength } from 'xxscreeps/mods/meta/memory/memory.js';
-import { getPublicSegmentChannel, loadMemorySegmentBlob, loadUserMemoryString, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
+import { isValidSegmentId, kMaxMemorySegmentLength } from './memory.js';
+import { loadMemorySegmentBlob, loadUserMemoryString, publicSegmentChannel, saveMemorySegmentBlob } from './model.js';
 
 const invalidPath = 'Incorrect memory path';
 const emptyObject = Object.create(null);
@@ -145,7 +145,7 @@ interface SegmentGetRequest {
 const segmentGetRequestSchema: JSONSchemaType<SegmentGetRequest> = {
 	type: 'object',
 	properties: {
-		segment: { type: 'string', pattern: '^\\d+$' },
+		segment: { type: 'string' },
 	},
 	required: [ 'segment' ],
 };
@@ -199,11 +199,9 @@ hooks.register('route', {
 		if (data.length > kMaxMemorySegmentLength) {
 			throw new Error('Memory segment size is too large');
 		}
-		// The publish wakes up subscribers, same as the runner connector does on save. Firing it
-		// alongside the write is safe because reads are synchronized on tick.
 		await Promise.all([
 			saveMemorySegmentBlob(context.shard, userId, segment, utf16ToBuffer(data)),
-			getPublicSegmentChannel(context.shard, userId).publish({ type: 'segment', id: segment }),
+			publicSegmentChannel(context.shard, userId).publish({ type: 'segment', id: segment }),
 		]);
 		return { ok: 1 };
 	}, { coerceTypes: true }),

@@ -1,4 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import * as assert from 'node:assert/strict';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -19,12 +20,13 @@ export type StoredForeignSegmentRequest = {
 	segmentId: number;
 };
 
-type PublicSegmentMessage =
+export type PublicSegmentChannel = Channel<
 	{ type: 'segment'; id: number } |
-	{ type: 'publicSet' };
+	{ type: 'publicSet' }
+>;
 
-export function getPublicSegmentChannel(shard: Shard, userId: string) {
-	return new Channel<PublicSegmentMessage>(shard.pubsub, `user/${userId}/publicSegments`);
+export function publicSegmentChannel(shard: Shard, userId: string): PublicSegmentChannel {
+	return new Channel(shard.pubsub, `user/${userId}/publicSegments`);
 }
 
 export function loadUserMemoryBlob(shard: Shard, user: string) {
@@ -46,18 +48,20 @@ export function deleteUserMemoryBlob(shard: Shard, userId: string) {
 	return shard.data.vDel(`user/${userId}/memory`);
 }
 
+const memorySegmentKey = (userId: string, segmentId: number) => `user/${userId}/segments/${segmentId}`;
+
 export function loadMemorySegmentBlob(shard: Shard, userId: string, segmentId: number) {
-	return shard.data.get(`user/${userId}/segment${segmentId}`, { blob: true });
+	return shard.data.get(memorySegmentKey(userId, segmentId), { blob: true });
 }
 
 export async function saveMemorySegmentBlob(shard: Shard, userId: string, segmentId: number, blob: Readonly<Uint8Array> | null) {
-	if (isValidSegmentId(segmentId)) {
-		const key = `user/${userId}/segment${segmentId}`;
-		if (blob === null || blob.byteLength === 0) {
-			await shard.data.vDel(key);
-		} else if (blob.byteLength <= kMaxMemorySegmentSize) {
-			return shard.data.set(key, blob);
-		}
+	assert.ok(isValidSegmentId(segmentId));
+	const key = memorySegmentKey(userId, segmentId);
+	if (blob === null || blob.byteLength === 0) {
+		return shard.data.vDel(key);
+	} else {
+		assert.ok(blob.byteLength <= kMaxMemorySegmentSize);
+		return shard.data.set(key, blob);
 	}
 }
 

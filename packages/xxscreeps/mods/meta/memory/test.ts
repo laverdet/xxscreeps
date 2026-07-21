@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { getPublicSegmentChannel, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import * as Spawn from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { publicSegmentChannel, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import { describe, simulate, test } from 'xxscreeps/test/index.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 // nb: Try not to include too much in this file because `sandbox` uses a fake function that gets
@@ -167,7 +167,7 @@ describe('mod/meta/memory', () => {
 		await tick(2);
 		// Simulates the memory-segment API endpoint: write the blob, then notify
 		await saveMemorySegmentBlob(shard, '200', 0, utf16ToBuffer('foo'));
-		await getPublicSegmentChannel(shard, '200').publish({ type: 'segment', id: 0 });
+		await publicSegmentChannel(shard, '200').publish({ type: 'segment', id: 0 });
 		await tick(2);
 	}));
 });
