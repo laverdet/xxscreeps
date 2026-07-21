@@ -1,3 +1,4 @@
+import type { StrongholdStructure, StrongholdTemplate } from './strongholds.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
@@ -9,21 +10,24 @@ import { optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { release, reserve } from 'xxscreeps/mods/classic/controller/processor.js';
 import * as Creep from 'xxscreeps/mods/classic/creep/creep.js';
-import { flushActionLog } from 'xxscreeps/mods/classic/creep/processor.js';
+import { buryCreep, flushActionLog } from 'xxscreeps/mods/classic/creep/processor.js';
 import { create as createRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
-import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
+import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { birthSpawnCreep } from 'xxscreeps/mods/classic/spawn/processor.js';
 import { Spawning } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
+import { calcReward, templates } from './strongholds.js';
 
 // Register invader NPC
 registerNPC('2', loop);
@@ -251,28 +255,93 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 	}
 });
 
-// The structures a deployed stronghold spawns around its core. A stub layout; the canonical bunker
-// templates and their reward containers land in a follow-up. Decaying peers are pinned to the
-// collapse time so they don't decay (and read a past expiry) while the room sleeps until collapse.
-function strongholdTemplate(pos: RoomPosition, collapseTime: number) {
-	const tower = createTower(new RoomPosition(pos.x, pos.y - 1, pos.roomName), '2');
-	const rampart = createRampart(new RoomPosition(pos.x + 1, pos.y, pos.roomName), '2');
-	const container = createContainer(new RoomPosition(pos.x - 1, pos.y, pos.roomName));
-	const road = createRoad(new RoomPosition(pos.x, pos.y + 1, pos.roomName));
-	rampart['#nextDecayTime'] = collapseTime;
-	container['#nextDecayTime'] = collapseTime;
-	road['#nextDecayTime'] = collapseTime;
-	return [ tower, rampart, container, road ];
+// One structure of a deployed stronghold, created at its template position with the per-type loot
+// and hit points. A decaying peer is pinned to the collapse time so it never reads a past expiry
+// while the room sleeps until collapse. The caller stamps the shared collapse timer and id.
+function createPeer(type: StrongholdStructure['type'], pos: RoomPosition, rewardLevel: number, collapseTime: number) {
+	switch (type) {
+		case C.STRUCTURE_RAMPART: {
+			const rampart = createRampart(pos, '2');
+			rampart.hits = C.STRONGHOLD_RAMPART_HITS[rewardLevel]!;
+			rampart['#nextDecayTime'] = collapseTime;
+			return rampart;
+		}
+		case C.STRUCTURE_TOWER: {
+			const tower = createTower(pos, '2');
+			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_CAPACITY);
+			return tower;
+		}
+		case C.STRUCTURE_CONTAINER: {
+			const container = createContainer(pos);
+			for (const [ resource, amount ] of calcReward(rewardLevel)) {
+				container.store['#add'](resource, amount);
+			}
+			// Reward containers are withdraw-only
+			container.store['#capacity'] = 0;
+			container['#nextDecayTime'] = collapseTime;
+			return container;
+		}
+		case C.STRUCTURE_ROAD: {
+			const road = createRoad(pos);
+			road['#nextDecayTime'] = collapseTime;
+			return road;
+		}
+	}
+}
+
+// The structures a deployed stronghold spawns around its core, per its bunker template. Template
+// peers freely share a tile (a rampart over a tower, container, or road).
+function *strongholdTemplate(core: StructureInvaderCore, template: StrongholdTemplate, collapseTime: number) {
+	const { rewardLevel } = template;
+	for (const entry of template.structures) {
+		const pos = new RoomPosition(core.pos.x + entry.dx, core.pos.y + entry.dy, core.pos.roomName);
+		const peer = createPeer(entry.type, pos, rewardLevel, collapseTime);
+		peer['#collapseTime'] = collapseTime;
+		peer['#strongholdId'] = core.id;
+		yield peer;
+	}
+}
+
+// Crush whatever the template lands on: creeps on its tiles die, construction sites refund half
+// their progress as dropped energy, and player-buildable structures are destroyed. Runs before any
+// peer is inserted, so peers never crush each other on shared tiles.
+function crushStrongholdTiles(core: StructureInvaderCore, template: StrongholdTemplate) {
+	const { room } = core;
+	const objects = Fn.pipe(
+		template.structures,
+		$$ => Fn.map($$, entry => new RoomPosition(core.pos.x + entry.dx, core.pos.y + entry.dy, core.pos.roomName)),
+		$$ => Fn.map($$, pos => [ pos['#id'], pos ] as const),
+		$$ => new Map($$),
+		$$ => $$.values(),
+		$$ => Fn.transform($$, pos => room['#lookAt'](pos)));
+	for (const object of objects) {
+		if (object instanceof Creep.Creep) {
+			buryCreep(object);
+		} else if (object instanceof ConstructionSite) {
+			if (object.progress > 1) {
+				dropResource(object.pos, C.RESOURCE_ENERGY, Math.floor(object.progress / 2));
+			}
+			room['#removeObject'](object);
+		} else if (object instanceof Structure && object.structureType in C.CONSTRUCTION_COST) {
+			object['#destroy']();
+		}
+	}
 }
 
 // Deploy the stronghold: drop the deploy timer, start the shared collapse timer, and spawn the
-// template peers carrying that same timer so the whole stronghold vanishes together.
+// template peers carrying that same timer and id so the whole stronghold vanishes together.
 function deployStronghold(core: StructureInvaderCore, context: ProcessorContext) {
+	const templateName = core['#templateName'];
+	if (templateName === undefined) {
+		throw new Error('Deploying invader core has no stronghold template');
+	}
+	const template = templates[templateName];
 	core['#deployTime'] = 0;
+	core['#strongholdId'] = core.id;
 	const duration = Math.round(C.STRONGHOLD_DECAY_TICKS * (0.9 + Math.random() * 0.2));
 	const collapseTime = core['#collapseTime'] = Game.time + duration;
-	for (const peer of strongholdTemplate(core.pos, collapseTime)) {
-		peer['#collapseTime'] = collapseTime;
+	crushStrongholdTiles(core, template);
+	for (const peer of strongholdTemplate(core, template, collapseTime)) {
 		core.room['#insertObject'](peer);
 	}
 	context.wakeAt(collapseTime);
