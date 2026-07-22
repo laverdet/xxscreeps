@@ -22,7 +22,7 @@ const wallSchema = registerVariant('Room.objects', compose(wallShape, StructureW
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		defense: [
 			typeof rampartSchema,

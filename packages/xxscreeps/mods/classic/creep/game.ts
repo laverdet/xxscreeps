@@ -50,9 +50,10 @@ declare module 'xxscreeps/game/game.js' {
 	}
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { creep: typeof find }
 	interface Look { creep: typeof look }
+
 	interface RoomSchema {
 		creep: [
 			typeof creepSchema,

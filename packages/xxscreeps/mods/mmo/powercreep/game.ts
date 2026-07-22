@@ -59,7 +59,7 @@ const find = registerFindHandlers({
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [ registerLook<PowerCreep>()(C.LOOK_POWER_CREEPS) ];
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { powerCreep: typeof find }
 	interface Look { powerCreep: typeof look }
 	interface RoomSchema { powerCreep: [ typeof powerCreepSchema ] }

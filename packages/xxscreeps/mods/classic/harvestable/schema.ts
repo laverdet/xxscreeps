@@ -21,6 +21,6 @@ declare module 'xxscreeps/game/schema.js' {
 	interface ActionLogSchema { harvestable: typeof actionSchema }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { harvestable: typeof harvestEventSchema }
 }

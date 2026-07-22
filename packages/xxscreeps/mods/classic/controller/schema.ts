@@ -74,7 +74,7 @@ const upgradeControllerEventSchema = registerVariant('Room.eventLog', declare('U
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		controllerSchema: [
 			typeof attackControllerEventSchema,

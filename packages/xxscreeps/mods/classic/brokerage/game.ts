@@ -45,6 +45,8 @@ declare module 'xxscreeps/game/room/index.js' {
 		 */
 		terminal?: StructureTerminal | undefined;
 	}
+}
 
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { terminal: typeof terminalSchema }
 }

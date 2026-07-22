@@ -40,6 +40,6 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { ConstructionSite: typeof ConstructionSite }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { construction: [ typeof siteSchema ] }
 }

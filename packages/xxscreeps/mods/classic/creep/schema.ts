@@ -129,7 +129,7 @@ const exitEventSchema = registerVariant('Room.eventLog', declare('ExitEvent', st
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface CreepSchema {}
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		creepSchema: [
 			typeof transferEventSchema,

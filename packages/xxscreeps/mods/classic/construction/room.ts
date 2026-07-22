@@ -24,7 +24,7 @@ const find = registerFindHandlers({
 // Register LOOK_ type for `ConstructionSite`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { construction: typeof find }
 	interface Look { construction: typeof look }
 }

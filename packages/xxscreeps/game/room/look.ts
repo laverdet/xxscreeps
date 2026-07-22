@@ -1,6 +1,7 @@
 import type { AnyRoomObject } from './room.js';
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { Look } from 'xxscreeps:mods/game';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, fetchPositionArgument, iterateArea } from 'xxscreeps/game/position.js';
@@ -10,8 +11,6 @@ import { Room } from './room.js';
 import { lookConstants } from './symbols.js';
 
 // All LOOK_ constants
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface Look {}
 export type LookConstants = LookInfo['look'] | typeof C.LOOK_TERRAIN;
 
 // Converts a LOOK_ constant to result type

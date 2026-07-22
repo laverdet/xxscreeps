@@ -54,6 +54,6 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructurePowerSpawn: typeof StructurePowerSpawn }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { powerspawn: [ typeof powerSpawnSchema ] }
 }

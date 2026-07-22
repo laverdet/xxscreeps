@@ -37,6 +37,6 @@ const roomSchema = registerStruct('Room', {
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { sourceSchema: [ typeof roomSchema ] }
 }

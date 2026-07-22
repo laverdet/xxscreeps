@@ -48,14 +48,11 @@ const resourceSchema = registerVariant('Room.objects', compose(resourceShape, Re
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { resource: [ typeof containerSchema, typeof resourceSchema ] }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { resource: typeof find }
 	interface Look {
 		resource: typeof look;
 		energy: typeof lookEnergy;
 	}
+	interface RoomSchema { resource: [ typeof containerSchema, typeof resourceSchema ] }
 }

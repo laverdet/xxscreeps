@@ -33,7 +33,7 @@ declare module 'xxscreeps/game/runtime.js' {
 	}
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { nuker: typeof find }
 	interface Look { nuker: typeof look }
 	interface RoomSchema { nuker: [ typeof nukerSchema, typeof nukeSchema ] }

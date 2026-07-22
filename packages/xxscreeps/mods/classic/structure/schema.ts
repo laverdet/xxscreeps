@@ -59,7 +59,7 @@ export interface StructureSchema {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OwnedStructureSchema {}
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		structureSchema: [ typeof destroyedEventSchema ];
 	}

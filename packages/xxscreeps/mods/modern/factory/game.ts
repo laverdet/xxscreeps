@@ -8,6 +8,6 @@ const factorySchema = registerVariant('Room.objects', compose(factoryShape, Stru
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { factory: [ typeof factorySchema ] }
 }

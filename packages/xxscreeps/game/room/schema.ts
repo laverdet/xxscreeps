@@ -1,4 +1,4 @@
-import type { RoomSchema } from './index.js';
+import type { RoomSchema } from 'xxscreeps:mods/game';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { structForPath, variantForPath } from 'xxscreeps/engine/schema/index.js';
 import { compose, declare, struct, variant, vector } from 'xxscreeps/schema/index.js';

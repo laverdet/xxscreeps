@@ -36,6 +36,6 @@ declare module 'xxscreeps/game/schema.js' {
 	interface ActionLogSchema { combat: typeof actionSchema }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { combat: [ typeof attackEventSchema, typeof healEventSchema ] }
 }

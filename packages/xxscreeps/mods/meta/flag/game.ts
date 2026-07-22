@@ -136,7 +136,7 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Flag: typeof Flag }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { flag: typeof find }
 	interface Look { flag: typeof look }
 }

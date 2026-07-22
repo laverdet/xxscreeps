@@ -72,7 +72,7 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureController: typeof StructureController }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		controller: [
 			typeof roomSchema,

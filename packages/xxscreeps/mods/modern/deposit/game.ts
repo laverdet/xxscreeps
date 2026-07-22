@@ -18,7 +18,7 @@ const depositSchema = registerVariant('Room.objects', compose(depositShape, Depo
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { deposit: typeof find }
 	interface Look { deposit: typeof look }
 	interface RoomSchema { deposit: [ typeof depositSchema ] }

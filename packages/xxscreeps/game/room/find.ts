@@ -1,13 +1,12 @@
 import type { Room } from './index.js';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
+import type { Find } from 'xxscreeps:mods/game';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface Find {}
 export type FindHandler = (room: Room) => readonly any[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
@@ -54,6 +53,7 @@ const find = registerFindHandlers({
 		...room.find(C.FIND_EXIT_LEFT),
 	],
 });
-declare module 'xxscreeps/game/room/index.js' {
+
+declare module 'xxscreeps:mods/game' {
 	interface Find { exit: typeof find }
 }

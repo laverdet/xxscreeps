@@ -59,10 +59,8 @@ declare module 'xxscreeps/game/runtime.js' {
 	}
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { structure: typeof find }
 	interface Look { structure: typeof look }
-	interface RoomSchema {
-		structure: [ typeof ruinSchema ];
-	}
+	interface RoomSchema { structure: [ typeof ruinSchema ] }
 }

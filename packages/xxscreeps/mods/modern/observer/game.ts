@@ -21,6 +21,6 @@ declare module 'xxscreeps/game/runtime.js' {
 	}
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { observer: [ typeof observerSchema, typeof observerSpySchema ] }
 }

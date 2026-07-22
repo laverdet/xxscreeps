@@ -53,7 +53,7 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface Find { mineral: typeof find }
 	interface Look { mineral: typeof look }
 	interface RoomSchema { mineral: [ typeof extractorSchema, typeof mineralSchema ] }

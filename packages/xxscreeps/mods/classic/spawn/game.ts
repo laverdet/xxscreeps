@@ -66,7 +66,6 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 declare module 'xxscreeps/game/room/index.js' {
-	interface Find { spawn: typeof find }
 	interface Room {
 		/**
 		 * Total amount of energy available in all spawns and extensions in the room.
@@ -82,5 +81,9 @@ declare module 'xxscreeps/game/room/index.js' {
 		 */
 		energyCapacityAvailable: number;
 	}
+}
+
+declare module 'xxscreeps:mods/game' {
+	interface Find { spawn: typeof find }
 	interface RoomSchema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

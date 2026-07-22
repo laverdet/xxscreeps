@@ -69,7 +69,7 @@ declare module 'xxscreeps/game/schema.js' {
 	interface ActionLogSchema { construction: typeof actionSchema }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema {
 		constructionSchema: [
 			typeof buildEventSchema,

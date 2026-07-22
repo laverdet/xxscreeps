@@ -16,6 +16,6 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureRoad: typeof StructureRoad }
 }
 
-declare module 'xxscreeps/game/room/index.js' {
+declare module 'xxscreeps:mods/game' {
 	interface RoomSchema { road: typeof schema }
 }
