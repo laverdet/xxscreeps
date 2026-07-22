@@ -2,7 +2,7 @@ import type { EnumTypes, Format, Interceptor, Primitive, UnionDeclaration } from
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { compositeComparator, mappedNumericComparator, mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { bifurcate, getOrSet } from 'xxscreeps/utility/utility.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 
 export const kPointerSize = 4;
@@ -252,12 +252,10 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 					Iterable<[ string | symbol, Format ] | [ string, UnionDeclaration ]>,
 				$$ => Fn.reject($$, ([ key ]) => key === Variant),
 				$$ => [ ...$$ ]);
-			const [ unionReferences, memberDeclarations ] = bifurcate(allEntries,
-				(entry): entry is [ string, UnionDeclaration ] => typeof entry[1] === 'object' && 'union' in entry[1]);
-			const entries = memberDeclarations.map(([ key, member ]) => ({
-				key,
-				...getLayout(member, cache),
-			}));
+			const unionLength = Fn.partition(allEntries, entry => typeof entry[1] === 'object' && 'union' in entry[1]);
+			const unionReferences = Fn.slice(allEntries, 0, unionLength) as Iterable<[ string, UnionDeclaration ]>;
+			const memberDeclarations = Fn.slice(allEntries, unionLength) as Iterable<[ string | symbol, Format ]>;
+			const entries = [ ...Fn.map(memberDeclarations, ([ key, member ]) => ({ key, ...getLayout(member, cache) })) ];
 
 			// Sort members for struct packing
 			entries.sort(compositeComparator([
