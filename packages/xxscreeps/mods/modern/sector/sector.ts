@@ -1,5 +1,6 @@
 import type { SectorControl } from './schema.js';
 import type { World } from 'xxscreeps/game/map.js';
+import type { HighwayOrientation } from 'xxscreeps/scripts/symbols.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeAbstractIterateWithRangeTo, makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import { makeSignedRoomName, parseSignedRoomName, roomLinearDistance } from 'xxscreeps/game/room/name.js';
@@ -19,6 +20,45 @@ export function *iterateSectors(world: World): IterableIterator<[ center: string
 // residue) so the test holds at any world size rather than a fixed half-world offset.
 function isCentralAxis(coord: number): boolean {
 	return coord < 0 ? coord % 10 === -6 : coord % 10 === 5;
+}
+
+// A highway axis sits exactly 5 rooms from a sector-center axis (the `{..}0` boundary). Defined off
+// `isCentralAxis` so the W/N sign phase-shift is handled in one place rather than re-derived.
+function isHighwayAxis(coord: number): boolean {
+	return isCentralAxis(coord - 5) || isCentralAxis(coord + 5);
+}
+
+// The 3-wide central band of a sector -- printed digits 4, 5, 6, sign-agnostic so W4 and E4 both
+// yield 4. Both axes in-band marks the 3x3 sector core: the center plus its 8 source-keeper rooms.
+function isCenterNineAxis(coord: number): boolean {
+	const digit = (coord < 0 ? -1 - coord : coord) % 10;
+	return digit >= 4 && digit <= 6;
+}
+
+export type RoomType = 'normal' | 'highway' | 'sourceKeeper' | 'center';
+
+/** Classifies a room by its role in the mod-10 sector template. */
+export function roomType(roomName: string): RoomType {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	if (isHighwayAxis(rx) || isHighwayAxis(ry)) {
+		return 'highway';
+	} else if (isCentralAxis(rx) && isCentralAxis(ry)) {
+		return 'center';
+	} else if (isCenterNineAxis(rx) && isCenterNineAxis(ry)) {
+		return 'sourceKeeper';
+	}
+	return 'normal';
+}
+
+// Which sector-facing borders a highway room walls off: rooms on a vertical highway axis bound
+// their east+west sides, rooms on a horizontal axis their top+bottom, and rooms on both axes are
+// the crossings whose masses sit in the four corners.
+export function highwayOrientation(roomName: string): HighwayOrientation {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	if (isHighwayAxis(rx)) {
+		return isHighwayAxis(ry) ? 'crossing' : 'vertical';
+	}
+	return 'horizontal';
 }
 
 const iterateRoomRing = makeAbstractIterateWithRangeTo(-Infinity, Infinity);
