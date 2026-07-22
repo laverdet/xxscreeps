@@ -1,5 +1,6 @@
 import type { ExitMap, GenerateRoomOptions, HighwayOrientation, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { RoomType } from 'xxscreeps/mods/modern/sector/sector.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -7,10 +8,10 @@ import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition, iterateArea, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
+import { kMaxWorldSize, makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
-import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
+import { computeRoomMeta, highwayOrientation, roomType } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import { hashCombine, hashMix } from 'xxscreeps/utility/utility.js';
@@ -594,7 +595,6 @@ const kMaxGenerateAttempts = 50;
 // forever) after a bounded number of attempts.
 function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions) {
 	const generators = [ ...hooks.map('roomGenerator') ].sort(mappedNumericComparator(generator => generator.order));
-	const { rx, ry } = parseRoomName(roomName);
 	const swampType = options.swampType ??
 		(options.highway ? rollHighwaySwamp() : Math.floor(Math.random() * 14));
 	// Highway terrain is a deterministic function of world position, so a retry would rebuild it
@@ -603,6 +603,7 @@ function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions)
 	for (let attempt = 0; attempt < maxAttempts; ++attempt) {
 		const terrain = gridToTerrain(function() {
 			if (options.highway) {
+				const { rx, ry } = parseRoomName(roomName);
 				return genHighwayTerrain(exits, rx, ry, options.highway, swampType);
 			}
 			const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
@@ -693,6 +694,33 @@ function buildRoom(
 	return { room, terrain };
 }
 
+// Inserts a freshly built room's record into the terrain map with its authored geometry. Sector
+// meta starts empty -- it can only be stamped correctly once every room of the batch is in the
+// map, so `refreshRoomMeta` owns the stamping.
+function commitRoom(terrainMap: WorldTerrain, roomName: string, terrain: Terrain) {
+	terrainMap.set(roomName, { exits: packExits(terrain), terrain, sectors: [], sectorControl: undefined });
+}
+
+// Sector relationships are stored bidirectionally, so a room landing can extend the records of
+// rooms generated earlier -- an existing member gains this center, a center gains this member.
+// Restamps the geometry of every record within sector range of the given rooms.
+function refreshRoomMeta(terrainMap: WorldTerrain, roomNames: Iterable<string>) {
+	const allNames = new Set(terrainMap.keys());
+	const touched = new Set<string>();
+	for (const roomName of roomNames) {
+		const { rx, ry } = parseSignedRoomName(roomName);
+		for (const [ xx, yy ] of iterateRoomsInRange(rx, ry, 5)) {
+			touched.add(makeSignedRoomName(xx, yy));
+		}
+	}
+	for (const name of touched) {
+		const record = terrainMap.get(name);
+		if (record) {
+			terrainMap.set(name, { ...record, ...computeRoomMeta(name, allNames) });
+		}
+	}
+}
+
 // A freshly-created shard has no world terrain blob; the strict (redis) provider then throws
 // "terrain does not exist" out of loadWorld. Seed an empty terrain map so the first generated room
 // can bootstrap the world. (The local provider tolerates the missing key, masking this.)
@@ -732,18 +760,157 @@ export async function generateRoom(
 
 	const terrainMap = new Map(world.terrain);
 	const { room, terrain } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName));
-	const roomNames = new Set([ ...terrainMap.keys(), roomName ]);
-	terrainMap.set(roomName, { exits: packExits(terrain), terrain, ...computeRoomMeta(roomName, roomNames) });
-	// Sector relationships are stored bidirectionally, so a room landing can extend the records of
-	// rooms generated earlier -- an existing member gains this center, a center gains this member.
-	for (const [ xx, yy ] of iterateRoomsInRange(rx, ry, 5)) {
-		const neighborName = makeSignedRoomName(xx, yy);
-		const record = terrainMap.get(neighborName);
-		if (record && neighborName !== roomName) {
-			terrainMap.set(neighborName, { ...record, ...computeRoomMeta(neighborName, roomNames) });
-		}
-	}
+	commitRoom(terrainMap, roomName, terrain);
+	refreshRoomMeta(terrainMap, [ roomName ]);
 	await flushRooms(shard, terrainMap, [ room ]);
 
 	return room;
+}
+
+interface SectorOrigin {
+	rx: number;
+	ry: number;
+	// Signed-coordinate direction of increasing printed room numbers, per axis.
+	xStep: number;
+	yStep: number;
+}
+
+// A sector's origin is its outer highway ring corner nearest the world axes, so it sits at printed
+// multiples of 10 on both axes; the sector spans printed coordinates `n..n+10` away from the axes.
+function parseSectorOrigin(name: string): SectorOrigin {
+	const { rx, ry } = parseSignedRoomName(name);
+	if (Number.isNaN(rx) || Number.isNaN(ry)) {
+		throw new Error(`Invalid room name: ${name}`);
+	}
+	const xNum = rx < 0 ? -1 - rx : rx;
+	const yNum = ry < 0 ? -1 - ry : ry;
+	if (xNum % 10 !== 0 || yNum % 10 !== 0) {
+		throw new Error(`Sector origin must be at a multiple of 10: ${name}`);
+	}
+	if (xNum + 10 >= kMaxWorldSize >>> 1 || yNum + 10 >= kMaxWorldSize >>> 1) {
+		throw new Error(`Sector ${name} extends past world bounds`);
+	}
+	return { rx, ry, xStep: rx < 0 ? -1 : 1, yStep: ry < 0 ? -1 : 1 };
+}
+
+// Per-type object loadouts. Highways are object-free open corridors; source-keeper rooms hold
+// three guarded sources and a guarded mineral with no controller; center rooms are the same but
+// keeper-free; normal rooms keep the caller/default loadout (controller + 1-2 sources + mineral).
+const roomTypeTemplates: Record<RoomType, GenerateRoomOptions> = {
+	center: { controller: false, keeperLairs: false, sources: 3 },
+	highway: { controller: false, keeperLairs: false, mineral: false, sources: 0 },
+	normal: {},
+	sourceKeeper: { controller: false, keeperLairs: true, sources: 3 },
+};
+
+interface SectorDir {
+	dxx: number;
+	dyy: number;
+	// The neighbor's border shared with this room, as its `packExits` bit.
+	sharedExitBit: number;
+}
+
+const kSectorDirs: Record<keyof ExitMap, SectorDir> = {
+	top: { dxx: 0, dyy: -1, sharedExitBit: 4 },
+	right: { dxx: 1, dyy: 0, sharedExitBit: 8 },
+	bottom: { dxx: 0, dyy: 1, sharedExitBit: 1 },
+	left: { dxx: -1, dyy: 0, sharedExitBit: 2 },
+};
+
+// The live world walls off some borders where both sides carry a wall mass: a normal room seals
+// about one of its four sides on average, and a highway seals its mass sides at much the same
+// rate. A void border between two sealable sides seals with this probability; the neighbor
+// inherits the seal when it builds.
+const kSealSideProbability = 0.3;
+
+// A highway may seal only its mass sides (the lane must run through); a normal room may seal a
+// side facing another normal or highway room, but never the sector core; source-keeper and center
+// rooms never seal, since walling off the core would strand the sector's guarded rooms.
+function isSealableSide(type: RoomType, dir: keyof ExitMap, roomName: string, neighborName: string, hasController: boolean): boolean {
+	if (type === 'highway') {
+		const orientation = highwayOrientation(roomName);
+		return orientation === 'vertical' ? dir === 'left' || dir === 'right' :
+			orientation === 'horizontal' ? dir === 'top' || dir === 'bottom' :
+			false;
+	} else if (type === 'normal' && hasController) {
+		const neighborType = roomType(neighborName);
+		return neighborType === 'normal' || neighborType === 'highway';
+	}
+	return false;
+}
+
+// Builds every not-yet-existing room of one sector into the shared accumulators -- terrain into
+// `terrainMap`, names into `existing` so later rooms see them as neighbors -- and yields the new
+// rooms. The range is the inclusive 11x11 block from the origin, so the sector is bounded by its
+// full highway ring on all four sides -- the origin-corner rings plus the rings shared with the
+// next sectors. Already-existing rooms are skipped, so the shared rings are idempotent across
+// adjacent sectors and partially-built sectors can be re-entered. No storage I/O; the caller
+// flushes once.
+function *accumulateSector(
+	origin: SectorOrigin,
+	options: GenerateRoomOptions | undefined,
+	terrainMap: WorldTerrain,
+	existing: Set<string>,
+): Iterable<Room> {
+	for (const [ rx, ry ] of iterateRoomsInRange(origin.rx + 5 * origin.xStep, origin.ry + 5 * origin.yStep, 5)) {
+		const roomName = makeSignedRoomName(rx, ry);
+		if (existing.has(roomName)) {
+			continue;
+		}
+		const type = roomType(roomName);
+		const template = roomTypeTemplates[type];
+		const hasController = (template.controller ?? options?.controller) !== false;
+
+		// Roll seals on void borders; sides facing a built room inherit its border instead.
+		const sealed: (keyof ExitMap)[] = [];
+		let openSides = 0;
+		for (const dir of [ 'top', 'right', 'bottom', 'left' ] as const) {
+			const sectorDir = kSectorDirs[dir];
+			const neighborName = makeSignedRoomName(rx + sectorDir.dxx, ry + sectorDir.dyy);
+			const record = terrainMap.get(neighborName);
+			if (record) {
+				if ((record.exits & sectorDir.sharedExitBit) !== 0) {
+					openSides += 1;
+				}
+			} else if (isSealableSide(type, dir, roomName, neighborName, hasController) &&
+				Math.random() < kSealSideProbability) {
+				sealed.push(dir);
+			} else {
+				openSides += 1;
+			}
+		}
+		// Never wall off all four sides -- reopen a rolled seal when no border can carry an exit. A
+		// re-entered hole whose four built neighbors all sealed toward it has nothing to reopen and
+		// still generates a zero-exit room; rare, locally unfixable (the neighbors' terrain is already
+		// authored), and the live world does carry fully sealed rooms.
+		if (openSides === 0 && sealed.length > 0) {
+			sealed.shift();
+		}
+
+		const roomOptions: GenerateRoomOptions = {
+			...type === 'normal' && options,
+			...template,
+			...type === 'highway' && { highway: highwayOrientation(roomName) },
+			exits: Fn.fromEntries(Fn.map(sealed, dir => [ dir, [] ])),
+		};
+		const { room, terrain } = buildRoom(roomName, roomOptions, neighborName => terrainMap.get(neighborName));
+		commitRoom(terrainMap, roomName, terrain);
+		existing.add(roomName);
+		yield room;
+	}
+}
+
+export async function generateSector(
+	shard: Shard,
+	sectorName: string,
+	options?: GenerateRoomOptions,
+): Promise<Room[]> {
+	const origin = parseSectorOrigin(sectorName);
+	await ensureWorldTerrain(shard);
+	const [ world, existingRooms ] = await Promise.all([ shard.loadWorld(), shard.data.sMembers('rooms') ]);
+	const terrainMap = new Map(world.terrain);
+	const rooms = [ ...accumulateSector(origin, options, terrainMap, new Set(existingRooms)) ];
+	refreshRoomMeta(terrainMap, Fn.map(rooms, room => room.name));
+	await flushRooms(shard, terrainMap, rooms);
+	return rooms;
 }
