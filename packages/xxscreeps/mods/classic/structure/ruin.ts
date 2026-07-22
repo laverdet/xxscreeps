@@ -1,9 +1,9 @@
 import type { Store } from 'xxscreeps/mods/classic/resource/store.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';
 

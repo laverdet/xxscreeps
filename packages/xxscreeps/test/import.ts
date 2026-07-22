@@ -5,7 +5,6 @@ import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
@@ -15,6 +14,7 @@ import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/classic/source/source.js';
 import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import * as C from 'xxscreeps:mods/constants';
 import { testRedis } from './context.js';
 
 // Read file

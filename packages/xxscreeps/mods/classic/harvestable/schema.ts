@@ -1,7 +1,7 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { constant, declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'harvest');

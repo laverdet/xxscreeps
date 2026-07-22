@@ -1,6 +1,6 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { CostMatrix } from 'xxscreeps/game/pathfinder/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 let cached: undefined | {
 	costMatrix: CostMatrix;

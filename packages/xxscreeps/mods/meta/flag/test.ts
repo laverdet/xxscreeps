@@ -1,8 +1,8 @@
 import type { Color } from './flag.js';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Flag, checkCreateFlag } from './flag.js';
 
 describe('mods/meta/flag', () => {

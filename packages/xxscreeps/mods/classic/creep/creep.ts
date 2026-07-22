@@ -10,7 +10,6 @@ import type { PolyStyle } from 'xxscreeps/mods/meta/visual/visual.js';
 import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, createRoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
@@ -25,6 +24,7 @@ import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { creepShape } from './schema.js';
 import { Tombstone } from './tombstone.js';
 

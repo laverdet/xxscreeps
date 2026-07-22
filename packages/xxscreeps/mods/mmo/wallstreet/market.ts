@@ -1,11 +1,11 @@
 import type { Order, OrderType } from './order.js';
 import type { StructureTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Market } from 'xxscreeps/mods/classic/brokerage/market.js';
 import { filter } from 'xxscreeps/utility/iteratee.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Orders } from './order.js';
 
 /**

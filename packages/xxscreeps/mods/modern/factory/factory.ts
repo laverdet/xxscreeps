@@ -1,7 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -9,6 +8,7 @@ import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { factoryShape } from './schema.js';
 
 /**

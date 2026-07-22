@@ -28,6 +28,7 @@ const getRuntimeSource = runOnce(() => {
 			process: 'xxscreeps/driver/sandbox/isolated/process.js',
 			'/xxscreeps:private-symbol': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 			'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
+			'xxscreeps/game/constants/index.js': import.meta.resolve('xxscreeps/game/constants/index.js'),
 		},
 		externals: ({ request }) => {
 			switch (request) {

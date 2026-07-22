@@ -1,10 +1,10 @@
 import type { StructureExtension } from './extension.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createExtension } from './extension.js';
 import { StructureSpawn, create } from './spawn.js';
 

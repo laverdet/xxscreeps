@@ -1,9 +1,9 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat, optionalResourceEnumFormat, resourceEnumFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { constant, declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 const creepBodyShape = struct({
 	/**

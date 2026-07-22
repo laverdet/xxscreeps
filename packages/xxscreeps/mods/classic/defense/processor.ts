@@ -1,5 +1,4 @@
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
@@ -7,6 +6,7 @@ import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/class
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureRampart } from './rampart.js';
 import { StructureTower, checkTower } from './tower.js';
 

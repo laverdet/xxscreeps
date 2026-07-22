@@ -33,7 +33,12 @@ const makeMakeGenericSource = (
 			: $$ => Fn.join($$, '\n') + '\n');
 
 // xxscreeps:mods/constants
-const makeConstantsSource = makeMakeGenericSource(({ js }) => `export * from ${JSON.stringify(js)};`);
+const makeConstantsSource = makeMakeGenericSource(
+	({ js }) => `export * from ${JSON.stringify(js)};`,
+	sources =>
+		`export * from 'xxscreeps/game/constants/index.js';
+		${sources.join('\n')}`,
+);
 
 // xxscreeps:mods/schema
 const makeSchemaSource = makeMakeGenericSource(({ js }) => `import ${JSON.stringify(js)};`);

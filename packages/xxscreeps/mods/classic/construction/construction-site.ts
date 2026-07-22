@@ -1,12 +1,12 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { constructionSiteShape } from './schema.js';
 import { structureFactories } from './symbols.js';
 

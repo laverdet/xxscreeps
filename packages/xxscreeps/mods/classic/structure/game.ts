@@ -1,9 +1,9 @@
 import type { AnyStructure } from './structure.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Ruin } from './ruin.js';
 import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';

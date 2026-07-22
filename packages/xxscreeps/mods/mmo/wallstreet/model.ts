@@ -3,7 +3,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { UpdateSchemaBlob, loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Order, orderAmountOffsetOf, orderSchemaVersion, readOrder, upgradeOrder, writeOrder } from './order.js';
 
 // -- User credits --

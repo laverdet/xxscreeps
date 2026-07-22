@@ -1,13 +1,13 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { lookForStructureAt, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { create as createPowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
 import { createPowerCreep, read, write } from './powercreep.js';
 

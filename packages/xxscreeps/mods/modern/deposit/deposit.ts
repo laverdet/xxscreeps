@@ -1,9 +1,9 @@
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerHarvestable } from 'xxscreeps/mods/classic/harvestable/game.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { depositShape } from './schema.js';
 
 /**

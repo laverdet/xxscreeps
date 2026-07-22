@@ -1,7 +1,7 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructurePowerSpawn } from './powerspawn.js';
 import { powerSpawnShape } from './schema.js';
 

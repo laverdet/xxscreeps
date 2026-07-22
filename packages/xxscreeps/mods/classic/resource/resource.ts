@@ -1,11 +1,11 @@
 import type { ResourceSchema } from './schema.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject, createRoomObject } from 'xxscreeps/game/object.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { resourceEnumFormat } from './schema.js';
 
 // Enum schema for resource types

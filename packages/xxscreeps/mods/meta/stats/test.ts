@@ -1,11 +1,11 @@
 import { mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { parseStatLayer, pendingBucketOffset, readRoomLayer, readRoomPunchcard, readUserTotals, removeAllForUser, statIntervals, writeRoomBucket } from './model.js';
 import { statNames } from './schema.js';
 

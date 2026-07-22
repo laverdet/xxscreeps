@@ -2,7 +2,6 @@ import type { RoomObject, RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
@@ -11,6 +10,7 @@ import { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { invaderCoreShape } from './schema.js';
 
 /**

@@ -1,7 +1,7 @@
 import type { StructureInvaderCore } from '../invader-core.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import findAttack from './find-attack.js';
 import healer from './healer.js';
 import shootAtWill from './shoot-at-will.js';

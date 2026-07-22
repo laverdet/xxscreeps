@@ -1,6 +1,6 @@
 import type { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { getCostMatrix } from './rooms.js';
 
 export default function flee(creep: Creep, range: number) {

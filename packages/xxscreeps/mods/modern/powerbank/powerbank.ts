@@ -1,6 +1,5 @@
 import type { UserInfo } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
@@ -9,6 +8,7 @@ import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { powerBankShape } from './schema.js';
 import { PowerBankStore } from './store.js';
 

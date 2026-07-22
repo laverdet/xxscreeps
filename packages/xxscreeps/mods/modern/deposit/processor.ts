@@ -2,7 +2,6 @@ import type { DepositResource } from './main.js';
 import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
@@ -12,6 +11,7 @@ import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/pro
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
 

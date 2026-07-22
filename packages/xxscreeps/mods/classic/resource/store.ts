@@ -2,10 +2,10 @@ import type { ResourceType } from './resource.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { makeReader, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
+import * as C from 'xxscreeps:mods/constants';
 import { bindOpenStore, bindRestrictedStoreFormat, bindUntypedSingleStore, restrictedStoreFormat, shapeOpen, shapeRestricted, shapeSingle } from './schema.js';
 
 export type WithStore = Record<'store', Store>;

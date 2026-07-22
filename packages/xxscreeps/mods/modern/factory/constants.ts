@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Structure traits
 export const FACTORY_HITS = 1000;

@@ -1,12 +1,12 @@
 import { Shard } from 'xxscreeps/engine/db/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { incrementUserCredits, insertOrder, loadAndReadMarketOrder, loadMarketOrderIds, loadUserCredits, marketChannel, updateOrderAmount } from './model.js';
 import { Order } from './order.js';
 

@@ -1,11 +1,11 @@
 import type { RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
 import { optionalExpiryTime, untilTime } from 'xxscreeps/game/object.js';
 import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { controllerShape } from './schema.js';
 
 /**

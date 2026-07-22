@@ -1,5 +1,5 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { incrementGlobalPowerLevel } from './model.js';
 import { StructurePowerSpawn, checkProcessPower } from './powerspawn.js';
 

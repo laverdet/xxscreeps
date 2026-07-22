@@ -1,9 +1,9 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { registerHarvestable } from 'xxscreeps/mods/classic/harvestable/game.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { lookForStructureAt } from '../structure/structure.js';
 import { StructureExtractor } from './extractor.js';
 import { Mineral } from './mineral.js';

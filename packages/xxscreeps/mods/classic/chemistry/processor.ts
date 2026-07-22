@@ -1,9 +1,9 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/classic/creep/creep.js';
 import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getReactionProduct, getReactionVariants } from './lab.js';
 
 type BoostEffects = Partial<Record<string, number>>;

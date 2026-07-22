@@ -1,9 +1,9 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 export const structureShape =
 	declare('Structure', () => struct(...structForPath<StructureSchema>()('Structure', roomObjectShape, {

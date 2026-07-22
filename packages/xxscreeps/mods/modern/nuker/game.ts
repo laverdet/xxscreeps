@@ -1,8 +1,8 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Nuke } from './nuke.js';
 import { StructureNuker } from './nuker.js';
 import { nukeShape, nukerShape } from './schema.js';

@@ -1,9 +1,9 @@
 import type { ResourceType } from './resource.js';
 import type { OpenStore, RestrictedStore, SingleStore } from './store.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { structureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { composeBind, declare, enumerated, struct, variant, vector, withType } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Resource types
 export const optionalResourceEnumFormat = () =>

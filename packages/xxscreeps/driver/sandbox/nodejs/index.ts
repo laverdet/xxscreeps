@@ -45,7 +45,8 @@ const resolver = function() {
 						default: return specifier;
 					}
 				}();
-				const { url } = await resolve(defaultAsyncFileSystem, alias, new URL(referrer ?? import.meta.url));
+				const resolveReferrer = referrer?.startsWith('xxscreeps:') ? import.meta.url : referrer;
+				const { url } = await resolve(defaultAsyncFileSystem, alias, new URL(resolveReferrer ?? import.meta.url));
 				return url.href;
 			});
 		}

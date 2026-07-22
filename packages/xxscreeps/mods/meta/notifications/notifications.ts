@@ -1,6 +1,6 @@
 import type { NotificationType } from './model.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 const kPerTickCap = 20;
 const kCpuCost = 0.2;

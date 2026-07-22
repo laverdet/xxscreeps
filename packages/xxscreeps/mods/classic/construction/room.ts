@@ -1,12 +1,12 @@
 import type { ConstructibleStructureType } from './construction-site.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { asUnion, extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 

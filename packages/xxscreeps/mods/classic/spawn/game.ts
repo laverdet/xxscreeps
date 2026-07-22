@@ -1,8 +1,8 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
 import { extensionShape, spawnShape } from './schema.js';
 import { StructureSpawn } from './spawn.js';

@@ -1,12 +1,12 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { storageShape } from './schema.js';
 
 /**

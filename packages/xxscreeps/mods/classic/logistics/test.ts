@@ -1,9 +1,9 @@
 import type { StructureLink } from './link.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createLink } from './link.js';
 
 function own(room: Room, level: number) {

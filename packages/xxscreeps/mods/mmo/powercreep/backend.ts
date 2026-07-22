@@ -2,8 +2,8 @@ import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { bindMapRenderer, bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { renderStore } from 'xxscreeps/mods/classic/resource/backend.js';
+import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
 import { PowerCreep } from './powercreep.js';
 

@@ -1,9 +1,9 @@
 import { registerEnumerated } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 /** @internal */
 export const factoryShape = declare('StructureFactory', struct(ownedStructureShape, {

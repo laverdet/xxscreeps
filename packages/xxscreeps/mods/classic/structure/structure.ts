@@ -4,13 +4,13 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { createRuin } from './ruin.js';
 import { ownedStructureShape, structureShape } from './schema.js';
 

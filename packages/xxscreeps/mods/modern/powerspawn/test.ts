@@ -1,9 +1,9 @@
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createPowerSpawn } from './powerspawn.js';
 
 const owner = '100';

@@ -3,7 +3,6 @@ import type { Direction } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
@@ -17,6 +16,7 @@ import { buryCreep, dropOverflowResources } from 'xxscreeps/mods/classic/creep/p
 import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
 import { Spawning, StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
 

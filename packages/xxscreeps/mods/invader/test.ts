@@ -2,7 +2,6 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -11,6 +10,7 @@ import { create as createContainer } from 'xxscreeps/mods/classic/resource/conta
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { lookForStructureAt, lookForStructures } from '../classic/structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
 

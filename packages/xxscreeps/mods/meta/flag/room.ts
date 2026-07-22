@@ -2,11 +2,11 @@ import type { Color } from './flag.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { extend, instantiate } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Flag, checkCreateFlag, intents } from './flag.js';
 
 declare module 'xxscreeps/game/room/index.js' {

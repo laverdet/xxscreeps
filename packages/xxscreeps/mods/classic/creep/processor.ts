@@ -10,7 +10,6 @@ import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registe
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -23,6 +22,7 @@ import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Creep, calculateCarry } from './creep.js';
 import * as CreepLib from './creep.js';
 import { Tombstone } from './tombstone.js';

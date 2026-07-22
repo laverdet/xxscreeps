@@ -1,9 +1,9 @@
 import type { ResourceType } from '../resource.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Resource, create } from '../resource.js';
 
 export function drop(pos: RoomPosition, resourceType: ResourceType, amount: number) {

@@ -5,7 +5,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, upgradeRoster, write } from './powercreep.js';
 
 // Account-scoped power creep roster.

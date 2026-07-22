@@ -1,11 +1,11 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Creep extension declaration
 declare module 'xxscreeps/mods/classic/creep/creep.js' {

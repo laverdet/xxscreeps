@@ -1,8 +1,8 @@
 import { registerEnumerated } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { labStoreFormat } from './store.js';
 
 /** @internal */

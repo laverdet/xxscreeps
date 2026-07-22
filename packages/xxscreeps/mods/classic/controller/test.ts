@@ -1,5 +1,4 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
@@ -7,6 +6,7 @@ import { StructureExtension, create as createExtension } from 'xxscreeps/mods/cl
 import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { captureNotificationsForTesting } from 'xxscreeps/mods/meta/notifications/transports.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureController } from './controller.js';
 
 describe('mods/classic/controller', () => {

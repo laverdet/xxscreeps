@@ -1,7 +1,7 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkCreepNotifyWhenAttacked, checkStructureNotifyWhenAttacked } from './game.js';
 import { sendNotification } from './model.js';
 

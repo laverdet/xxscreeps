@@ -1,7 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { dispatchQueuedNotifications } from './driver.js';
 import { getAllRowsForTesting, upsertNotification } from './model.js';
 import { flush } from './notifications.js';

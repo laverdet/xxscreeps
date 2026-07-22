@@ -5,13 +5,13 @@ import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
-import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/meta/flag/model.js';
 import { renderStore } from 'xxscreeps/mods/classic/resource/backend.js';
+import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/meta/flag/model.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
 import * as Spawn from './spawn.js';
 

@@ -2,7 +2,6 @@ import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
@@ -13,6 +12,7 @@ import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
+import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
 import { PowerCreep, checkRenew, createSpawnedPowerCreep } from './powercreep.js';
 

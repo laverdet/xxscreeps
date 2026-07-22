@@ -1,8 +1,8 @@
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Retain previous `Transactions` to reuse blobs from previous payload
 let previousTransactions: Transactions | undefined;

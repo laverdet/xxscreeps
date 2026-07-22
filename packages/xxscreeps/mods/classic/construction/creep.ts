@@ -1,10 +1,10 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/classic/creep/creep.js';
 import { checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 

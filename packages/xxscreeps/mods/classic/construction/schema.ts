@@ -1,9 +1,9 @@
 import type { ConstructibleStructureType } from './construction-site.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { constant, declare, enumerated, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { structureFactories } from './symbols.js';
 
 /** @internal */

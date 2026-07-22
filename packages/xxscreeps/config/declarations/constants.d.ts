@@ -1,4 +1,6 @@
 declare module 'xxscreeps:mods/constants' {
+	export * from 'xxscreeps/game/constants/index.js';
+
 	export * from 'xxscreeps/mods/classic/brokerage/constants.js';
 	export * from 'xxscreeps/mods/classic/chemistry/constants.js';
 	export * from 'xxscreeps/mods/classic/combat/constants.js';

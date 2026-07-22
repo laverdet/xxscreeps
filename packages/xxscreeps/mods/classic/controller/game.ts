@@ -1,8 +1,8 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureController } from './controller.js';
 import { controllerShape, roomSchema } from './schema.js';
 import './creep.js';

@@ -1,8 +1,8 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureFactory, checkProduce, getCommodityRecipe } from './factory.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {

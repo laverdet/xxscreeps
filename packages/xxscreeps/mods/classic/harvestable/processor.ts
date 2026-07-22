@@ -3,11 +3,11 @@ import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkHarvest } from './creep.js';
 
 // `RoomObject` harvest intent processor symbol

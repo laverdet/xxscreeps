@@ -2,11 +2,11 @@ import type { FlagIntent } from './model.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { flagShape } from './schema.js';
 
 export let intents: FlagIntent[] = [];

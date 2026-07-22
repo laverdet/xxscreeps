@@ -4,7 +4,6 @@ import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -15,6 +14,7 @@ import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { bindSpawningFormat, spawnShape, spawningShape } from './schema.js';
 
 interface SpawnCreepOptions {

@@ -1,8 +1,8 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 /** @internal */
 export const controllerShape = declare('Controller', struct(ownedStructureShape, {

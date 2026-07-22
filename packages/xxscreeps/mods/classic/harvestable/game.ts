@@ -1,7 +1,7 @@
 import type { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ContextType, Implementation } from 'xxscreeps/utility/types.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
+import * as C from 'xxscreeps:mods/constants';
 import './creep.js';
 import './schema.js';
 

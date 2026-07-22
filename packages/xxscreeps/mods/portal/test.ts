@@ -1,8 +1,8 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructurePortal, create as createPortal } from './portal.js';
 
 const findPortal = (room: Room) =>
