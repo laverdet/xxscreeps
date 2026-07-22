@@ -1,3 +1,4 @@
+import type { UserBadge } from './badge.js';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -15,6 +16,11 @@ const removeHooks = hooks.makeMapped('remove');
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
 export const infoKey = (userId: string) => `user/${userId}`;
+
+interface BackendUserInfo {
+	username: string;
+	badge: UserBadge | null;
+}
 
 const annoyingUsernames = [
 	NaN, Infinity, false, true, undefined, null,
@@ -104,4 +110,14 @@ export async function findUserByProvider(db: Database, provider: string, provide
 
 export async function findUserByName(db: Database, username: string) {
 	return findUserByProvider(db, 'username', flattenUsername(username));
+}
+
+export async function loadBackendUserInfo(db: Database, userId: string): Promise<BackendUserInfo | undefined> {
+	const info = await db.data.hmGet(infoKey(userId), [ 'badge', 'username' ]);
+	if (info.username != null) {
+		return {
+			username: info.username,
+			badge: info.badge == null ? null : JSON.parse(info.badge) as UserBadge,
+		};
+	}
 }

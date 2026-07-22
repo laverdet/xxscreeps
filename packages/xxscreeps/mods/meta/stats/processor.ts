@@ -1,4 +1,6 @@
 import { RoomProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/room.js';
+import { parseSignedRoomName } from 'xxscreeps/game/room/name.js';
+import { hashCombine, hashMix } from 'xxscreeps/utility/utility.js';
 import { statIntervals, writeRoomBucket } from './model.js';
 import { isStatName } from './schema.js';
 
@@ -39,11 +41,8 @@ const flushIntervalMs = Math.min(...statIntervals) * 60_000;
 // Deterministic per-room delay within one flush interval, spreading the dumps across ticks instead
 // of every room hitting redis on the first tick after a bucket boundary
 function jitterOf(roomName: string) {
-	let hash = 0;
-	for (let ii = 0; ii < roomName.length; ++ii) {
-		hash = (Math.imul(hash, 31) + roomName.charCodeAt(ii)) | 0;
-	}
-	return (hash >>> 0) % flushIntervalMs;
+	const { rx, ry } = parseSignedRoomName(roomName);
+	return (hashCombine(hashMix(rx), hashMix(ry)) >>> 0) % flushIntervalMs;
 }
 
 registerRoomTickProcessor((room, context) => {
@@ -51,17 +50,17 @@ registerRoomTickProcessor((room, context) => {
 	if (entries.length === 0) {
 		return;
 	}
-	const bucketTime = room['#userStatsTime'];
-	const deadline = (Math.floor(bucketTime / flushIntervalMs) + 1) * flushIntervalMs + jitterOf(room.name);
+	const bucket = room['#userStatsTime'];
+	const deadline = (Math.floor(bucket / flushIntervalMs) + 1) * flushIntervalMs + jitterOf(room.name);
 	if (Date.now() < deadline) {
 		return;
 	}
 	// Snapshot and clear before this tick's intents run, so their contributions begin a fresh
 	// bucket instead of being wiped along with the flushed one. The batch is credited to the
 	// bucket the timestamp falls in, not the flush time.
-	const batch = entries.map(({ amount, stat, userId }) => ({ amount, stat, userId }));
+	const batch = room['#userStats'];
 	room['#userStats'] = [];
 	room['#userStatsTime'] = 0;
 	context.didUpdate();
-	context.task(writeRoomBucket(context.shard, room.name, batch, bucketTime));
+	context.task(writeRoomBucket(context.shard, room.name, batch, bucket));
 });

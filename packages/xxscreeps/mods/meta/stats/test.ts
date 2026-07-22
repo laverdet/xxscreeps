@@ -3,12 +3,10 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import {
-	parseStatLayer, pendingBucketOffset, readRoomLayer, readRoomPunchcard, readRoomTotals,
-	readUserTotals, removeAllForUser, statIntervals, writeRoomBucket,
-} from './model.js';
+import { parseStatLayer, pendingBucketOffset, readRoomLayer, readRoomPunchcard, readUserTotals, removeAllForUser, statIntervals, writeRoomBucket } from './model.js';
 import { statNames } from './schema.js';
 
 const alice = '100';
@@ -30,7 +28,8 @@ describe('mod/meta/stats', () => {
 		},
 	});
 
-	test('contributions coalesce per (user, stat) on the room blob', () => sim(async ({ player, tick }) => {
+	test('contributions coalesce per (user, stat) on the room blob', () => sim(async ({ peekRoom, player, tick }) => {
+		using clock = new DeterministicClockForTesting({ step: 0 });
 		const perTick = 2 * C.HARVEST_POWER;
 
 		await player(alice, Game => {
@@ -39,31 +38,33 @@ describe('mod/meta/stats', () => {
 		});
 		await tick();
 		let statsTime = 0;
-		await player(alice, Game => {
-			const [ stats, aggregate ] = Game.rooms.W1N1?.['#userStats'] ?? [];
+		await peekRoom('W1N1', room => {
+			const [ stats, rest ] = room['#userStats'];
 			assert.ok(stats);
-			assert.strictEqual(aggregate, undefined);
+			assert.strictEqual(rest, undefined);
 			assert.strictEqual(stats.userId, alice);
 			assert.strictEqual(stats.stat, 'energyHarvested');
 			assert.strictEqual(stats.amount, perTick);
-			statsTime = Game.rooms.W1N1?.['#userStatsTime'] ?? 0;
-			assert.ok(statsTime > 0);
+			assert.ok((statsTime = room['#userStatsTime']) > 0);
+		});
+		await player(alice, Game => {
 			// A second harvest accumulates into the same entry
-			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
-			assert.strictEqual(Game.creeps.harvester?.harvest(source!), C.OK);
+			const source = Game.rooms.W1N1!.find(C.FIND_SOURCES)[0]!;
+			assert.strictEqual(Game.creeps.harvester?.harvest(source), C.OK);
 		});
 		await tick();
-		await player(alice, Game => {
-			const [ stats, aggregate ] = Game.rooms.W1N1?.['#userStats'] ?? [];
+		await peekRoom('W1N1', room => {
+			const [ stats, rest ] = room['#userStats'];
 			assert.ok(stats);
-			assert.strictEqual(aggregate, undefined);
+			assert.strictEqual(rest, undefined);
 			assert.strictEqual(stats.amount, 2 * perTick);
 			// The bucket timestamp is stamped once
-			assert.strictEqual(Game.rooms.W1N1?.['#userStatsTime'], statsTime);
+			assert.strictEqual(room['#userStatsTime'], statsTime);
 		});
 	}));
 
-	test('contributions are attributed per user', () => sim(async ({ player, tick }) => {
+	test('contributions are attributed per user', () => sim(async ({ peekRoom, player, tick }) => {
+		using clock = new DeterministicClockForTesting({ step: 0 });
 		await player(alice, Game => {
 			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
 			assert.strictEqual(Game.creeps.harvester?.harvest(source!), C.OK);
@@ -73,16 +74,21 @@ describe('mod/meta/stats', () => {
 			assert.strictEqual(Game.creeps.poacher?.harvest(source!), C.OK);
 		});
 		await tick();
-		await player(alice, Game => {
-			const stats = Game.rooms.W1N1?.['#userStats'];
+		await peekRoom('W1N1', room => {
+			const stats = room['#userStats'];
 			assert.deepStrictEqual(
-				stats?.map(entry => [ entry.userId, entry.stat, entry.amount ] as const)
+				stats
+					.map(entry => [ entry.userId, entry.stat, entry.amount ] as const)
 					.sort(mappedPrimitiveComparator(entry => entry[0])),
-				[ [ alice, 'energyHarvested', 2 * C.HARVEST_POWER ], [ bob, 'energyHarvested', C.HARVEST_POWER ] ]);
+				[
+					[ alice, 'energyHarvested', 2 * C.HARVEST_POWER ],
+					[ bob, 'energyHarvested', C.HARVEST_POWER ],
+				]);
 		});
 	}));
 
-	test('an aged bucket is flushed to redis and cleared from the blob', () => sim(async ({ player, poke, shard, tick }) => {
+	test('an aged bucket is flushed to redis and cleared from the blob', () => sim(async ({ player, peekRoom, poke, shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ step: 0 });
 		const perTick = 2 * C.HARVEST_POWER;
 		await player(alice, Game => {
 			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
@@ -95,20 +101,20 @@ describe('mod/meta/stats', () => {
 			room['#userStatsTime'] = Date.now() - 20 * 60_000;
 		});
 		await tick();
-		await player(alice, Game => {
-			const room = Game.rooms.W1N1;
-			assert.strictEqual(room?.['#userStats'].length, 0);
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(room['#userStats'].length, 0);
 			assert.strictEqual(room['#userStatsTime'], 0);
 		});
 		// Landed in both the per-user account series and the per-room series
 		assert.strictEqual((await readUserTotals(shard.db, alice, 1440)).energyHarvested, perTick);
-		assert.strictEqual((await readRoomTotals(shard.data, 'W1N1', alice, 1440)).energyHarvested, perTick);
+		assert.strictEqual(Fn.accumulate(await readRoomPunchcard(shard.data, 'W1N1', alice, 1440, 'energyHarvested')), perTick);
 		assert.deepStrictEqual(
-			await readRoomLayer(shard.data, 'W1N1', 1440, 'energyHarvested'),
+			await readRoomLayer(shard, 'W1N1', 1440, 'energyHarvested'),
 			[ { user: alice, value: perTick } ]);
 	}));
 
-	test('contributions from the flush tick begin a fresh bucket', () => sim(async ({ player, poke, shard, tick }) => {
+	test('contributions from the flush tick begin a fresh bucket', () => sim(async ({ player, peekRoom, poke, shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ step: 0 });
 		const perTick = 2 * C.HARVEST_POWER;
 		await player(alice, Game => {
 			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
@@ -125,10 +131,10 @@ describe('mod/meta/stats', () => {
 			assert.strictEqual(Game.creeps.harvester?.harvest(source!), C.OK);
 		});
 		await tick();
-		await player(alice, Game => {
-			const [ entry ] = Game.rooms.W1N1?.['#userStats'] ?? [];
+		await peekRoom('W1N1', room => {
+			const [ entry ] = room['#userStats'];
 			assert.strictEqual(entry?.amount, perTick);
-			assert.ok((Game.rooms.W1N1?.['#userStatsTime'] ?? 0) > 0);
+			assert.ok(room['#userStatsTime'] > 0);
 		});
 		// Only the first tick's batch was flushed
 		assert.strictEqual((await readUserTotals(shard.db, alice, 1440)).energyHarvested, perTick);
@@ -161,8 +167,8 @@ describe('mod/meta/stats', () => {
 		const later = t0 + 2 * hour;
 		assert.strictEqual((await readUserTotals(shard.db, alice, 8, later)).energyHarvested, 0);
 		assert.strictEqual((await readUserTotals(shard.db, alice, 1440, later)).energyHarvested, 100);
-		assert.strictEqual((await readRoomTotals(shard.data, 'W1N1', alice, 8, later)).energyHarvested, 0);
-		assert.strictEqual((await readRoomTotals(shard.data, 'W1N1', alice, 1440, later)).energyHarvested, 100);
+		assert.strictEqual(Fn.accumulate(await readRoomPunchcard(shard.data, 'W1N1', alice, 8, 'energyHarvested', later)), 0);
+		assert.strictEqual(Fn.accumulate(await readRoomPunchcard(shard.data, 'W1N1', alice, 1440, 'energyHarvested', later)), 100);
 	});
 
 	test('punchcard exposes the per-bucket series oldest-first', async () => {
@@ -185,18 +191,18 @@ describe('mod/meta/stats', () => {
 			{ amount: 250, stat: 'energyHarvested', userId: bob },
 		], t0);
 		assert.deepStrictEqual(
-			await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0),
+			await readRoomLayer(shard, 'W1N1', 8, 'energyHarvested', t0),
 			[ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
 		// A user active in the room but not in the requested stat is dropped
-		assert.deepStrictEqual(await readRoomLayer(shard.data, 'W1N1', 8, 'powerProcessed', t0), []);
+		assert.deepStrictEqual(await readRoomLayer(shard, 'W1N1', 8, 'powerProcessed', t0), []);
 		// Two hours on, the contributions have aged out of the 1h window entirely
-		assert.deepStrictEqual(await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0 + 2 * hour), []);
+		assert.deepStrictEqual(await readRoomLayer(shard, 'W1N1', 8, 'energyHarvested', t0 + 2 * hour), []);
 		// Eight days later a dump reclaims every expired field, in every interval, in the room hash
 		// and the writing user's account hash alike
 		const later = t0 + 8 * 24 * hour;
 		await writeRoomBucket(shard, 'W1N1', [ { amount: 70, stat: 'energyHarvested', userId: bob } ], later);
 		assert.deepStrictEqual(
-			await readRoomLayer(shard.data, 'W1N1', 1440, 'energyHarvested', later),
+			await readRoomLayer(shard, 'W1N1', 1440, 'energyHarvested', later),
 			[ { user: bob, value: 70 } ]);
 		for (const interval of statIntervals) {
 			assert.strictEqual((await shard.data.hKeys(`room/W1N1/stats/${interval}`)).length, 1);

@@ -10,53 +10,59 @@ import { isStatName, statNames } from './schema.js';
 // per-room dump (see `processor.ts`), so the youngest bucket lives on the room blob until it is
 // flushed and readers merge it in via `pendingBucketOffset`.
 //
-//   - per room: one hash per (room, interval) in shard storage, fields `<userId>:<stat>:<bucket>`.
+//   - per room: one hash per (room, interval) in shard storage, fields `<userId>/<stat>/<bucket>`.
 //     Drives the world-map layer (a single `hGetAll` enumerates every contributor) and the
 //     room-overview punchcards.
 //   - per user: one hash per (user, interval) in `db.data` (like GCL), so a player's account totals
 //     aggregate naturally across shards.
 
 // The three intervals the client offers, keyed by minutes-per-bucket, mapped to the number of
-// buckets that make up the displayed window: 8min×8 ≈ 1h, 180min×8 = 24h, 1440min×7 = 7d.
+// buckets that make up the displayed window.
 export const bucketCount = {
-	8: 8,
-	180: 8,
-	1440: 7,
+	8: 8, // 8min * 8 ~= 1h
+	180: 8, // 180min * 8 = 24h
+	1440: 7, // 1440min * 7 = 7d
 } as const;
-export type StatInterval = keyof typeof bucketCount;
+type StatInterval = keyof typeof bucketCount;
 export const statIntervals = Object.keys(bucketCount).map(Number) as StatInterval[];
 
 export function isStatInterval(value: number): value is StatInterval {
 	return value in bucketCount;
 }
 
-const userStatsKey = (userId: string, interval: StatInterval) => `user/${userId}/stats/${interval}`;
+type FieldOf = (stat: StatName, bucket: number) => string;
 const roomStatsKey = (roomName: string, interval: StatInterval) => `room/${roomName}/stats/${interval}`;
-const bucketOf = (interval: StatInterval, time: number) => Math.floor(time / (interval * 60_000));
+const roomUserStatsField = (userId: string): FieldOf => (stat: StatName, bucket: number) => `${userId}/${stat}/${bucket}`;
+const scopeStatsField: FieldOf = (stat: StatName, bucket: number) => `${stat}/${bucket}`;
+const userStatsKey = (userId: string, interval: StatInterval) => `user/${userId}/stats/${interval}`;
+const bucketOf = (interval: StatInterval, time: number) => Math.floor(time / interval / 60_000);
+
 // The bucket indices, oldest first, that make up the window for `interval` at `now`
+// bucket = wallTime / interval / 60_000
 function windowBuckets(interval: StatInterval, now: number) {
-	const points = bucketCount[interval];
-	const latest = bucketOf(interval, now);
-	return [ ...Fn.map(Fn.range(points), ii => latest - points + 1 + ii) ];
+	const latest = bucketOf(interval, now) + 1;
+	return [ ...Fn.range(latest - bucketCount[interval], latest) ];
 }
 
-export interface StatEntry {
+interface StatEntry {
 	amount: number;
 	stat: StatName;
 	userId: string;
 }
 
-// Drop every field of a stats hash whose trailing bucket index has aged out of the window. The
-// per-field reads only ever fetch in-window fields, but without the sweep an inactive stretch
-// would strand its expired fields forever.
-const reclaimExpired = (data: KeyValProvider, key: string, oldest: number) =>
-	data.hKeys(key).then(fields => {
-		const expired = fields.filter(field =>
-			Number(field.slice(field.lastIndexOf(':') + 1)) < oldest);
-		if (expired.length > 0) {
-			return data.hDel(key, expired);
-		}
-	});
+interface BucketedStatEntry extends StatEntry {
+	bucket: number;
+}
+
+// Drop every field of a stats hash whose trailing bucket index has aged out of the window. This can
+// be used on room and user hashes.
+async function truncateExpired(data: KeyValProvider, key: string, oldest: number) {
+	const fields = await data.hKeys(key);
+	const expired = fields.filter(field => Number(field.slice(field.lastIndexOf('/') + 1)) < oldest);
+	if (expired.length > 0) {
+		return data.hDel(key, expired);
+	}
+}
 
 /**
  * Dump one room's accumulated bucket into every interval resolution: the per-(room, user) hashes in
@@ -64,34 +70,68 @@ const reclaimExpired = (data: KeyValProvider, key: string, oldest: number) =>
  * the bucket began to fill; the whole batch is credited to the bucket it falls in. Expired fields
  * of every touched hash are reclaimed here as well.
  */
-export async function writeRoomBucket(shard: Shard, roomName: string, entries: readonly StatEntry[], bucketTime: number) {
+export async function writeRoomBucket(shard: Shard, roomName: string, entries: Iterable<StatEntry>, bucketTime: number) {
 	await Promise.all(function*() {
+		const statsByUser = Fn.groupBy(entries, entry => [ entry.userId, entry ]);
 		for (const interval of statIntervals) {
+			const roomKey = roomStatsKey(roomName, interval);
 			const bucket = bucketOf(interval, bucketTime);
 			const oldest = bucket - bucketCount[interval] + 1;
-			const roomKey = roomStatsKey(roomName, interval);
-			for (const { userId, stat, amount } of entries) {
-				yield shard.data.hincrBy(roomKey, `${userId}:${stat}:${bucket}`, amount);
-			}
-			yield reclaimExpired(shard.data, roomKey, oldest);
-			for (const [ userId, userEntries ] of Fn.groupBy(entries, entry => [ entry.userId, entry ])) {
+			for (const [ userId, userEntries ] of statsByUser) {
+				const roomStatsField = roomUserStatsField(userId);
+				// Room stats, per user
+				// nb: Users could be coalesced into one incr per stat per room but most of the time there's
+				// only one user in a room.
+				for (const { stat, amount } of userEntries) {
+					yield shard.data.hincrBy(roomKey, roomStatsField(stat, bucket), amount);
+				}
+
+				// User stats
 				const userKey = userStatsKey(userId, interval);
 				for (const { stat, amount } of userEntries) {
-					yield shard.db.data.hincrBy(userKey, `${stat}:${bucket}`, amount);
+					yield shard.db.data.hincrBy(userKey, scopeStatsField(stat, bucket), amount);
 				}
-				yield reclaimExpired(shard.db.data, userKey, oldest);
+				// ..truncated per user
+				yield truncateExpired(shard.db.data, userKey, oldest);
 			}
+			// ..truncated once per room
+			yield truncateExpired(shard.data, roomKey, oldest);
 		}
 	}());
 }
 
 export type StatTotals = Record<StatName, number>;
 
-async function readTotals(data: KeyValProvider, key: string, fieldOf: (stat: StatName, bucket: number) => string, interval: StatInterval, now: number) {
+// Aggregate all stats from the given scope (room, or user) over an interval
+async function readAndAggregate(data: KeyValProvider, key: string, fieldOf: FieldOf, interval: StatInterval, now: number) {
 	const buckets = windowBuckets(interval, now);
-	const values = await data.hmGet(key, statNames.flatMap(stat => buckets.map(bucket => fieldOf(stat, bucket))));
-	return Fn.fromEntries(statNames, stat =>
-		[ stat, Fn.accumulate(buckets, bucket => Number(values[fieldOf(stat, bucket)] ?? 0)) ]);
+	const values = await Fn.pipe(
+		statNames,
+		$$ => Fn.transform($$, stat => Fn.map(buckets, bucket => fieldOf(stat, bucket))),
+		$$ => data.hmGet(key, [ ...$$ ]));
+	return Fn.fromEntries(statNames, stat => {
+		const total = Fn.accumulate(buckets, bucket => Number(values[fieldOf(stat, bucket)] ?? 0));
+		return [ stat, total ] as const;
+	});
+}
+
+// Parse and iterate *all* stats entries belonging to the given room
+async function iterateRoomStatEntries(shard: Shard, roomName: string, interval: StatInterval): Promise<Iterable<BucketedStatEntry>> {
+	return Fn.pipe(
+		await shard.data.hGetAll(roomStatsKey(roomName, interval)),
+		$$ => Object.entries($$),
+		$$ => Fn.map($$, ([ field, amount ]): BucketedStatEntry | undefined => {
+			const [ userId, stat, bucket ] = field.split('/');
+			if (userId !== undefined && stat !== undefined && isStatName(stat)) {
+				return {
+					amount: Number(amount),
+					bucket: Number(bucket),
+					stat,
+					userId,
+				};
+			}
+		}),
+		$$ => Fn.filter($$));
 }
 
 /**
@@ -100,50 +140,71 @@ async function readTotals(data: KeyValProvider, key: string, fieldOf: (stat: Sta
  * included here.
  */
 export function readUserTotals(db: Database, userId: string, interval: StatInterval, now = Date.now()): Promise<StatTotals> {
-	return readTotals(db.data, userStatsKey(userId, interval), (stat, bucket) => `${stat}:${bucket}`, interval, now);
+	return readAndAggregate(db.data, userStatsKey(userId, interval), scopeStatsField, interval, now);
 }
 
 /**
- * One user's windowed totals for their activity in a room — the room-overview tiles (owner) draw
- * from this.
- */
-export function readRoomTotals(data: KeyValProvider, roomName: string, userId: string, interval: StatInterval, now = Date.now()): Promise<StatTotals> {
-	return readTotals(data, roomStatsKey(roomName, interval), (stat, bucket) => `${userId}:${stat}:${bucket}`, interval, now);
-}
-
-/**
- * One user's per-bucket series for a single stat in a room, oldest bucket first — the overview
- * punchcard (requesting user) and the room-overview punchcards (owner).
+ * Punchcard for one user's activity in the given room for a single interval.
  */
 export async function readRoomPunchcard(data: KeyValProvider, roomName: string, userId: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<number[]> {
+	const fieldOf = roomUserStatsField(userId);
 	const buckets = windowBuckets(interval, now);
-	const values = await data.hmGet(roomStatsKey(roomName, interval), buckets.map(bucket => `${userId}:${stat}:${bucket}`));
-	return buckets.map(bucket => Number(values[`${userId}:${stat}:${bucket}`] ?? 0));
+	const values = await data.hmGet(roomStatsKey(roomName, interval), buckets.map(bucket => fieldOf(stat, bucket)));
+	return buckets.map(bucket => Number(values[fieldOf(stat, bucket)] ?? 0));
 }
 
-export interface RoomStatContribution {
+interface OverviewBucket {
+	endTime: number;
+	value: number;
+}
+
+type OverviewPunchcard = Record<StatName, OverviewBucket[]>;
+
+/**
+ * Punchcard for all activity in a given room over the active bucket period.
+ */
+export async function readCompleteRoomPunchcard(shard: Shard, roomName: string, interval: StatInterval, now = Date.now()): Promise<OverviewPunchcard> {
+	const buckets = windowBuckets(interval, now);
+	const punchcardByName = Fn.pipe(
+		statNames,
+		$$ => Fn.map($$, stat => {
+			const punchcard = buckets.map((bucket): OverviewBucket => ({ endTime: bucket + 1, value: 0 }));
+			return [ stat, punchcard ] as const;
+		}),
+		$$ => Fn.fromEntries($$));
+	const entries = await iterateRoomStatEntries(shard, roomName, interval);
+	for (const { amount, bucket, stat } of entries) {
+		const bucketId = buckets.indexOf(bucket);
+		if (bucketId !== -1) {
+			punchcardByName[stat][bucketId]!.value += amount;
+		}
+	}
+	return punchcardByName;
+}
+
+interface UserRoomBucket {
 	user: string;
 	value: number;
 }
 
 /**
- * Every contributing user's windowed value for a single stat in a room, highest first — the
- * world-map stat layer. One `hGetAll` enumerates the room's contributors; zero values (active in
- * the room but not in this stat) are dropped.
+ * Every contributing user's aggregated total amount for a single stat in a room, highest first.
  */
-export async function readRoomLayer(data: KeyValProvider, roomName: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<RoomStatContribution[]> {
-	const fields = await data.hGetAll(roomStatsKey(roomName, interval));
+export async function readRoomLayer(shard: Shard, roomName: string, interval: StatInterval, statName: StatName, now = Date.now()): Promise<UserRoomBucket[]> {
+	const entries = await iterateRoomStatEntries(shard, roomName, interval);
 	const oldest = bucketOf(interval, now) - bucketCount[interval] + 1;
 	const values = new Map<string, number>();
-	for (const [ field, value ] of Object.entries(fields)) {
-		const [ user, fieldStat, bucket ] = field.split(':');
-		if (fieldStat === stat && Number(bucket) >= oldest) {
-			values.set(user!, (values.get(user!) ?? 0) + Number(value));
+	for (const { amount, bucket, stat, userId } of entries) {
+		if (stat === statName && bucket >= oldest) {
+			values.set(userId, (values.get(userId) ?? 0) + Number(amount));
 		}
 	}
-	return [ ...Fn.map(values, ([ user, value ]) => ({ user, value })) ]
-		.filter(contribution => contribution.value > 0)
-		.sort(mappedInvertedNumericComparator(contribution => contribution.value));
+	return Fn.pipe(
+		values,
+		$$ => Fn.map($$, ([ user, value ]) => ({ user, value })),
+		$$ => Fn.filter($$, ({ value }) => value > 0),
+		$$ => [ ...$$ ],
+		$$ => $$.sort(mappedInvertedNumericComparator(entry => entry.value)));
 }
 
 /**
