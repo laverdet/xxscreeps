@@ -23,6 +23,8 @@ export interface MapStatsPayload {
 	statName?: string;
 	/** Loaded rooms paired with their per-room response entry */
 	rooms: MapStatsRoom[];
+	/** Extra top-level response fields, e.g. `statsMax` */
+	response: Record<string, unknown>;
 	/** Users referenced by the response; the endpoint resolves them into its `users` index */
 	userIds: Set<string>;
 }
