@@ -43,6 +43,7 @@ export const ruinShape = declare('Ruin', struct(roomObjectShape, {
 	}),
 }));
 
+export type StructureSchemaRoomSchema = typeof destroyedEventSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const destroyedEventSchema = registerVariant('Room.eventLog', declare('DestroyedEvent', struct({
 	...variant(C.EVENT_OBJECT_DESTROYED),
@@ -58,9 +59,3 @@ export interface StructureSchema {}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OwnedStructureSchema {}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema {
-		structureSchema: [ typeof destroyedEventSchema ];
-	}
-}

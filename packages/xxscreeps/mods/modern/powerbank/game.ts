@@ -6,6 +6,7 @@ import { powerBankShape } from './schema.js';
 
 registerGlobal(StructurePowerBank);
 
+export type PowerbankRoomSchema = typeof powerBankSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const powerBankSchema = registerVariant('Room.objects', compose(powerBankShape, StructurePowerBank));
 
@@ -13,8 +14,4 @@ const powerBankSchema = registerVariant('Room.objects', compose(powerBankShape, 
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructurePowerBank: typeof StructurePowerBank }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { powerbank: [ typeof powerBankSchema] }
 }

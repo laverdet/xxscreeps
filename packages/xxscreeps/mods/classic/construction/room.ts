@@ -11,6 +11,7 @@ import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 
 // Register FIND_ types for `ConstructionSite`
+export type ConstructionFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_CONSTRUCTION_SITES]: room =>
@@ -22,12 +23,9 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `ConstructionSite`
+export type ConstructionLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
-declare module 'xxscreeps:mods/game' {
-	interface Find { construction: typeof find }
-	interface Look { construction: typeof look }
-}
 
 // Extend `Room`
 declare module 'xxscreeps/game/room/index.js' {

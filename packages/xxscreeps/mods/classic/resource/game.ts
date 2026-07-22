@@ -28,31 +28,25 @@ hooks.register('environment', () => {
 });
 
 // Register FIND_ types for `Resource`
+export type ResourceFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_DROPPED_RESOURCES]: room => room['#lookFor'](C.LOOK_RESOURCES),
 });
 
 // Register LOOK_ type for `Resource`
+export type ResourceLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Resource>()(C.LOOK_RESOURCES);
+export type EnergyLook = typeof lookEnergy;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const lookEnergy = registerLook<Resource>()(C.LOOK_ENERGY);
 
 // These need to be declared separately I guess
+export type ResourceRoomSchemas = [ typeof containerSchema, typeof resourceSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const containerSchema = registerVariant('Room.objects', compose(containerShape, StructureContainer));
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resourceSchema = registerVariant('Room.objects', compose(resourceShape, Resource));
-
-// ---
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { resource: typeof find }
-	interface Look {
-		resource: typeof look;
-		energy: typeof lookEnergy;
-	}
-	interface RoomSchema { resource: [ typeof containerSchema, typeof resourceSchema ] }
-}

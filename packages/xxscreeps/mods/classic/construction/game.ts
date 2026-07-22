@@ -15,6 +15,7 @@ hooks.register('gameInitializer', Game => Game.constructionSites = Object.create
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite);
 
+export type ConstructionRoomSchema = typeof siteSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const siteSchema = registerVariant('Room.objects', compose(constructionSiteShape, ConstructionSite));
 
@@ -38,8 +39,4 @@ declare module 'xxscreeps/game/game.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { ConstructionSite: typeof ConstructionSite }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { construction: [ typeof siteSchema ] }
 }

@@ -9,6 +9,8 @@ import { StructureStorage } from './storage.js';
 registerGlobal(StructureLink);
 registerGlobal(StructureStorage);
 
+export type LogisticsRoomSchemas = [ typeof linkSchema, typeof storageSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const linkSchema = registerVariant('Room.objects', compose(linkShape, StructureLink));
 
@@ -22,8 +24,4 @@ declare module 'xxscreeps/game/runtime.js' {
 		StructureLink: typeof StructureLink;
 		StructureStorage: typeof StructureStorage;
 	}
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { logistics: [ typeof linkSchema, typeof storageSchema ] }
 }

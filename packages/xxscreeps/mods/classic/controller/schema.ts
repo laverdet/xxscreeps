@@ -48,6 +48,12 @@ export const roomSchema = registerStruct('Room', {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
 
+export type ControllerEventRoomSchemas = [
+	typeof attackControllerEventSchema,
+	typeof reserveControllerEventSchema,
+	typeof upgradeControllerEventSchema,
+];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const attackControllerEventSchema = registerVariant('Room.eventLog', declare('AttackControllerEvent', struct({
 	...variant(C.EVENT_ATTACK_CONTROLLER),
@@ -73,16 +79,6 @@ const upgradeControllerEventSchema = registerVariant('Room.eventLog', declare('U
 })));
 
 // ---
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema {
-		controllerSchema: [
-			typeof attackControllerEventSchema,
-			typeof reserveControllerEventSchema,
-			typeof upgradeControllerEventSchema,
-		];
-	}
-}
 
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {

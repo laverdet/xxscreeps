@@ -19,6 +19,7 @@ hooks.register('gameInitializer', (Game, payload) => {
 
 registerGlobal(StructurePowerSpawn);
 
+export type PowerspawnRoomSchema = typeof powerSpawnSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const powerSpawnSchema = registerVariant('Room.objects', compose(powerSpawnShape, StructurePowerSpawn));
 
@@ -52,8 +53,4 @@ declare module 'xxscreeps/game/game.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructurePowerSpawn: typeof StructurePowerSpawn }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { powerspawn: [ typeof powerSpawnSchema ] }
 }

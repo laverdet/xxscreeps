@@ -15,6 +15,7 @@ registerGlobal(Creep);
 registerGlobal(Tombstone);
 
 // Register FIND_ types for `Creep` & `Tombstone`
+export type CreepFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS),
@@ -24,6 +25,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Creep` & `Tombstone`
+export type CreepLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [
 	registerLook<Creep>()(C.LOOK_CREEPS),
@@ -31,6 +33,8 @@ const look = [
 ];
 
 // Schema types
+export type CreepRoomSchemas = [ typeof creepSchema, typeof tombstoneSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const creepSchema = registerVariant('Room.objects', compose(creepShape, Creep));
 
@@ -47,18 +51,6 @@ declare module 'xxscreeps/game/game.js' {
 		 * @see https://docs.screeps.com/api/#Game.creeps
 		 */
 		creeps: Record<string, Creep>;
-	}
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { creep: typeof find }
-	interface Look { creep: typeof look }
-
-	interface RoomSchema {
-		creep: [
-			typeof creepSchema,
-			typeof tombstoneSchema,
-		];
 	}
 }
 

@@ -10,6 +10,8 @@ const actionSchema = registerEnumerated('ActionLog.action',
 	'rangedAttack', 'rangedHeal', 'rangedMassAttack',
 );
 
+export type CombatRoomSchemas = [ typeof attackEventSchema, typeof healEventSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const attackEventSchema = registerVariant('Room.eventLog', declare('AttackEvent', struct({
 	...variant(C.EVENT_ATTACK),
@@ -34,8 +36,4 @@ const healEventSchema = registerVariant('Room.eventLog', declare('HealEvent', st
 
 declare module 'xxscreeps/game/schema.js' {
 	interface ActionLogSchema { combat: typeof actionSchema }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { combat: [ typeof attackEventSchema, typeof healEventSchema ] }
 }

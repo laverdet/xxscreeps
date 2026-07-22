@@ -10,13 +10,17 @@ import { nukeShape, nukerShape } from './schema.js';
 registerGlobal(StructureNuker);
 registerGlobal(Nuke);
 
+export type NukerFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_NUKES]: room => room['#lookFor'](C.LOOK_NUKES),
 });
 
+export type NukerLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Nuke>()(C.LOOK_NUKES);
+
+export type NukerRoomSchemas = [ typeof nukerSchema, typeof nukeSchema ];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const nukerSchema = registerVariant('Room.objects', compose(nukerShape, StructureNuker));
@@ -31,10 +35,4 @@ declare module 'xxscreeps/game/runtime.js' {
 		Nuke: typeof Nuke;
 		StructureNuker: typeof StructureNuker;
 	}
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { nuker: typeof find }
-	interface Look { nuker: typeof look }
-	interface RoomSchema { nuker: [ typeof nukerSchema, typeof nukeSchema ] }
 }

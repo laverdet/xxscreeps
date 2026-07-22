@@ -104,6 +104,8 @@ export const tombstoneShape = declare('Tombstone', struct(roomObjectShape, {
 }));
 
 // Schema types
+export type CreepEventRoomSchemas = [ typeof transferEventSchema, typeof exitEventSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const transferEventSchema = registerVariant('Room.eventLog', declare('TransferEvent', struct({
 	...variant(C.EVENT_TRANSFER),
@@ -128,12 +130,3 @@ const exitEventSchema = registerVariant('Room.eventLog', declare('ExitEvent', st
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface CreepSchema {}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema {
-		creepSchema: [
-			typeof transferEventSchema,
-			typeof exitEventSchema,
-		];
-	}
-}

@@ -46,9 +46,11 @@ hooks.register('gameInitializer', Game => {
 	}
 });
 
+export type PowerCreepRoomSchema = typeof powerCreepSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const powerCreepSchema = registerVariant('Room.objects', compose(powerCreepShape, PowerCreep));
 
+export type PowerCreepFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS),
@@ -56,14 +58,9 @@ const find = registerFindHandlers({
 	[C.FIND_HOSTILE_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS).filter(creep => !creep.my),
 });
 
+export type PowerCreepLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [ registerLook<PowerCreep>()(C.LOOK_POWER_CREEPS) ];
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { powerCreep: typeof find }
-	interface Look { powerCreep: typeof look }
-	interface RoomSchema { powerCreep: [ typeof powerCreepSchema ] }
-}
 
 registerGlobal(PowerCreep);
 declare module 'xxscreeps/game/runtime.js' {

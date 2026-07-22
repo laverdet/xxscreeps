@@ -43,8 +43,9 @@ function makeFindExit(exit: ExitType) {
 }
 
 // All FIND_EXIT_ handlers
+export type ExitFind = typeof exitFind;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const find = registerFindHandlers({
+const exitFind = registerFindHandlers({
 	...Fn.fromEntries(exits.map(exit => [ exit, makeFindExit(exit) ])),
 	[C.FIND_EXIT]: (room: Room): RoomPosition[] => [
 		...room.find(C.FIND_EXIT_TOP),
@@ -53,7 +54,3 @@ const find = registerFindHandlers({
 		...room.find(C.FIND_EXIT_LEFT),
 	],
 });
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { exit: typeof find }
-}

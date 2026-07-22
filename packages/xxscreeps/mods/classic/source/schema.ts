@@ -30,13 +30,8 @@ export const keeperLairShape = declare('KeeperLair', struct(ownedStructureShape,
 }));
 
 // Register schema extensions
+export type SourceSchemaRoomSchema = typeof roomSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#cumulativeEnergyHarvested': 'int32',
 });
-
-// ---
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { sourceSchema: [ typeof roomSchema ] }
-}

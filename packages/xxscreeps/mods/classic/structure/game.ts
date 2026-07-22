@@ -14,6 +14,7 @@ registerGlobal(Ruin);
 registerGlobal(Structure);
 
 // Register FIND_ types for `Structure`
+export type StructureFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_STRUCTURES]: room => room['#lookFor'](C.LOOK_STRUCTURES),
@@ -25,6 +26,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Structure`
+export type StructureLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [
 	registerLook<Ruin>()(C.LOOK_RUINS),
@@ -32,6 +34,7 @@ const look = [
 ];
 
 // Register schema type for `Ruin`
+export type StructureRoomSchema = typeof ruinSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ruinSchema = registerVariant('Room.objects', compose(ruinShape, Ruin));
 
@@ -57,10 +60,4 @@ declare module 'xxscreeps/game/runtime.js' {
 		Ruin: typeof Ruin;
 		Structure: typeof Structure;
 	}
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { structure: typeof find }
-	interface Look { structure: typeof look }
-	interface RoomSchema { structure: [ typeof ruinSchema ] }
 }

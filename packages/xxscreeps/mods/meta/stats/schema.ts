@@ -15,6 +15,7 @@ export function isStatName(value: string): value is StatName {
 
 // Per-user stat contributions accumulated on the room blob since it last began to fill, coalesced
 // to one entry per (user, stat) pair
+export type StatsRoomSchema = typeof roomSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#userStats': vector(declare('UserStats', struct({
@@ -25,7 +26,3 @@ const roomSchema = registerStruct('Room', {
 	// Wall-clock time the first entry landed
 	'#userStatsTime': 'double',
 });
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { stats: [ typeof roomSchema ] }
-}

@@ -14,6 +14,7 @@ registerGlobal(Source);
 registerGlobal(StructureKeeperLair);
 
 // Register FIND_ types for `Source`
+export type SourceFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_SOURCES]: room =>
@@ -23,6 +24,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Source`
+export type SourceLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Source>()(C.LOOK_SOURCES);
 
@@ -46,6 +48,8 @@ const harvest = registerHarvestable(Source, function(creep) {
 });
 
 // Register schema extensions
+export type SourceRoomSchemas = [ typeof sourceSchema, typeof keeperLairSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const sourceSchema = registerVariant('Room.objects', compose(sourceShape, Source));
 
@@ -53,12 +57,6 @@ const sourceSchema = registerVariant('Room.objects', compose(sourceShape, Source
 const keeperLairSchema = registerVariant('Room.objects', compose(keeperLairShape, StructureKeeperLair));
 
 // ---
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { source: typeof find }
-	interface Look { source: typeof look }
-	interface RoomSchema { source: [ typeof sourceSchema, typeof keeperLairSchema ] }
-}
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global {

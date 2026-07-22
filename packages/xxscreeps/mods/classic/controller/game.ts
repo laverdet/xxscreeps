@@ -25,6 +25,7 @@ hooks.register('gameInitializer', (Game, payload) => {
 // Export `StructureController` to runtime globals
 registerGlobal(StructureController);
 
+export type ControllerRoomSchemas = [ typeof roomSchema, typeof controllerSchema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const controllerSchema = registerVariant('Room.objects', compose(controllerShape, StructureController));
 
@@ -70,13 +71,4 @@ declare module 'xxscreeps/game/object.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureController: typeof StructureController }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema {
-		controller: [
-			typeof roomSchema,
-			typeof controllerSchema,
-		];
-	}
 }

@@ -1,0 +1,5 @@
+declare module 'xxscreeps:mods/game' {
+	import type { HarvestableRoomSchema } from 'xxscreeps/mods/classic/harvestable/schema.js';
+
+	interface RoomSchema { harvestable: HarvestableRoomSchema }
+}

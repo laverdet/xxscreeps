@@ -40,6 +40,7 @@ registerGlobal(StructureSpawn);
 registerGlobal('Spawn', StructureSpawn);
 
 // Register FIND_ types for `Spawn`
+export type SpawnFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
@@ -49,6 +50,8 @@ const find = registerFindHandlers({
 });
 
 // Register schema
+export type SpawnRoomSchemas = [ typeof extensionSchema, typeof spawnSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extensionSchema = registerVariant('Room.objects', compose(extensionShape, StructureExtension));
 
@@ -81,9 +84,4 @@ declare module 'xxscreeps/game/room/index.js' {
 		 */
 		energyCapacityAvailable: number;
 	}
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface Find { spawn: typeof find }
-	interface RoomSchema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

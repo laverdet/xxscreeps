@@ -39,6 +39,8 @@ export const constructionSiteShape = () => declare('ConstructionSite', struct(ro
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
 
+export type ConstructionEventRoomSchemas = [ typeof buildEventSchema, typeof repairEventSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const buildEventSchema = registerVariant('Room.eventLog', declare('BuildEvent', struct({
 	...variant(C.EVENT_BUILD),
@@ -67,13 +69,4 @@ const repairEventSchema = registerVariant('Room.eventLog', declare('RepairEvent'
 
 declare module 'xxscreeps/game/schema.js' {
 	interface ActionLogSchema { construction: typeof actionSchema }
-}
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema {
-		constructionSchema: [
-			typeof buildEventSchema,
-			typeof repairEventSchema,
-		];
-	}
 }

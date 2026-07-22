@@ -25,13 +25,8 @@ export const powerBankShape = declare('PowerBank', struct(structureShape, {
 
 // The tick a room's next power bank is due. Placement state is authoritative on the room so it
 // survives a restart; the scratch schedule driving the per-tick sweep is rebuilt from it on init.
+export type PowerbankSchemaRoomSchema = typeof roomSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#nextPowerBankTime': 'int32',
 });
-
-// ---
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { powerbankSchema: [ typeof roomSchema ] }
-}

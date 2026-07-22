@@ -39,6 +39,7 @@ export const invaderCoreShape = declare('InvaderCore', struct(ownedStructureShap
 }));
 
 // Track energy mined on room
+export type InvaderSchemaRoomSchema = typeof roomSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#invaderEnergyTarget': 'int32',
@@ -53,10 +54,6 @@ const structureSchema = registerStruct('Structure', {
 });
 
 // ---
-
-declare module 'xxscreeps:mods/game' {
-	interface RoomSchema { invaderSchema: [ typeof roomSchema] }
-}
 
 declare module 'xxscreeps/mods/classic/structure/schema.js' {
 	interface StructureSchema { invaderSchema: [ typeof structureSchema ] }
