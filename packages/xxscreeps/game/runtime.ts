@@ -1,5 +1,5 @@
 import lodash from '@xxscreeps/lodash3';
-import * as C from './constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { hooks, registerGlobal } from './symbols.js';
 
 const { apply } = Reflect;
