@@ -7,26 +7,29 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { Deferred } from './async.js';
 import { Worker, waitForWorker } from './worker.js';
 
-type RequestMessage = {
-	id: number;
+interface ResponderFrame { id: number }
+interface RequestMessage extends ResponderFrame {
 	payload: unknown;
-};
-type ResponseMessage = {
-	id: number;
-} & ({
+}
+interface PayloadResponse extends ResponderFrame {
 	payload: unknown;
 	rejection?: false;
-} | {
+}
+interface RejectionResponse extends ResponderFrame {
 	payload: string;
 	rejection: true;
-});
+}
+type ResponseMessage = PayloadResponse | RejectionResponse;
+type ResponderMessage =
+	{ type?: never } |
+	{ type: 'responderReady'; port: MessagePort };
 
 type ResponderResult<Type, Result> = [ Effect, (payload: Type) => Promise<Result> ];
 const localEmitter = new EventEmitter();
 
 export async function negotiateResponderClient<Type, Result>(path: string, singleThread?: boolean) {
 	interface Adapter {
-		onMessage: (fn: (message: any) => void) => void;
+		onMessage: (fn: (message: ResponderMessage) => void) => void;
 		onClose: (fn: (err: unknown) => void) => void;
 		wait: () => Promise<void>;
 	}
@@ -48,7 +51,8 @@ export async function negotiateResponderClient<Type, Result>(path: string, singl
 		}
 	}();
 	const [ close, responder ] = await new Promise<ResponderResult<Type, Result>>((resolve, reject) => {
-		onClose(err => reject(err));
+		// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+		onClose(error => reject(error));
 		onMessage(message => {
 			if (message.type === 'responderReady') {
 				resolve(makeBasicResponderClient(message.port));
@@ -106,7 +110,7 @@ export function makeBasicResponderClient<Type, Result>(port: MessagePort): Respo
 
 export async function makeBasicResponderHost<Type>(url: string, implementation: (payload: Type) => Promise<any>) {
 	const { port1, port2 } = new MessageChannel();
-	const readyMessage = {
+	const readyMessage: ResponderMessage = {
 		type: 'responderReady',
 		port: port1,
 	};
@@ -120,8 +124,10 @@ export async function makeBasicResponderHost<Type>(url: string, implementation: 
 			const { payload, id } = message;
 			try {
 				yield { id, payload: await implementation(payload as Type) };
-			} catch (err: any) {
-				yield { id, payload: err.stack, rejection: true };
+			} catch (error: unknown) {
+				// @ts-expect-error
+				const stack = error.stack as string;
+				yield { id, payload: stack, rejection: true };
 			}
 		}
 	});

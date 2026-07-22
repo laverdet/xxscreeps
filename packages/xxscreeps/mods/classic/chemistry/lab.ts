@@ -252,9 +252,19 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => {
 			const mineralType = lab.mineralType!;
 			const variants = getReactionVariants(mineralType);
-			const variant = variants.find(v =>
-				(!lab1!.mineralType || lab1!.mineralType === v[0]) &&
-				(!lab2!.mineralType || lab2!.mineralType === v[1]));
+			const predicateFor = (lab: StructureLab): (resource: ResourceType) => boolean => {
+				const { mineralType } = lab;
+				if (mineralType === undefined) {
+					return () => true;
+				} else {
+					return resource => mineralType === resource;
+				}
+			};
+			const variant = variants.find(function() {
+				const left = predicateFor(lab1!);
+				const right = predicateFor(lab2!);
+				return ([ one, two ]) => left(one) && right(two);
+			}());
 			if (!variant) {
 				return C.ERR_INVALID_ARGS;
 			}
@@ -286,7 +296,7 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 			}
 		},
 		() => {
-			if (!creep!.body.some(p => !!p.boost)) {
+			if (creep?.body.every(part => part.boost === undefined)) {
 				return C.ERR_NOT_FOUND;
 			}
 		},

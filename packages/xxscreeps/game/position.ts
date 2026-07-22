@@ -414,7 +414,9 @@ export class RoomPosition {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const { stylize } = options;
 		return `[RoomPosition ${stylize(this.roomName, 'string')} {${stylize(`${this.x}`, 'number')}, ${stylize(`${this.y}`, 'number')}}]`;
 	}
 }

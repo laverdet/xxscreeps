@@ -1,7 +1,7 @@
 /**
  * Returns same result as JSON.stringify except it include inherited enumerable properties as well.
  */
-export function stringifyInherited(value: any): string {
+export function stringifyInherited(value: unknown): string {
 	if (typeof value === 'object') {
 		if (Array.isArray(value)) {
 			// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -10,14 +10,15 @@ export function stringifyInherited(value: any): string {
 		let str = '{';
 		let first = true;
 		for (const key in value) {
-			const prop = value[key];
+			// @ts-expect-error
+			const prop: unknown = value[key];
 			if (prop !== undefined) {
 				if (first) {
 					first = false;
 				} else {
 					str += ',';
 				}
-				str += `${JSON.stringify(key)}:${stringifyInherited(value[key])}`;
+				str += `${JSON.stringify(key)}:${stringifyInherited(prop)}`;
 			}
 		}
 		str += '}';

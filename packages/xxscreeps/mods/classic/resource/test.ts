@@ -10,12 +10,6 @@ import { Resource, create as createResource } from './resource.js';
 import { makeSingleStoreFormat, openStoreFormat, restrictedStoreFormat } from './schema.js';
 import { OpenStore, RestrictedStore, SingleStore } from './store.js';
 
-const keys = (object: {}) => [ ...function*() {
-	for (const key in object) {
-		yield key;
-	}
-}() ];
-
 describe('mods/classic/resource', () => {
 	describe('store', () => {
 		const types: [ string, any, () => Store][] = [
@@ -34,17 +28,17 @@ describe('mods/classic/resource', () => {
 
 				test('empty resources are non-enumerable', () => {
 					const store = create();
-					assert.deepStrictEqual(keys(store), []);
+					assert.deepStrictEqual(Object.keys(store), []);
 				});
 
 				test('enumerable resources', () => {
 					const store = create();
 					store['#add'](C.RESOURCE_ENERGY, 10);
-					assert.deepStrictEqual(keys(store), [ C.RESOURCE_ENERGY ]);
-					assert.deepStrictEqual(keys(reconstruct(store)), [ C.RESOURCE_ENERGY ]);
+					assert.deepStrictEqual(Object.keys(store), [ C.RESOURCE_ENERGY ]);
+					assert.deepStrictEqual(Object.keys(reconstruct(store)), [ C.RESOURCE_ENERGY ]);
 					store['#subtract'](C.RESOURCE_ENERGY, 10);
-					assert.deepStrictEqual(keys(store), []);
-					assert.deepStrictEqual(keys(reconstruct(store)), []);
+					assert.deepStrictEqual(Object.keys(store), []);
+					assert.deepStrictEqual(Object.keys(reconstruct(store)), []);
 				});
 
 				test('used capacity', () => {

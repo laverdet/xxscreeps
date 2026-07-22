@@ -89,18 +89,22 @@ WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 }
 
 // Composed interceptor types
-export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | OverlayInterceptor;
-export type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
-type CompositionInterceptor<Type = any, Result = any> = {
+export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | AbstractOverlayInterceptor;
+export type AbstractOverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
+export interface ConcreteOverlayInterceptor<Type = unknown> {
+	prototype: Record<keyof any, unknown>;
+	new(view: BufferView, offset: number): Type;
+}
+type CompositionInterceptor<Type = unknown, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
-	kaitai?: any[];
+	kaitai?: unknown[];
 };
 
-type RawCompositionInterceptor<Type = any> = {
+type RawCompositionInterceptor<Type = unknown> = {
 	composeFromBuffer: (view: BufferView, offset: number) => Type;
 	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => void;
-	kaitai?: any[];
+	kaitai?: unknown[];
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
@@ -111,7 +115,7 @@ export function compose<Type extends Format, Result>(
 	format: Type, interceptor: RawCompositionInterceptor<Result>,
 ): WithShapeAndType<Result>;
 
-export function compose<Type extends Format, Overlay>(format: Type, interceptor: OverlayInterceptor<Overlay>):
+export function compose<Type extends Format, Overlay>(format: Type, interceptor: AbstractOverlayInterceptor<Overlay>):
 WithShapeAndType<ShapeOf<Type>, Overlay>;
 
 export function compose(format: Format, interceptor: Interceptor) {
@@ -128,7 +132,7 @@ export function composeBind<Type extends Format>(format: Type) {
 			composed: format,
 			interceptor: undefined as never,
 		};
-		const bind = (interceptor: OverlayInterceptor<Overlay>) => {
+		const bind = (interceptor: AbstractOverlayInterceptor<Overlay>) => {
 			composedFormat.interceptor = interceptor;
 		};
 		return [

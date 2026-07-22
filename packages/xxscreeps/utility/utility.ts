@@ -1,4 +1,4 @@
-import type { LooseBoolean, Union } from './types.js';
+import type { Instantiable, LooseBoolean, Union } from './types.js';
 
 // Wrapper around Object.assign that enforces assigned types already exist
 export function assign<
@@ -65,16 +65,6 @@ export function asyncDisposableToEffect(disposable: AsyncDisposable) {
 	return () => dispose.call(disposable);
 }
 
-// Replace a value on an object with a new one, and returns the old one.
-export function exchange<T, N extends keyof T>(
-	target: T, name: N,
-	...newValue: undefined extends T[N] ? [ T[N]? ] : [ T[N] ]): T[N];
-export function exchange(target: any, name: keyof any, newValue: any = undefined) {
-	const value = target[name];
-	target[name] = newValue;
-	return value;
-}
-
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
 type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return
 	? (this: Type, ...args: Args) => Return : {
@@ -123,24 +113,25 @@ export function getOrSet<Key, Value>(map: Map<Key, Value>, key: Key, fn: () => V
 
 // Creates a new instance of a class without calling the constructor, then copies the given
 // properties on to it
-export function instantiate<Type>(
-	ctor: new(...params: any) => Type,
-	properties: { [Key in keyof Type]?: Type[Key] },
-): Type {
-	return Object.assign(Object.create(ctor.prototype), properties);
+export function instantiate<Type extends object>(ctor: Instantiable<Type>, properties: Partial<Type>): Type {
+	return Object.assign(Object.create(ctor.prototype) as Type, properties);
 }
 
-export function merge(result: any, subject: any) {
-	for (const [ key, val ] of Object.entries(subject)) {
-		if (val === null) {
+export function merge(result: object, subject: object) {
+	for (const [ key, value ] of Object.entries(subject)) {
+		if (value === null) {
+			// @ts-expect-error
 			result[key] = null;
 		} else if (
+			// @ts-expect-error
 			result[key] == null ||
-			typeof val !== 'object'
+			typeof value !== 'object'
 		) {
-			result[key] = val;
+			// @ts-expect-error
+			result[key] = value as unknown;
 		} else {
-			merge(result[key], val);
+			// @ts-expect-error
+			merge(result[key] as unknown, value as unknown);
 		}
 	}
 }

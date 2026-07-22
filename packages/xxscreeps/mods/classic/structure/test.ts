@@ -178,8 +178,8 @@ describe('mods/classic/structure', () => {
 				const mine = Game.rooms.W7N1?.find(C.FIND_MY_STRUCTURES);
 				assert.ok(mine);
 				assert.strictEqual(mine.length, 2, 'should return only my owned structures, including controller');
-				assert.ok(mine.some(s => (s as { name?: string }).name === 'MySpawn'));
-				assert.ok(mine.every(s => s.my));
+				assert.ok(mine.some(structure => (structure as { name?: string }).name === 'MySpawn'));
+				assert.ok(mine.every(structure => structure.my));
 			});
 		}));
 
@@ -198,7 +198,7 @@ describe('mods/classic/structure', () => {
 				assert.ok(ruins);
 				assert.strictEqual(ruins.length, 1);
 				assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_SPAWN);
-				assert.ok(ruins[0]!.ticksToDecay! > 0, 'ruin should have ticksToDecay property');
+				assert.ok(ruins[0]!.ticksToDecay > 0, 'ruin should have ticksToDecay property');
 			});
 		}));
 

@@ -20,7 +20,10 @@ export type EffectWithResult<Type = unknown> = readonly [ Effect | undefined, Ty
 export type AsyncEffectAndResult<Type = unknown> = MaybePromise<EffectWithResult<Type>> | undefined;
 
 // Helper for passing around prototypes
-export type Implementation<Type = {}> = { prototype: Type };
+export interface Implementation<Type extends object> { prototype: Type }
+export interface Instantiable<Type extends object, Params extends unknown[] = any[]> extends Implementation<Type> {
+	new(...params: Params): Type;
+}
 
 // Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 export type LooseBoolean = boolean | object | null | undefined;

@@ -2,6 +2,7 @@ import type { BackendContext } from './context.js';
 import type Koa from 'koa';
 import type { Server } from 'node:http';
 import type { Duplex } from 'node:stream';
+import type { Connection } from 'sockjs';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import type { Context, State } from 'xxscreeps:backend';
 import { EventEmitter } from 'node:events';
@@ -114,7 +115,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 
 	// The rest is regular WebSocket code, no more dragons
 	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...hooks.map('subscription') ];
-	socketServer.on('connection', connection => {
+	socketServer.on('connection', (connection: Connection | null) => {
 
 		if (!connection) {
 			// Sometimes Sockjs gives us dead connections on restart..
@@ -132,7 +133,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
 		const subscriptions = new Map<string, Promise<Effect>>();
-		function close() {
+		const close = () => {
 			for (const [ name, unlistener ] of subscriptions) {
 				subscriptions.delete(name);
 				const teardown = unlistener.then(unlistener => unlistener(), () => {});
@@ -140,7 +141,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 				void teardown.finally(() => pendingTeardowns.delete(teardown));
 			}
 			connection.close();
-		}
+		};
 
 		connection.write(`time ${Date.now()}`);
 		connection.write('protocol 14');

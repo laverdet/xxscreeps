@@ -19,7 +19,7 @@ import { testRedis } from './context.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
-const payload: Payload = JSON.parse(await fs.readFile(new URL('../test/data/shard.json', root), 'utf8'));
+const payload = JSON.parse(await fs.readFile(new URL('../test/data/shard.json', root), 'utf8')) as Payload;
 
 // Generate rooms
 const rooms = Object.entries(payload).map(([ roomName, info ]) => {

@@ -1,5 +1,6 @@
 // https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/witx/wasi_snapshot_preview1.wit
 import * as process from 'node:process';
+import { kFdStdOut } from 'xxscreeps/driver/runtime/print.js';
 import * as C from './constants.js';
 
 // Adapted from:
@@ -213,7 +214,7 @@ export class WASI {
 					file.push(this.#u8.subarray(addr, ii));
 					addr = ii + 1;
 					const string = readUTF8(file.splice(0));
-					(fd === 1 ? console.log : console.error)(string);
+					(fd === kFdStdOut ? console.log : console.error)(string);
 				}
 			}
 

@@ -7,10 +7,10 @@ type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;
 export type AnyEventLog = RemoveVariant<Room['#eventLog'][number]>;
 
 export interface GameEvent {
+	[key: string]: unknown;
 	event: number;
 	objectId: string;
 	data?: Record<string, unknown>;
-	[key: string]: unknown;
 }
 
 function toPlayerShape(entry: AnyEventLog): GameEvent {

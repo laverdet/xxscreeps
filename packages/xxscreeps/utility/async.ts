@@ -116,10 +116,11 @@ export async function spread<Type>(
 			}
 			Promise.resolve(fn(next.value)).then(
 				() => pending[offset++]!.resolve(),
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				err => pending[offset++]!.reject(err));
 		}
 	} finally {
-		iterator.return?.();
+		await iterator.return?.();
 	}
 }
 

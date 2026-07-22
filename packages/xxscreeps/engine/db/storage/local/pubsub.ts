@@ -137,11 +137,6 @@ class LocalPubSubProviderParent extends SharedResponder implements PubSubProvide
 		}
 	}
 
-	protected async disposeAsync() {
-		providersByName.delete(this.id);
-		await this.disposable.disposeAsync();
-	}
-
 	publish(key: string, message: string) {
 		this.send(key, message);
 		return Promise.resolve();
@@ -173,6 +168,11 @@ class LocalPubSubProviderParent extends SharedResponder implements PubSubProvide
 				this.subscriptionsByKey.delete(key);
 			}
 		}, subscription ] as const;
+	}
+
+	protected async disposeAsync() {
+		providersByName.delete(this.id);
+		await this.disposable.disposeAsync();
 	}
 
 	private handle(port: LocalPayloadPort<Sends, Receives>) {

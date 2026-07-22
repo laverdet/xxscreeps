@@ -101,7 +101,9 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 		);
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const { stylize } = options;
 		try {
 			// The `RoomObject` printer can fail here because these are instantiated and added to game
 			// state without reading a `BufferObject`

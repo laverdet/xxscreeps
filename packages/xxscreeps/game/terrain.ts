@@ -2,7 +2,6 @@ import type { BufferView } from 'xxscreeps/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { array, compose } from 'xxscreeps/schema/index.js';
-import { exchange } from 'xxscreeps/utility/utility.js';
 import { Room } from './room/index.js';
 import { Game } from './index.js';
 
@@ -44,7 +43,7 @@ export class Terrain {
 	 * Extracts the underlying private buffer out of a `Terrain` class.
 	 * @internal
 	 */
-	static getBuffer(that: Terrain) {
+	static getBuffer(this: void, that: Terrain) {
 		return that.#buffer;
 	}
 
@@ -121,7 +120,8 @@ export class TerrainWriter extends Terrain {
 	}
 }
 
-export const getBuffer = exchange(Terrain, 'getBuffer', (): never => { throw new Error(); });
+export const { getBuffer } = Terrain;
+Terrain.getBuffer = (): never => { throw new Error(); };
 
 export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;

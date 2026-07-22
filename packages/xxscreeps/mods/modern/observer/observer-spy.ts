@@ -4,6 +4,7 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { observerSpyShape } from './schema.js';
 
 export class ObserverSpy extends withOverlay(RoomObject, observerSpyShape) {
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#lookType'() { return null; }
 	override get '#providesVision'() { return true; }
 }

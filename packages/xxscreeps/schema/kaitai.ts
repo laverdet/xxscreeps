@@ -1,14 +1,14 @@
 import type { Layout } from './layout.js';
 import jsYaml from 'js-yaml';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
-import { mappedNumericComparator, primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { mappedNumericComparator, mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 
 function toId(name: string | symbol): string {
 	if (typeof name === 'symbol') {
 		return toId(name.description!);
 	} else if (name.startsWith('#')) {
-		return toId(name.substr(1));
+		return toId(name.slice(1));
 	} else if (/^[A-Z0-9]+$/.test(name)) {
 		return name.toLowerCase();
 	} else {
@@ -16,12 +16,25 @@ function toId(name: string | symbol): string {
 	}
 }
 
-export class KaitaiArchiver {
+interface Seq {
+	id?: string;
+	contents?: unknown[];
+	enum?: unknown;
+	repeat?: unknown;
+	'repeat-expr'?: number;
+	size?: number | string;
+	type?: undefined | string | {
+		'switch-on': string;
+		cases: unknown;
+	};
+}
+
+class KaitaiArchiver {
 	private size = 0;
 	private readonly top: KaitaiArchiver;
-	private readonly seq: any[] = [];
-	private readonly enums = new Map<string, any>();
-	private readonly instances = new Map<string, any>();
+	private readonly seq: Seq[] = [];
+	private readonly enums = new Map<string, unknown>();
+	private readonly instances = new Map<string, object>();
 	private readonly types = new Map<string, KaitaiArchiver>();
 	private readonly namedTypes: Set<Layout>;
 	constructor(top?: KaitaiArchiver) {
@@ -55,22 +68,34 @@ export class KaitaiArchiver {
 	}
 
 	render(): any {
-		function sort(map: Map<string, any>) {
-			return [ ...map ].sort((left, right) => primitiveComparator(left[0], right[0]));
-		}
 		return {
 			seq: this.seq,
 			...this.enums.size > 0 && {
-				enums: Object.fromEntries(sort(this.enums)),
+				enums: Fn.pipe(
+					this.enums,
+					$$ => [ ...$$ ],
+					$$ => $$.sort(mappedPrimitiveComparator(value => value[0])),
+					$$ => Fn.fromEntries($$)),
 			},
 			...this.instances.size > 0 && {
-				instances: Object.fromEntries(Fn.map(sort(this.instances), ([ key, value ]) => [ key, {
-					...value,
-					'-webide-parse-mode': 'eager',
-				} ])),
+				instances: Fn.pipe(
+					this.instances,
+					$$ => [ ...$$ ],
+					$$ => $$.sort(mappedPrimitiveComparator(value => value[0])),
+					$$ => Fn.fromEntries($$, ([ key, value ]) => {
+						const format: unknown = {
+							...value,
+							'-webide-parse-mode': 'eager',
+						};
+						return [ key, format ] as const;
+					})),
 			},
 			...this.types.size > 0 && {
-				types: Object.fromEntries(Fn.map(sort(this.types), ([ key, value ]) => [ key, value.render() ])),
+				types: Fn.pipe(
+					this.types,
+					$$ => [ ...$$ ],
+					$$ => $$.sort(mappedPrimitiveComparator(value => value[0])),
+					$$ => Fn.fromEntries($$, ([ key, value ]) => [ key, value.render() ] as const)),
 			},
 		};
 	}
@@ -78,9 +103,9 @@ export class KaitaiArchiver {
 	private makeType(id: string, child: KaitaiArchiver) {
 		if (child.seq.length === 1 && child.enums.size === 0 && child.instances.size === 0) {
 			if (child.types.size === 0) {
-				return child.seq[0].type;
-			} else if (child.types.has(child.seq[0].type)) {
-				this.types.set(id, child.types.get(child.seq[0].type)!);
+				return child.seq[0]!.type;
+			} else if (child.types.has(child.seq[0]!.type as string)) {
+				this.types.set(id, child.types.get(child.seq[0]!.type as string)!);
 				return id;
 			}
 		}
@@ -170,7 +195,7 @@ export class KaitaiArchiver {
 			const { interceptor } = layout;
 			if ('kaitai' in interceptor) {
 				const { kaitai } = interceptor;
-				holder.seq.push(...kaitai);
+				holder.seq.push(...kaitai as Seq[]);
 				const tmp = new KaitaiArchiver();
 				tmp.archive(id, tmp, layout.composed);
 				holder.size = tmp.size;
@@ -222,7 +247,7 @@ export class KaitaiArchiver {
 				this.namedTypes.add(layout);
 				const holder = new KaitaiArchiver(this);
 				this.archive(nameId, holder, layout.layout);
-				if (holder.seq.length === 1 && holder.seq[0].type === nameId) {
+				if (holder.seq.length === 1 && holder.seq[0]!.type === nameId) {
 					this.types.set(nameId, holder.types.get(nameId)!);
 				} else {
 					this.types.set(nameId, holder);
@@ -304,7 +329,7 @@ export class KaitaiArchiver {
 				const variantHolder = new KaitaiArchiver(this);
 				const variantId = `variant${cases.length}`;
 				this.archive(variantId, variantHolder, element.layout);
-				cases.push(holder.makeType(variantId, variantHolder));
+				cases.push(holder.makeType(variantId, variantHolder) as string);
 			}
 			holder.seq.push({
 				id: `${id}_ofs`,

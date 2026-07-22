@@ -294,8 +294,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.circle
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
-		const [ x, y, style ] = extractPositions(args, this.#encodePositions);
-		this.#push({ [Variant]: 'c', x, y, s: style ?? {} });
+		const [ xx, yy, style ] = extractPositions(args, this.#encodePositions);
+		this.#push({ [Variant]: 'c', x: xx, y: yy, s: style ?? {} });
 		return this;
 	}
 
@@ -351,8 +351,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.rect
 	 */
 	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
-		const [ x, y, width, height, style ] = extractPositions(args, this.#encodePositions);
-		this.#push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
+		const [ xx, yy, width, height, style ] = extractPositions(args, this.#encodePositions);
+		this.#push({ [Variant]: 'r', x: xx, y: yy, w: width, h: height, s: style ?? {} });
 		return this;
 	}
 
@@ -369,8 +369,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.text
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
-		const [ x, y, style ] = extractPositions(args, this.#encodePositions);
-		this.#push({ [Variant]: 't', x, y, text, s: style ?? {} });
+		const [ xx, yy, style ] = extractPositions(args, this.#encodePositions);
+		this.#push({ [Variant]: 't', x: xx, y: yy, text, s: style ?? {} });
 		return this;
 	}
 

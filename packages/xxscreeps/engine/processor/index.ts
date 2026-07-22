@@ -41,7 +41,7 @@ type RemapNull<Type> = Type extends any[] ? {
 } : NullToUndefined<Type>;
 
 // Register RoomObject intent processor
-export function registerIntentProcessor<Type extends {}, Intent extends string, Data extends AllowedTypes[]>(
+export function registerIntentProcessor<Type extends object, Intent extends string, Data extends AllowedTypes[]>(
 	receiver: abstract new(...args: any[]) => Type,
 	intent: Intent,
 	constraints: {

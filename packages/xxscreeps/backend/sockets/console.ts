@@ -1,7 +1,8 @@
 
 import type { SubscriptionEndpoint } from '../socket.js';
+import type { PlayerLog } from 'xxscreeps/driver/runtime/print.js';
 import { config } from 'xxscreeps/config/index.js';
-import { resultPrefix, unescapedFd } from 'xxscreeps/driver/runtime/print.js';
+import { kFdStdError, kFdUnescaped, resultPrefix } from 'xxscreeps/driver/runtime/print.js';
 import { getConsoleChannel, runnerUsageChannel } from 'xxscreeps/engine/runner/model.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
 
@@ -49,13 +50,16 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 				messages?: never;
 			};
 			const frames: Frame[] = [];
-			const lines = JSON.parse(message);
+			const lines = JSON.parse(message) as PlayerLog[];
 
 			for (const line of lines) {
-				if (line.fd !== unescapedFd) {
+				if (line.fd !== kFdUnescaped) {
 					line.data = escape(line.data);
 				}
-				if (line.fd !== 2) {
+				if (line.fd === kFdStdError) {
+					// Error (console.error, or runtime)
+					frames.push({ error: colorize(line.data) });
+				} else {
 					const previous = frames.at(-1)?.messages;
 					if (line.data.startsWith(resultPrefix)) {
 						if (previous?.results.length) {
@@ -72,9 +76,6 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 						// Repeated console.log
 						frames.push({ messages: { log: [ colorize(line.data) ], results: [] } });
 					}
-				} else {
-					// Error
-					frames.push({ error: colorize(line.data) });
 				}
 			}
 			for (const frame of frames) {

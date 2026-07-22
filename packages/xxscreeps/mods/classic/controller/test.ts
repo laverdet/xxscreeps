@@ -2,7 +2,8 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
-import { StructureExtension, create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
+import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
+import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { captureNotificationsForTesting } from 'xxscreeps/mods/meta/notifications/transports.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -357,18 +358,16 @@ describe('mods/classic/controller', () => {
 		test('downgrade updates extension.energyCapacity',
 			() => downgradeWithExtension(async ({ peekRoom, tick }) => {
 				await peekRoom('W3N3', room => {
-					const ext = room.find(C.FIND_STRUCTURES)
-						.find((s): s is StructureExtension => s instanceof StructureExtension);
-					assert.ok(ext, 'extension should exist');
-					assert.strictEqual(ext.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[8]);
+					const [ extension ] = lookForStructures(room, C.STRUCTURE_EXTENSION);
+					assert.ok(extension, 'extension should exist');
+					assert.strictEqual(extension.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[8]);
 				});
 				await tick();
 				await peekRoom('W3N3', room => {
 					assert.strictEqual(room.controller!.level, 7);
-					const ext = room.find(C.FIND_STRUCTURES)
-						.find((s): s is StructureExtension => s instanceof StructureExtension);
-					assert.ok(ext, 'extension should still exist');
-					assert.strictEqual(ext.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[7]);
+					const [ extension ] = lookForStructures(room, C.STRUCTURE_EXTENSION);
+					assert.ok(extension, 'extension should still exist');
+					assert.strictEqual(extension.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[7]);
 				});
 			}));
 	});

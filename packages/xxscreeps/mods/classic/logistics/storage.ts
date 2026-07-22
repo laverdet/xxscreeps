@@ -16,9 +16,6 @@ import { storageShape } from './schema.js';
  * @see https://docs.screeps.com/api/#StructureStorage
  */
 export class StructureStorage extends withOverlay(OwnedStructure, storageShape) {
-	override get hitsMax() { return C.STORAGE_HITS; }
-	override get structureType() { return C.STRUCTURE_STORAGE; }
-
 	/**
 	 * An alias for [`.store.getCapacity()`](https://docs.screeps.com/api/#Store.getCapacity).
 	 * @public
@@ -26,6 +23,9 @@ export class StructureStorage extends withOverlay(OwnedStructure, storageShape) 
 	 * @see https://docs.screeps.com/api/#StructureStorage.storeCapacity
 	 */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
+
+	override get hitsMax() { return C.STORAGE_HITS; }
+	override get structureType() { return C.STRUCTURE_STORAGE; }
 
 	override '#afterRemove'() {
 		this.room.storage = undefined;

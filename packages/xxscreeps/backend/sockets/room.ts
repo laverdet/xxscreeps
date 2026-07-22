@@ -142,17 +142,15 @@ export const roomSubscription: SubscriptionEndpoint = {
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
 		await acquireWith(
 			fn => disposable.defer(fn),
-			subscribeToRoom(shard, roomName, (room, time, didUpdate) => mustNotReject(async () => {
+			subscribeToRoom(shard, roomName, (room, time, roomDidUpdate) => mustNotReject(async () => {
 				if (Date.now() < skipUntil) {
-					if (didUpdate) {
+					if (roomDidUpdate) {
 						missedUpdateDuringSkip = true;
 					}
 					return;
 				}
-				if (missedUpdateDuringSkip) {
-					didUpdate = true;
-					missedUpdateDuringSkip = false;
-				}
+				const didUpdate = roomDidUpdate || missedUpdateDuringSkip;
+				missedUpdateDuringSkip = false;
 
 				// Render current room state
 				room['#initialize']();

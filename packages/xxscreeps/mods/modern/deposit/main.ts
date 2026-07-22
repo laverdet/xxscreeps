@@ -45,7 +45,7 @@ function depositThroughput(harvested: number): number {
 // Surviving in-sector deposits per normal edge room (one group per room, empties included).
 export async function loadSectorDeposits(shard: Shard, world: World, centralRoom: string, normalEdges: string[]): Promise<Deposit[]> {
 	const depositsByRoom = await Fn.mapAwait(normalEdges, async edgeRoom => {
-		const sectors = world.map['#getRoomTraits'](edgeRoom)!.sectors;
+		const sectors = world.map['#getRoomTraits'](edgeRoom).sectors;
 		const room = await shard.loadRoom(edgeRoom);
 		const inSector = makeSectorRadiusPredicate(centralRoom, edgeRoom, sectors);
 		return room['#objects'].filter((object): object is Deposit =>
@@ -85,7 +85,7 @@ async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: str
 }
 
 async function evaluateSector(shard: Shard, world: World, centralRoom: string) {
-	const sectorControl = world.map['#getRoomTraits'](centralRoom)?.sectorControl;
+	const sectorControl = world.map['#getRoomTraits'](centralRoom).sectorControl;
 	assert.ok(sectorControl);
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
 	const normalEdges = sectorControl.edges.filter(name => world.map.getRoomStatus(name).status === 'normal');

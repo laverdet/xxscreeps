@@ -30,14 +30,14 @@ declare module 'openid/index.js' {
 RelyingParty.prototype.authenticate = function(authenticate): typeof authenticate {
 	return function(this: InstanceType<typeof RelyingParty>, ...args) {
 		this.update();
-		return void authenticate.apply(this, args);
+		authenticate.apply(this, args);
 	};
 }(RelyingParty.prototype.authenticate);
 
 RelyingParty.prototype.verifyAssertion = function(verifyAssertion): typeof verifyAssertion {
 	return function(this: InstanceType<typeof RelyingParty>, ...args) {
 		this.update();
-		return void verifyAssertion.apply(this, args);
+		verifyAssertion.apply(this, args);
 	};
 }(RelyingParty.prototype.verifyAssertion);
 

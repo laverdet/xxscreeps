@@ -33,10 +33,6 @@ export class Ruin extends withOverlay(RoomObject, ruinShape) {
 		return user === null ? [] : [ user ];
 	}
 
-	override '#applyNukeImpact'() {
-		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-	}
-
 	/**
 	 * An object containing basic data of the destroyed structure.
 	 * @public
@@ -62,6 +58,10 @@ export class Ruin extends withOverlay(RoomObject, ruinShape) {
 		});
 		Object.defineProperty(this, 'structure', { value: structure });
 		return structure;
+	}
+
+	override '#applyNukeImpact'() {
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 	}
 }
 

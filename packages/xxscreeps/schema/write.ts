@@ -1,6 +1,6 @@
 import type { Package } from './build.js';
-import type { ShapeOf } from './format.js';
-import type { Layout, StructLayout } from './layout.js';
+import type { EnumTypes, ShapeOf } from './format.js';
+import type { Layout, StructLayout, Subject } from './layout.js';
 import { makeGetterFromSymbol, ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
@@ -11,8 +11,8 @@ import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from 
 import { makeTypeScanner } from './scan.js';
 import { Builder } from './index.js';
 
-export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
-export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
+export type Writer<Type = unknown> = (value: Type, view: BufferView, offset: number, heap: number) => number;
+export type MemberWriter = (value: Subject, view: BufferView, offset: number, heap: number) => number;
 
 function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter {
 	return getOrSet(builder.memberWriter, layout, () => {
@@ -97,7 +97,7 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 }
 
 function makeTypeWriter(layout: Layout, builder: Builder): Writer {
-	return getOrSet(builder.writer, layout, () => {
+	return getOrSet(builder.writer, layout, (): Writer<any> => {
 
 		if (typeof layout === 'string') {
 			// Basic types
@@ -165,7 +165,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			const { length, stride } = layout;
 			const elementLayout = layout.array;
 			const write = makeTypeWriter(elementLayout, builder);
-			return (value, view, offset, heap) => {
+			return (value: Subject, view, offset, heap) => {
 				let currentOffset = offset;
 				for (let ii = 0; ii < length; ++ii) {
 					write(value[ii], view, currentOffset, 0);
@@ -179,9 +179,10 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			const { composed, interceptor } = layout;
 			const write = makeTypeWriter(composed, builder);
 			if ('decompose' in interceptor) {
-				return (value, view, offset, heap) => write(interceptor.decompose(value), view, offset, heap);
+				return (value: unknown, view, offset, heap) => write(interceptor.decompose(value), view, offset, heap);
 			} else if ('decomposeIntoBuffer' in interceptor) {
-				return (value, view, offset, heap) => (interceptor.decomposeIntoBuffer(value, view, offset), heap);
+				// eslint-disable-next-line no-sequences
+				return (value: unknown, view, offset, heap) => (interceptor.decomposeIntoBuffer(value, view, offset), heap);
 			} else {
 				return write;
 			}
@@ -192,14 +193,15 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 		} else if ('enum' in layout) {
 			// Enumerated types
 			const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
-			return (value, view, offset, heap) => (view.uint8[offset] = enumMap.get(value)!, heap);
+			// eslint-disable-next-line no-sequences
+			return (value: EnumTypes, view, offset, heap) => (view.uint8[offset] = enumMap.get(value)!, heap);
 
 		} else if ('list' in layout) {
 			// Vector with dynamic element size
 			const { size, list: elementLayout } = layout;
 			const align = Math.max(kPointerSize, layout.align);
 			const write = makeTypeWriter(elementLayout, builder);
-			return (value, view, offset, heap) => {
+			return (value: unknown[], view, offset, heap) => {
 				let prevOffset = offset + kPointerSize;
 				let end = heap;
 				for (const element of value) {
@@ -220,7 +222,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			// Small optional element
 			const { size, optional: elementLayout, uninitialized } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
-			return (value, view, offset, heap) => {
+			return (value: unknown, view, offset, heap) => {
 				if (value === uninitialized) {
 					view.int8[offset + size] = 0;
 					return heap;
@@ -234,7 +236,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			// Optional element implemented as pointer
 			const { align, size, pointer: elementLayout, uninitialized } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
-			return (value, view, offset, heap) => {
+			return (value: unknown, view, offset, heap) => {
 				if (value === uninitialized) {
 					view.int32[offset >>> 2] = 0;
 					return heap;
@@ -248,17 +250,17 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 		} else if ('struct' in layout) {
 			// Structured types
 			const writeMembers = makeMemberWriter(layout, builder);
-			return (value, view, offset, heap) => writeMembers(value, view, offset, heap);
+			return (value: Subject, view, offset, heap) => writeMembers(value, view, offset, heap);
 
 		} else if ('variant' in layout) {
 			// Variant types
-			const variantMap = new Map(layout.variant.map((element, ii): [ string | number, Writer ] => {
+			const variantMap = new Map(layout.variant.map((element, ii): [ unknown, Writer ] => {
 				const { align, size } = element;
 				const layout = unpackWrappedStruct(element.layout);
 				const write = makeTypeWriter(layout, builder);
 				return [
 					layout.variant!,
-					(value, view, offset, heap) => {
+					(value: unknown, view, offset, heap) => {
 						const payloadOffset = alignTo(heap, align);
 						view.int32[offset >>> 2] = payloadOffset;
 						view.uint8[offset + kPointerSize] = ii;
@@ -266,14 +268,14 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 					},
 				];
 			}));
-			return (value, view, offset, heap) => variantMap.get(value[Variant])!(value, view, offset, heap);
+			return (value: Subject, view, offset, heap) => variantMap.get(value[Variant])!(value, view, offset, heap);
 
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
 			const { align, size, stride, vector: elementLayout } = layout;
 			const tailPadding = stride - size;
 			const write = makeTypeWriter(elementLayout, builder);
-			return (value, view, offset, heap) => {
+			return (value: unknown[], view, offset, heap) => {
 				let length = 0;
 				let currentOffset = view.int32[offset >>> 2] = alignTo(heap, align);
 				for (const element of value) {

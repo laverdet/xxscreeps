@@ -1,5 +1,6 @@
 import type { ShardInitializer, ShardTickProcessor } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { shardInitializers, shardTickProcessors } from './symbols.js';
 
 export function registerShardTickProcessor(tick: ShardTickProcessor) {
@@ -24,5 +25,5 @@ export const everyNTicks = (period: number, fn: ShardTickProcessor): ShardTickPr
 	};
 
 export async function runShardTickProcessors(shard: Shard, time: number) {
-	await Promise.all(shardTickProcessors.map(fn => fn(shard, time)));
+	await Fn.mapAwait(shardTickProcessors, fn => fn(shard, time));
 }

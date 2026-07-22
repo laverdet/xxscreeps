@@ -41,7 +41,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
 	 * @deprecated
 	 * @see https://docs.screeps.com/api/#StructureNuker.energyCapacity
 	 */
-	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) ?? 0; }
+	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 
 	/**
 	 * An alias for `.store[RESOURCE_GHODIUM]`.
@@ -57,7 +57,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
 	 * @deprecated
 	 * @see https://docs.screeps.com/api/#StructureNuker.ghodiumCapacity
 	 */
-	@enumerable get ghodiumCapacity() { return this.store.getCapacity(C.RESOURCE_GHODIUM) ?? 0; }
+	@enumerable get ghodiumCapacity() { return this.store.getCapacity(C.RESOURCE_GHODIUM); }
 
 	/**
 	 * The total amount of hit points of the structure.

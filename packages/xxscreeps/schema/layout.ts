@@ -16,13 +16,19 @@ export function alignTo(address: number, align: number) {
 
 type ResolvedFormat<Type> =
 	(Type extends () => infer First ? First : never) |
-	(Type extends () => any ? never : Type);
-export function resolve<Type>(declaration: Type): ResolvedFormat<Type> {
+	(Type extends () => unknown ? never : Type);
+export function resolve<Type>(declaration: Type): ResolvedFormat<Type>;
+export function resolve(declaration: unknown): unknown {
 	if (typeof declaration === 'function') {
-		return resolve(declaration());
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+		return resolve(declaration() as unknown);
+	} else {
+		return declaration;
 	}
-	return declaration as never;
 }
+
+// Object-like materialized schema value
+export type Subject = Record<keyof any, unknown>;
 
 export type Layout =
 	Primitive | ComposedLayout | NamedLayout |
@@ -36,7 +42,7 @@ interface ArrayLayout {
 	stride: number;
 }
 
-interface ComposedLayout {
+export interface ComposedLayout {
 	composed: Layout;
 	interceptor: Interceptor;
 }
