@@ -1,9 +1,9 @@
 import type { BackendContext } from './context.js';
-import type { Context, State } from './index.js';
 import type Koa from 'koa';
 import type { Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import type { Effect } from 'xxscreeps/utility/types.js';
+import type { Context, State } from 'xxscreeps:backend';
 import { EventEmitter } from 'node:events';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
@@ -19,7 +19,7 @@ import { hooks } from './symbols.js';
 
 const { allowGuestAccess } = config.backend;
 
-declare module './index.js' {
+declare module 'xxscreeps:backend' {
 	interface Context {
 		upgrade?: (fn: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>) => Promise<void>;
 	}

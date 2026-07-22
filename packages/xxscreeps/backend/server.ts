@@ -1,4 +1,4 @@
-import type { Context, State } from './index.js';
+import type { Context, State } from 'xxscreeps:backend';
 import * as http from 'node:http';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';

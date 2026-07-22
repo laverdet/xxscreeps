@@ -4,16 +4,22 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { StructureContainer } from './container.js';
 import { Resource } from './resource.js';
 
+interface RenderedStore {
+	store: Record<string, unknown>;
+	storeCapacity?: unknown;
+	storeCapacityResource?: Record<string, unknown>;
+}
+
 // Store renderer
 export function renderStore(store: Store) {
-	const result: any = {
+	const result: RenderedStore = {
 		store: Fn.fromEntries(store['#entries']()),
 	};
 	const storeCapacityResource = store['#storeCapacityResource']();
-	if (storeCapacityResource !== null) {
-		result.storeCapacityResource = storeCapacityResource;
-	} else {
+	if (storeCapacityResource === null) {
 		result.storeCapacity = store.getCapacity();
+	} else {
+		result.storeCapacityResource = storeCapacityResource;
 	}
 	return result;
 }

@@ -1,4 +1,4 @@
-import type { Context, State } from 'xxscreeps/backend/index.js';
+import type { Context, State } from 'xxscreeps:backend';
 import Passport from 'koa-passport';
 import Router from 'koa-router';
 import * as OpenId from 'openid';
@@ -30,14 +30,14 @@ declare module 'openid/index.js' {
 RelyingParty.prototype.authenticate = function(authenticate): typeof authenticate {
 	return function(this: InstanceType<typeof RelyingParty>, ...args) {
 		this.update();
-		return authenticate.apply(this, args);
+		return void authenticate.apply(this, args);
 	};
 }(RelyingParty.prototype.authenticate);
 
 RelyingParty.prototype.verifyAssertion = function(verifyAssertion): typeof verifyAssertion {
 	return function(this: InstanceType<typeof RelyingParty>, ...args) {
 		this.update();
-		return verifyAssertion.apply(this, args);
+		return void verifyAssertion.apply(this, args);
 	};
 }(RelyingParty.prototype.verifyAssertion);
 

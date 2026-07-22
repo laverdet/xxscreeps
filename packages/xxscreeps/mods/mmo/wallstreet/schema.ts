@@ -61,6 +61,7 @@ export const orderShape = struct({
 
 // The orders this terminal backs, tracked on the terminal itself so the room pass can sync the
 // advertised amounts against its stock.
+export type WallStreetTerminalRoomSchema = typeof terminalSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const terminalSchema = registerStruct('StructureTerminal', {
 	'#orders': vector(struct({
@@ -68,9 +69,3 @@ const terminalSchema = registerStruct('StructureTerminal', {
 		buy: 'bool',
 	})),
 });
-
-// ---
-
-declare module 'xxscreeps/mods/classic/brokerage/schema.js' {
-	interface StructureTerminalSchema { wallstreet: [ typeof terminalSchema ] }
-}

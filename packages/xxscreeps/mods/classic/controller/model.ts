@@ -5,7 +5,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 export const controlledRoomsKey = (userId: string) => `user/${userId}/controlledRooms`;
 export const reservedRoomsKey = (userId: string) => `user/${userId}/reservedRooms`;
 
-export const globalControlChannel =	(shard: Shard, userId: string): GlobalControlChannel =>
+export const globalControlChannel = (shard: Shard, userId: string): GlobalControlChannel =>
 	new Channel(shard.pubsub, `user/${userId}/globalControl`);
 
 export type GlobalControlChannel = Channel<

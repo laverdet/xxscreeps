@@ -9,5 +9,5 @@ declare module 'xxscreeps:mods/game' {
 	}
 	interface Find { construction: ConstructionFind }
 	interface Look { construction: ConstructionLook }
-	interface RoomSchema { construction: [ ConstructionRoomSchema, ...ConstructionEventRoomSchemas ]	}
+	interface RoomSchema { construction: [ ConstructionRoomSchema, ...ConstructionEventRoomSchemas ] }
 }

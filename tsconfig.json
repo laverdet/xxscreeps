@@ -6,5 +6,6 @@
 		{ "path": "./packages/pathfinder" },
 		{ "path": "./packages/redis" },
 		{ "path": "./packages/xxscreeps" },
+		{ "path": "./packages/xxscreeps/tsconfig.mmo.json" },
 	],
 }

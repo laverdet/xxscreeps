@@ -1,4 +1,4 @@
-import type { StructDeclaration, StructFormat, WithShapeAndType, variant } from 'xxscreeps/schema/format.js';
+import type { StructDeclaration, StructFormat, TypeOf, UnionDeclaration, variant } from 'xxscreeps/schema/format.js';
 import type { BuilderOptions, Format } from 'xxscreeps/schema/index.js';
 import type { ReadOptions } from 'xxscreeps/schema/read.js';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
@@ -13,6 +13,16 @@ export { build, makeUpgrader };
 // Resolve mod formats from `declare module` interfaces
 type FormatsForPath<Schema, Path extends string> =
 	Extract<UnwrapArray<Schema[keyof Schema]>, { path: Path }> extends { format: infer Type } ? Type : never;
+
+/**
+ * Composable overlay extension for types like `Creep` and `StructureTerminal` which have multiple
+ * schema hooks.
+ */
+export type WithOverlay<Schema> = StructDeclarationMembers<UnionToIntersection<FormatsForPath<Schema, string>>>;
+
+type StructDeclarationMembers<Type> = {
+	[Key in keyof Type]: TypeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
+};
 
 // Schema which can be extend by mods using the given path
 export interface SchemaByPath<Path extends string, Format> {

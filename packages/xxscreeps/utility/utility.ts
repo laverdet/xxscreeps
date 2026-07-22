@@ -1,5 +1,4 @@
-import type { Effect, LooseBoolean, Union } from './types.js';
-import { mustNotReject } from './async.js';
+import type { LooseBoolean, Union } from './types.js';
 
 // Wrapper around Object.assign that enforces assigned types already exist
 export function assign<

@@ -314,6 +314,8 @@ const typedTypeScriptRules = acceptTypeScriptRules({
 	'no-extra-boolean-cast': 'off',
 	// Re-enabled for non-d.ts files
 	'no-unused-private-class-members': 'warn',
+	// We make heavy use of this, for better or worse
+	'@typescript-eslint/no-unsafe-declaration-merging': 'off',
 
 	'@typescript-eslint/consistent-type-exports': 'warn',
 	'@typescript-eslint/dot-notation': 'warn',

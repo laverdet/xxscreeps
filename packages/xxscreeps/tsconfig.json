@@ -5,6 +5,7 @@
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},
 	},
+	"exclude": [ "mods/mmo", "**/dist", "**/node_modules", "**/package.json", "**/tsconfig.json" ],
 	"references": [
 		{ "path": "../lodash3" },
 		{ "path": "../pathfinder" },

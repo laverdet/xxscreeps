@@ -40,7 +40,7 @@ export async function loadBlobs(db: Database, userId: string, branchName: string
 		),
 	]);
 	if (buffers || strings) {
-		return { buffers,	strings };
+		return { buffers, strings };
 	}
 }
 

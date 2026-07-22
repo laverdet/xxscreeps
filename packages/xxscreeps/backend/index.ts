@@ -5,20 +5,22 @@ import type { RouterContext } from 'koa-router';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
+import type { Context, State } from 'xxscreeps:backend';
 import { Ajv } from 'ajv';
 import { MapRender, Render, TerrainRender } from './symbols.js';
 
 export { hooks } from './symbols.js';
 
 // Koa middleware & generic backend route types
-export interface Context {
-	backend: BackendContext;
-	db: Database;
-	shard: Shard;
-	request: RequestType;
+declare module 'xxscreeps:backend' {
+	interface Context {
+		backend: BackendContext;
+		db: Database;
+		shard: Shard;
+		request: RequestType;
+	}
 }
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface State {}
+
 export type Method = 'delete' | 'get' | 'post' | 'put';
 export type Middleware = Koa.Middleware<State, Context>;
 

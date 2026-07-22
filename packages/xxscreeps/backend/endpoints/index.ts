@@ -1,6 +1,6 @@
 import type Koa from 'koa';
 import type Router from 'koa-router';
-import type { Context, State } from 'xxscreeps/backend/index.js';
+import type { Context, State } from 'xxscreeps:backend';
 
 import { hooks } from 'xxscreeps/backend/index.js';
 import gameEndpoints from './game/index.js';

@@ -35,6 +35,9 @@ export const CONTROLLER_MAX_UPGRADE_PER_TICK = 15;
 export const CONTROLLER_ATTACK_BLOCKED_UPGRADE = 1000;
 export const CONTROLLER_NUKE_BLOCKED_UPGRADE = 200;
 
+// TODO: Find a home for it?
+export const EFFECT_INVULNERABILITY = 1001;
+
 export const SAFE_MODE_DURATION = 20000;
 export const SAFE_MODE_COOLDOWN = 50000;
 export const SAFE_MODE_COST = 1000;

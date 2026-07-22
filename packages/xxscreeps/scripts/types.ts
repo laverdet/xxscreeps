@@ -83,7 +83,7 @@ const compilerOptions: ts.CompilerOptions = {
 // In-memory files generated from active mod list.
 const xxpackage = packages.get('xxscreeps');
 assert.ok(xxpackage);
-const virtualFiles =	Fn.pipe(
+const virtualFiles = Fn.pipe(
 	Object.entries({
 		'main.ts': 'import "xxscreeps/game/index.js";',
 		'constants.d.ts': makeModTypeScriptText(mods, 'constants'),

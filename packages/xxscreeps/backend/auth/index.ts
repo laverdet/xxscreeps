@@ -6,20 +6,6 @@ import { checkToken, makeToken } from './token.js';
 
 const { allowGuestAccess } = config.backend;
 
-declare module 'xxscreeps/backend/index.js' {
-	interface Context {
-		authenticateForProvider: (provider: string, providerId: string) => Promise<string>;
-		flushToken: (initializeGuest?: boolean) => Promise<string | undefined>;
-	}
-	interface State {
-		newUserId?: string | undefined;
-		userId?: string | undefined;
-		provider?: string | undefined;
-		providerId?: string | undefined;
-		token?: string | undefined;
-	}
-}
-
 export function authentication(): Middleware {
 	return async (context, next) => {
 

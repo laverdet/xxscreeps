@@ -1,10 +1,11 @@
 import type { SubscriptionEndpoint } from './socket.js';
 import type Koa from 'koa';
 import type Router from 'koa-router';
-import type { Context, Endpoint, State } from 'xxscreeps/backend/index.js';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { AsyncEffectAndResult, MaybePromise } from 'xxscreeps/utility/types.js';
+import type { Context, State } from 'xxscreeps:backend';
 import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
 export const MapRender = Symbol('mapRender');
