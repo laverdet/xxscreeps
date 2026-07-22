@@ -21,6 +21,23 @@ We also don't do copy & pasting here. If an existing function almost does what y
 quite, then figure out a way to abstract out the behavior you need. Don't copy & paste a dozen lines
 of code just to change one line.
 
+Invariants are law. Don't plaster over errors with try/catches or conditionals. Don't allow for
+muddy ownership where more than one consumer owns one underlying resource. If something is wrong
+it's generally better to sound the alarms and crash the process than it is to continue in an
+undefined state.
+
+
+### Screeps
+
+Screeps can be used as a reference but should not be used as a blueprint. Screeps is over a decade
+old at this point, so the code does not match modern practices. Furthermore, xxscreeps's
+architecture and database is dramatically different, so whatever solution Screeps landed on may not
+be the best solution for this project.
+
+You can refer to the Screeps source for behavioral reference, or for working out messy
+implementation details that are not clearly documented. Otherwise it is best to start building
+features from a clean slate.
+
 
 ### Prefer `const` over `let`
 
@@ -71,3 +88,16 @@ Avoid `any`.
 Prefer `interface` over `type` aliases.
 
 Just don't do crazy stuff, alright?
+
+
+### Use `async` functions
+
+Do not use `.then()` unless there is a very good reason. "I don't want to write a catch block" is
+not a good reason.
+
+
+### Import style
+
+Don't break import declarations onto multiple lines. The management of these declarations are
+managed almost entirely automatically. You don't need to make them pretty, just make sure there
+aren't any lint errors.
