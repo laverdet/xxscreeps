@@ -257,7 +257,7 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 
 // One structure of a deployed stronghold, created at its template position with the per-type loot
 // and hit points. A decaying peer is pinned to the collapse time so it never reads a past expiry
-// while the room sleeps until collapse. The caller stamps the shared collapse timer and id.
+// while the room sleeps until collapse. The caller stamps the shared collapse timer.
 function createPeer(type: StrongholdStructure['type'], pos: RoomPosition, rewardLevel: number, collapseTime: number) {
 	switch (type) {
 		case C.STRUCTURE_RAMPART: {
@@ -297,7 +297,6 @@ function *strongholdTemplate(core: StructureInvaderCore, template: StrongholdTem
 		const pos = new RoomPosition(core.pos.x + entry.dx, core.pos.y + entry.dy, core.pos.roomName);
 		const peer = createPeer(entry.type, pos, rewardLevel, collapseTime);
 		peer['#collapseTime'] = collapseTime;
-		peer['#strongholdId'] = core.id;
 		yield peer;
 	}
 }
@@ -329,7 +328,8 @@ function crushStrongholdTiles(core: StructureInvaderCore, template: StrongholdTe
 }
 
 // Deploy the stronghold: drop the deploy timer, start the shared collapse timer, and spawn the
-// template peers carrying that same timer and id so the whole stronghold vanishes together.
+// template peers carrying that same timer so the whole stronghold vanishes together. Unowned peers
+// are recorded on the core as its property.
 function deployStronghold(core: StructureInvaderCore, context: ProcessorContext) {
 	const templateName = core['#templateName'];
 	if (templateName === undefined) {
@@ -337,12 +337,14 @@ function deployStronghold(core: StructureInvaderCore, context: ProcessorContext)
 	}
 	const template = templates[templateName];
 	core['#deployTime'] = 0;
-	core['#strongholdId'] = core.id;
 	const duration = Math.round(C.STRONGHOLD_DECAY_TICKS * (0.9 + Math.random() * 0.2));
 	const collapseTime = core['#collapseTime'] = Game.time + duration;
 	crushStrongholdTiles(core, template);
 	for (const peer of strongholdTemplate(core, template, collapseTime)) {
 		core.room['#insertObject'](peer);
+		if (peer['#user'] === null) {
+			core['#ownedNeutralStructureIds'].push(peer.id);
+		}
 	}
 	context.wakeAt(collapseTime);
 	context.didUpdate();

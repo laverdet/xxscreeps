@@ -1,7 +1,7 @@
+import type { StructureInvaderCore } from './invader-core.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { StructureInvaderCore } from './invader-core.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -616,13 +616,11 @@ describe('mod/invader', () => {
 			});
 		}));
 
-		test('deploy spawns the bunker template with loot, scaled ramparts, and a shared id', () => deployScene(async ({ tick, peekRoom }) => {
+		test('deploy spawns the bunker template with loot, scaled ramparts, and a shared timer', () => deployScene(async ({ tick, peekRoom }) => {
 			await tick(2);
 			await peekRoom('W1N1', (room, Game) => {
 				const core = findRoomCore(room)!;
 				const collapseTime = core['#collapseTime'];
-				const strongholdId = core['#strongholdId'];
-				assert.ok(strongholdId !== null, 'the core carries a stronghold id');
 
 				// Two towers and two containers distinguish bunker2 from the single-of-each stub.
 				const towers = lookForStructures(room, C.STRUCTURE_TOWER);
@@ -650,11 +648,14 @@ describe('mod/invader', () => {
 				assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
 				for (const peer of [ tower, rampart, container, roads[0]! ]) {
 					assert.strictEqual(peer['#collapseTime'], collapseTime, 'peer shares the core collapse timer');
-					assert.strictEqual(peer['#strongholdId'], strongholdId, 'peer shares the stronghold id');
 					assert.deepStrictEqual(peer.effects, [
 						{ effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: collapseTime - Game.time },
 					], 'peer surfaces the shared collapse timer');
 				}
+				assert.deepStrictEqual(
+					[ ...core['#ownedNeutralStructureIds'] ].sort(),
+					[ ...containers, ...roads ].map(peer => peer.id).sort(),
+					'the core records its unowned peers and no others');
 				// Pinned to the collapse time so they don't decay (and read a past expiry, which throws)
 				// while the stronghold room sleeps between deploy and collapse.
 				for (const peer of [ rampart, container, roads[0]! ]) {
@@ -764,7 +765,6 @@ describe('mod/invader', () => {
 		const deployedCore = (level: number, templateName: StructureInvaderCore['#templateName']) => {
 			const core = createInvaderCore(corePos, level, 0);
 			core['#templateName'] = templateName;
-			core['#strongholdId'] = core.id;
 			core['#collapseTime'] = farFuture;
 			return core;
 		};
