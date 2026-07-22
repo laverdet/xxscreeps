@@ -18,7 +18,7 @@ import { create as createInvaderCore } from './invader-core.js';
 //   TOP -> W7N8 (y=0 edge), RIGHT -> W6N7 (x=49 edge),
 //   BOTTOM -> W7N6 (y=49 edge), LEFT -> W8N7 (x=0 edge)
 
-describe('mod/invader', () => {
+describe('mods/invader', () => {
 	describe('exit filtering', () => {
 		const dummyPos = new RoomPosition(25, 25, 'W7N7');
 

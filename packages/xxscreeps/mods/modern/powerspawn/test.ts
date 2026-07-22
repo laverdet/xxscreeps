@@ -9,7 +9,7 @@ import { create as createPowerSpawn } from './powerspawn.js';
 const owner = '100';
 const hostile = '101';
 
-describe('mod/modern/powerspawn', () => {
+describe('mods/modern/powerspawn', () => {
 	const sim = simulate({
 		W1N1: room => {
 			const powerSpawn = createPowerSpawn(new RoomPosition(25, 25, 'W1N1'), owner);

@@ -16,7 +16,7 @@ const keys = (object: {}) => [ ...function*() {
 	}
 }() ];
 
-describe('mod/classic/resource', () => {
+describe('mods/classic/resource', () => {
 	describe('store', () => {
 		const types: [ string, any, () => Store][] = [
 			[ 'Open store', openStoreFormat, () => OpenStore['#create'](100) ],

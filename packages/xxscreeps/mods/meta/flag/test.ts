@@ -5,7 +5,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { Flag, checkCreateFlag } from './flag.js';
 
-describe('mod/meta/flag', () => {
+describe('mods/meta/flag', () => {
 	describe('checkCreateFlag precedence', () => {
 		const pos = new RoomPosition(25, 25, 'W1N1');
 		const validColor = C.COLOR_RED;

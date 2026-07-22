@@ -10,7 +10,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { getAllRowsForTesting } from 'xxscreeps/mods/meta/notifications/model.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
-describe('mod/classic/combat', () => {
+describe('mods/classic/combat', () => {
 	describe('death', () => {
 		// 17 ATTACK (510 dmg), 1 RANGED_ATTACK (10 dmg)
 		// attack intent (type 'primary') runs before rangedAttack (type 'laser').

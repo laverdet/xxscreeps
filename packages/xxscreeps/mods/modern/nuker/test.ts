@@ -39,7 +39,7 @@ function createTestTombstone(pos: RoomPosition) {
 	return tombstone;
 }
 
-describe('mod/modern/nuker', () => {
+describe('mods/modern/nuker', () => {
 	const sim = simulate({
 		W1N1: room => {
 			room['#insertObject'](createLoadedNuker(new RoomPosition(25, 25, 'W1N1')));

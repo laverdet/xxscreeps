@@ -4,7 +4,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './observer.js';
 
-describe('mod/modern/observer', () => {
+describe('mods/modern/observer', () => {
 	const simulation = simulate({
 		W1N1: room => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100'));

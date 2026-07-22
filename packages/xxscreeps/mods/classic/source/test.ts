@@ -4,7 +4,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
-describe('mod/classic/source', () => {
+describe('mods/classic/source', () => {
 	const depletedOutOfRange = simulate({
 		W1N1: room => {
 			const source = room.find(C.FIND_SOURCES)[0]!;

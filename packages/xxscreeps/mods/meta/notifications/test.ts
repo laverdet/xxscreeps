@@ -15,7 +15,7 @@ const empty = simulate({
 	W0N0: () => {},
 });
 
-describe('mod/meta/notifications', () => {
+describe('mods/meta/notifications', () => {
 
 	// The notify queue is module-level state that persists between tests (the test framework runs
 	// sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain

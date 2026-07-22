@@ -7,7 +7,7 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createRampart } from './rampart.js';
 import { create as createTower } from './tower.js';
 
-describe('mod/classic/defense', () => {
+describe('mods/classic/defense', () => {
 	describe('ramparts', () => {
 		const roomWithUnbuiltRamparts = simulate({
 			W0N0: room => {

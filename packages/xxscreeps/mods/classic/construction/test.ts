@@ -10,7 +10,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createSite } from './construction-site.js';
 
-describe('mod/classic/construction', () => {
+describe('mods/classic/construction', () => {
 	describe('createConstructionSite', () => {
 		const construction = simulate({
 			W1N1: room => {

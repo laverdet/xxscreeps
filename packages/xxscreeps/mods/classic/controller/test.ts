@@ -9,7 +9,7 @@ import { captureNotificationsForTesting } from 'xxscreeps/mods/meta/notification
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { StructureController } from './controller.js';
 
-describe('mod/classic/controller', () => {
+describe('mods/classic/controller', () => {
 
 	// Controller in W3N3 is at (33, 32)
 	const pos = new RoomPosition(34, 32, 'W3N3');

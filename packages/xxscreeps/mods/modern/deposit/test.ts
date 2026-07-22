@@ -58,7 +58,7 @@ function depositSim(options: DepositSimOptions = {}) {
 	});
 }
 
-describe('mod/modern/deposit', () => {
+describe('mods/modern/deposit', () => {
 	describe('harvest & decay', () => {
 		test('harvest stores resources and updates cooldown curve', () => depositSim({
 			body: [ C.WORK, C.WORK, C.WORK, C.CARRY, C.MOVE ],

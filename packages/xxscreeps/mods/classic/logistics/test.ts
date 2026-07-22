@@ -25,7 +25,7 @@ function getLink(room: Room | undefined, xx: number, yy: number) {
 	return link;
 }
 
-describe('mod/classic/logistics', () => {
+describe('mods/classic/logistics', () => {
 	const sim = simulate({
 		W1N1: room => {
 			own(room, 5);

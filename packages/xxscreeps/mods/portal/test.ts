@@ -8,7 +8,7 @@ import { StructurePortal, create as createPortal } from './portal.js';
 const findPortal = (room: Room) =>
 	room.find(C.FIND_STRUCTURES).find(object => object instanceof StructurePortal);
 
-describe('mod/portal', () => {
+describe('mods/portal', () => {
 	test('decaying portal exposes positive ticksToDecay', () => simulate({
 		W1N1: room => {
 			room['#insertObject'](createPortal(

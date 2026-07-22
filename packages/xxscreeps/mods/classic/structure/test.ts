@@ -8,7 +8,7 @@ import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { createRuin } from './ruin.js';
 
-describe('mod/classic/structure', () => {
+describe('mods/classic/structure', () => {
 	describe('isActive', () => {
 		// Controller owner mismatch: structure owned by player A in room controlled by player B
 		const ownerMismatchSim = simulate({

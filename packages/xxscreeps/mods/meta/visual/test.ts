@@ -20,7 +20,7 @@ function roundTrip(draw: (vis: MapVisual) => void) {
 	return [ ...decodeMapVisuals(visuals) ];
 }
 
-describe('mod/meta/visual', () => {
+describe('mods/meta/visual', () => {
 	describe('MapVisual decode', () => {
 		test('circle decodes to room-relative coordinates', () => {
 			const decoded = roundTrip(vis => {

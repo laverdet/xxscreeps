@@ -6,7 +6,7 @@ import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtractor } from './extractor.js';
 
-describe('mod/classic/mineral', () => {
+describe('mods/classic/mineral', () => {
 	const depletedOutOfRange = simulate({
 		W6N1: room => {
 			const mineral = room.find(C.FIND_MINERALS)[0]!;

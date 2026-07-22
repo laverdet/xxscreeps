@@ -19,7 +19,7 @@ export function createLabWithResources(pos: RoomPosition, owner: string, mineral
 	return lab;
 }
 
-describe('mod/classic/chemistry', () => {
+describe('mods/classic/chemistry', () => {
 
 	// =========================================================================
 	// runReaction

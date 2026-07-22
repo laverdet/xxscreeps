@@ -7,7 +7,7 @@ import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 // nb: Try not to include too much in this file because `sandbox` uses a fake function that gets
 // stringified. So includes here confuse the seen globals.
 
-describe('mod/meta/memory', () => {
+describe('mods/meta/memory', () => {
 	const sim = simulate({
 		W1N1: room => {
 			room['#level'] = 1;

@@ -8,7 +8,7 @@ import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.j
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './road.js';
 
-describe('mod/classic/road', () => {
+describe('mods/classic/road', () => {
 	describe('roads', () => {
 		test('under obstacle', () => simulate({
 			W0N0: room => {

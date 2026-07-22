@@ -11,7 +11,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Creep, create } from './creep.js';
 
-describe('mod/classic/creep', () => {
+describe('mods/classic/creep', () => {
 	describe('death', () => {
 		const nearDeath = simulate({
 			W0N0: room => {

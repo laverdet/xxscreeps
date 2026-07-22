@@ -36,7 +36,7 @@ function powerBankSim(options: PowerBankSimOptions = {}) {
 	});
 }
 
-describe('mod/modern/powerbank', () => {
+describe('mods/modern/powerbank', () => {
 	describe('combat & decay', () => {
 		test('surface is hostile and rejects transfer & withdraw', () => powerBankSim()(async ({ player }) => {
 			await player('100', Game => {

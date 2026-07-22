@@ -15,7 +15,7 @@ async function loadMarketOrderBookForTesting(shard: Shard) {
 	return Fn.mapAwait(ids, id => loadAndReadMarketOrder(shard, id));
 }
 
-describe('mod/mmo/wallstreet', () => {
+describe('mods/mmo/wallstreet', () => {
 
 	// Player has 50k millicredits and controls a terminal in W1N1 with 10k energy
 	const makeMarketSim = (userId: string) => simulate({

@@ -8,7 +8,7 @@ import { loadTransactionBlob, loadTransactionEntries, recordTransaction } from '
 import { create as createTerminal } from './terminal.js';
 import { Transaction, read } from './transaction.js';
 
-describe('mod/classic/brokerage', () => {
+describe('mods/classic/brokerage', () => {
 
 	// Storage only — `recordTransaction` doesn't touch rooms, and users '100'/'101' exist by default.
 	const storageSim = simulate({});

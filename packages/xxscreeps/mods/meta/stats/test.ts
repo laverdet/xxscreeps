@@ -15,7 +15,7 @@ const bob = '101';
 const t0 = 1_700_000_000_000;
 const hour = 3_600_000;
 
-describe('mod/meta/stats', () => {
+describe('mods/meta/stats', () => {
 	const sim = simulate({
 		W1N1: room => {
 			const source = room.find(C.FIND_SOURCES)[0]!;
