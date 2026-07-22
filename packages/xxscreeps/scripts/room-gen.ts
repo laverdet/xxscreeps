@@ -11,6 +11,7 @@ import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
 import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import { hooks } from './symbols.js';
 import 'xxscreeps:mods/terrain';
 
@@ -295,16 +296,10 @@ function hasPassableNeighbor(grid: Grid, xx: number, yy: number): boolean {
 	return Fn.some(iterateGridInRange(xx, yy, 1), ([ nxx, nyy ]) => !grid[nyy]![nxx]!.wall);
 }
 
-// Rolls uniformly random tiles within [min, min + span) on both axes until one satisfies `accept`,
-// returning undefined after 1000 failed rolls to signal terrain that can't host the object.
+// The first tile in random order within [min, min + span) on both axes satisfying `accept`, or
+// undefined when terrain can't host the object anywhere.
 function findRandomTile(min: number, span: number, accept: (xx: number, yy: number) => boolean) {
-	for (let ii = 0; ii < 1000; ++ii) {
-		const xx = min + Math.floor(Math.random() * span);
-		const yy = min + Math.floor(Math.random() * span);
-		if (accept(xx, yy)) {
-			return [ xx, yy ] as const;
-		}
-	}
+	return Fn.find(shuffledSquare(min, span), ([ xx, yy ]) => accept(xx, yy));
 }
 
 const kNoTags: ReadonlySet<string> = new Set();
