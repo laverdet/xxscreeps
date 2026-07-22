@@ -1,15 +1,12 @@
+import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { RoomGeneratorContext } from 'xxscreeps/scripts/symbols.js';
-import { makeLocalIterateArea, makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { iterateArea, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
-import * as C from './constants.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
-
-const iterateGrid = makeLocalIterateArea(0, 49);
-const iterateGridInRange = makeLocalIterateInRangeTo(0, 49);
 
 // Keeper and center rooms (the controller-less ones) bake their sources' 4000 energy capacity at
 // generation: Source's '#roomStatusDidChange' computes the same thing from the room owner, but the
@@ -17,17 +14,17 @@ const iterateGridInRange = makeLocalIterateInRangeTo(0, 49);
 hooks.register('roomGenerator', {
 	order: 0,
 	generate(context) {
-		const { options, room } = context;
+		const { options } = context;
 		const count = options.sources ?? (Math.random() > 0.5 ? 1 : 2);
 		const energyCapacity = options.controller === false
 			? C.SOURCE_ENERGY_KEEPER_CAPACITY
 			: C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 		for (let ii = 0; ii < count; ++ii) {
-			const tile = context.findRandomTile(3, 44, context.isPlaceable);
-			if (tile === undefined) {
+			const position = context.findRandomPosition(3, 44, context.isPlaceable);
+			if (position === undefined) {
 				return false;
 			}
-			const source = createRoomObject(new Source(), new RoomPosition(tile[0], tile[1], room.name));
+			const source = createRoomObject(new Source(), position);
 			source.energy = source.energyCapacity = energyCapacity;
 			context.place(source, 'source', 'guarded');
 		}
@@ -35,27 +32,27 @@ hooks.register('roomGenerator', {
 	},
 });
 
-// Searches outward from (xx, yy) through passable terrain for a non-border wall tile 3 to 5 steps
+// Searches outward from `origin` through passable terrain for a non-border wall tile 3 to 5 steps
 // away to host a keeper lair, placing one on a uniformly random candidate. Returns false when no
 // tile qualifies, signalling the caller to regenerate.
-function placeKeeperLair(context: RoomGeneratorContext, xx: number, yy: number): boolean {
-	const visited = new Map([ [ yy * 50 + xx, 0 ] ]);
-	const stack = [ [ xx, yy ] as const ];
-	const spots = [ ...function*(): Iterable<readonly [ number, number ]> {
+function placeKeeperLair(context: RoomGeneratorContext, origin: RoomPosition): boolean {
+	const visited = new Map([ [ origin['#id'], 0 ] ]);
+	const stack = [ origin ];
+	const spots = [ ...function*(): Iterable<RoomPosition> {
 		while (stack.length > 0) {
-			const [ cxx, cyy ] = stack.pop()!;
-			const distance = visited.get(cyy * 50 + cxx)! + 1;
-			for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
-				const key = nyy * 50 + nxx;
+			const current = stack.pop()!;
+			const distance = visited.get(current['#id'])! + 1;
+			for (const neighbor of iterateNeighbors(current)) {
+				const key = neighbor['#id'];
 				if (visited.has(key)) {
 					continue;
 				}
 				visited.set(key, distance);
-				if (distance >= 3 && distance <= 5 && !isBorder(nxx, nyy) && context.isPlaceable(nxx, nyy)) {
-					yield [ nxx, nyy ];
+				if (distance >= 3 && distance <= 5 && !isBorder(neighbor.x, neighbor.y) && context.isPlaceable(neighbor)) {
+					yield neighbor;
 				}
-				if (!context.isWall(nxx, nyy) && distance < 5) {
-					stack.push([ nxx, nyy ]);
+				if (context.terrain.get(neighbor.x, neighbor.y) !== C.TERRAIN_MASK_WALL && distance < 5) {
+					stack.push(neighbor);
 				}
 			}
 		}
@@ -64,7 +61,7 @@ function placeKeeperLair(context: RoomGeneratorContext, xx: number, yy: number):
 	if (spot === undefined) {
 		return false;
 	}
-	context.place(createKeeperLair(new RoomPosition(spot[0], spot[1], context.room.name)), 'keeperLair');
+	context.place(createKeeperLair(spot), 'keeperLair');
 	return true;
 }
 
@@ -76,8 +73,8 @@ hooks.register('roomGenerator', {
 		if (context.options.keeperLairs !== true) {
 			return true;
 		}
-		for (const [ xx, yy ] of iterateGrid(0, 0, 49, 49)) {
-			if (context.tagsAt(xx, yy).has('guarded') && !placeKeeperLair(context, xx, yy)) {
+		for (const position of iterateArea(context.room.name, 0, 0, 49, 49)) {
+			if (context.tagsAt(position).has('guarded') && !placeKeeperLair(context, position)) {
 				return false;
 			}
 		}
