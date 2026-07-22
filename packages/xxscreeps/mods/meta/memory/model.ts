@@ -1,6 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { isValidSegmentId, kMaxMemoryLength, kMaxMemorySegmentLength } from './memory.js';
@@ -19,13 +18,13 @@ export type StoredForeignSegmentRequest = {
 	segmentId: number;
 };
 
-type PublicSegmentMessage =
+export type PublicSegmentChannel = Channel<
 	{ type: 'segment'; id: number } |
-	{ type: 'publicSet' };
+	{ type: 'publicSet'; ids: number[] }
+>;
 
-export function getPublicSegmentChannel(shard: Shard, userId: string) {
-	return new Channel<PublicSegmentMessage>(shard.pubsub, `user/${userId}/publicSegments`);
-}
+export const publicSegmentChannel = (shard: Shard, userId: string): PublicSegmentChannel =>
+	new Channel(shard.pubsub, `user/${userId}/publicSegments`);
 
 export function loadUserMemoryBlob(shard: Shard, user: string) {
 	return shard.data.get(`user/${user}/memory`, { blob: true });
@@ -46,15 +45,19 @@ export function deleteUserMemoryBlob(shard: Shard, userId: string) {
 	return shard.data.vDel(`user/${userId}/memory`);
 }
 
+const memorySegmentKey = (userId: string, segmentId: number) => `user/${userId}/segments/${segmentId}`;
+
 export function loadMemorySegmentBlob(shard: Shard, userId: string, segmentId: number) {
-	return shard.data.get(`user/${userId}/segment${segmentId}`, { blob: true });
+	return shard.data.get(memorySegmentKey(userId, segmentId), { blob: true });
 }
 
+// nb: It doesn't publish to the channel, since the player's own driver is subscribed to that
+// channel. The consumer of this API needs to publish updates.
 export async function saveMemorySegmentBlob(shard: Shard, userId: string, segmentId: number, blob: Readonly<Uint8Array> | null) {
 	if (isValidSegmentId(segmentId)) {
-		const key = `user/${userId}/segment${segmentId}`;
+		const key = memorySegmentKey(userId, segmentId);
 		if (blob === null || blob.byteLength === 0) {
-			await shard.data.vDel(key);
+			return shard.data.vDel(key);
 		} else if (blob.byteLength <= kMaxMemorySegmentSize) {
 			return shard.data.set(key, blob);
 		}
@@ -79,78 +82,27 @@ export async function saveDefaultPublicSegment(shard: Shard, userId: string, id:
 	}
 }
 
-function activeForeignSegmentKey(userId: string) {
-	return `user/${userId}/activeForeignSegment`;
-}
-
-export async function loadActiveForeignSegment(shard: Shard, userId: string): Promise<StoredForeignSegmentRequest | null> {
-	const fields = await shard.data.hGetAll(activeForeignSegmentKey(userId));
-	const { username, userId: storedUserId, segmentId } = fields;
-	if (!username || !storedUserId || !segmentId) {
-		return null;
-	}
-	return { username, userId: storedUserId, segmentId: Number(segmentId) };
-}
-
-// Resolves a player-supplied request (username + optional id) against the prior stored request, the
-// target's user record, and the target's `defaultPublicSegment`, then writes the result. Mirrors
-// vanilla's users-doc merge: reuses the cached `userId` when the caller repeats a username with an
-// explicit id, else looks up by name and falls back to the target's default. Returns `null` when
-// resolution fails (unknown username, no default) and also clears any prior stored request so a
-// failed request doesn't silently keep reading a previously-active foreign segment.
-export async function saveActiveForeignSegment(
-	shard: Shard,
-	userId: string,
-	prior: StoredForeignSegmentRequest | null,
-	request: ForeignSegmentRequest | null,
-): Promise<StoredForeignSegmentRequest | null> {
-	const key = activeForeignSegmentKey(userId);
-	if (request === null) {
-		await shard.data.vDel(key);
-		return null;
-	}
-	let resolved: StoredForeignSegmentRequest;
-	if (prior?.username === request.username && request.id !== undefined) {
-		resolved = { username: request.username, userId: prior.userId, segmentId: request.id };
-	} else {
-		const targetUserId = await User.findUserByName(shard.db, request.username);
-		if (targetUserId === null) {
-			await shard.data.vDel(key);
-			return null;
-		}
-		const segmentId = request.id ?? await loadDefaultPublicSegment(shard, targetUserId);
-		if (segmentId === null) {
-			await shard.data.vDel(key);
-			return null;
-		}
-		resolved = { username: request.username, userId: targetUserId, segmentId };
-	}
-	await shard.data.hmSet(key, {
-		username: resolved.username,
-		userId: resolved.userId,
-		segmentId: String(resolved.segmentId),
-	});
-	return resolved;
-}
-
 function publicSegmentsKey(userId: string) {
 	return `user/${userId}/publicSegments`;
 }
 
 export async function savePublicSegments(shard: Shard, userId: string, ids: number[]) {
+	const channel = publicSegmentChannel(shard, userId);
 	const key = publicSegmentsKey(userId);
-	const members = Fn.pipe(
+	const validIds = Fn.pipe(
 		ids,
 		$$ => Fn.filter($$, isValidSegmentId),
-		$$ => new Set($$),
-		$$ => Fn.map($$, String),
-		$$ => [ ...$$ ]);
-	if (members.length === 0) {
-		await shard.data.vDel(key);
+		$$ => new Set($$));
+	if (validIds.size === 0) {
+		await Promise.all([
+			shard.data.vDel(key),
+			channel.publish({ type: 'publicSet', ids: [] }),
+		]);
 	} else {
 		await Promise.all([
 			shard.data.vDel(key),
-			shard.data.sAdd(key, members),
+			shard.data.sAdd(key, [ ...Fn.map(validIds, String) ]),
+			channel.publish({ type: 'publicSet', ids: [ ...validIds ] }),
 		]);
 	}
 }

@@ -7,33 +7,24 @@ import type { RemoveBrand } from 'xxscreeps/utility/brand.js';
 import { build, makeUpgrader, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { makeRoomName, parseRoomName, roomLinearDistance, roomNameFormat } from 'xxscreeps/game/room/name.js';
-import { compose, declare, makeReader, makeWriter, optional, struct, vector } from 'xxscreeps/schema/index.js';
+import { makeRoomName, parseRoomName, roomLinearDistance } from 'xxscreeps/game/room/name.js';
+import { compose, declare, makeReader, makeWriter, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
 import { RoomPosition } from './position.js';
 import * as Terrain from './terrain.js';
-
-// Room metadata, extensible by mods through the `RoomMeta` path.
 // TODO: The World reader is built at module load, so a registrant must be evaluated before this
 // module.
+import 'xxscreeps:mods/schema';
+
+// Room metadata, extensible by mods through the `RoomIntrinsics` path.
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Schema {}
-const roomIntrinsics = () => struct(...structForPath<Schema>()('RoomIntrinsics', {
+const roomIntrinsics = struct(...structForPath<Schema>()('RoomIntrinsics', {
 	exits: 'uint8',
 	terrain: Terrain.format,
-	// TODO: mods/sector
-	sectors: vector(roomNameFormat),
-	sectorControl: optional(struct({
-		// The highway ring at range 5, shared with adjacent sectors.
-		edges: vector(roomNameFormat),
-		// The 9x9 interior at range <= 4, the center itself included; exclusive to this sector.
-		members: vector(roomNameFormat),
-	})),
 }));
-
-export type SectorControl = NonNullable<TypeOf<typeof roomIntrinsics>['sectorControl']>;
 
 export const schema = build(declare('World', compose(vector(struct({
 	name: 'string',
@@ -125,16 +116,6 @@ export class GameMap {
 			throw new Error(`Could not access room ${roomName}`);
 		}
 		return traits;
-	}
-
-	/** @internal */
-	*'#sectors'(): IterableIterator<[ center: string, sector: SectorControl ]> {
-		for (const [ roomName, entry ] of this.#traits) {
-			const { sectorControl } = entry;
-			if (sectorControl) {
-				yield [ roomName, sectorControl ];
-			}
-		}
 	}
 
 	/**

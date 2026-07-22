@@ -267,12 +267,17 @@ export function flush() {
 	if (_parsed) {
 		// Typical case: user accessed `Memory`, so we simulate vanilla reconstruction and save the
 		// string.
-		crunch(previousJson = _parsed as MemoryRecord);
 		try {
+			crunch(previousJson = _parsed as MemoryRecord);
 			string = JSON.stringify(previousJson);
 			isBufferOutOfDate = true;
 		} catch (err) {
 			console.error(err);
+			// The user's memory object cannot be serialized. Probably, it is circular or contains some
+			// other `toJSON` error. It will be reparsed from `string` or `memory` next tick.
+			// TODO: Does it make sense to do a sandbox reset here instead of attempt to continue
+			// gracefully?
+			previousJson = undefined;
 			return { size: memoryLength };
 		}
 	} else if (!isBufferOutOfDate || string === undefined) {

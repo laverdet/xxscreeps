@@ -34,9 +34,10 @@ export async function loadRoster(db: Database, userId: string) {
 /** Raw roster blob for the runtime payload — read as a shared buffer and handed across untouched. */
 export function loadPowerCreepsBlob(db: Database, userId: string) {
 	return loadUpgradedWithWriteBack(
+		db,
+		upgradeRoster,
 		() => db.data.get(powerCreepsKey(userId), { blob: true }),
 		blob => db.data.set(powerCreepsKey(userId), blob),
-		upgradeRoster,
 	);
 }
 

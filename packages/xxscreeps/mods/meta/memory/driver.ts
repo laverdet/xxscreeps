@@ -1,99 +1,144 @@
 import type { ForeignSegmentPayload, SegmentPayload, flush } from './memory.js';
-import type { ForeignSegmentRequest, StoredForeignSegmentRequest } from './model.js';
+import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { kMaxActiveSegments } from './memory.js';
-import { getPublicSegmentChannel, isPublicSegment, loadActiveForeignSegment, loadMemorySegmentBlob, loadUserMemoryBlob, saveActiveForeignSegment, saveDefaultPublicSegment, saveMemoryBlob, saveMemorySegmentBlob, savePublicSegments } from './model.js';
+import { disposableToEffect } from 'xxscreeps/utility/utility.js';
+import { isValidSegmentId, kMaxActiveSegments } from './memory.js';
+import { isPublicSegment, loadDefaultPublicSegment, loadMemorySegmentBlob, loadUserMemoryBlob, publicSegmentChannel, saveDefaultPublicSegment, saveMemoryBlob, saveMemorySegmentBlob, savePublicSegments } from './model.js';
 
-declare module 'xxscreeps/engine/runner/index.js' {
-	interface InitializationPayload {
-		memoryBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickPayload {
-		memorySegments?: SegmentPayload[];
-		// Tri-state: `undefined` = no change, `null` = clear, object = install
-		foreignSegment?: ForeignSegmentPayload | null;
-	}
-	interface TickResult {
-		activeSegmentsRequest: number[] | null;
-		foreignSegmentRequest: ForeignSegmentRequest | null | undefined;
-		memorySegmentsUpdated: SegmentPayload[] | null;
-		memoryUpdated: ReturnType<typeof flush>;
-		defaultPublicSegmentUpdate: number | null | undefined;
-		publicSegmentsUpdate: number[] | undefined;
+interface ForeignSegmentRequest {
+	id: number | undefined;
+	username: string;
+}
+
+interface ActiveForeignSegment {
+	username: string;
+	userId: string;
+	segmentId: number;
+}
+
+async function resolveActiveForeignSegment(
+	shard: Shard,
+	previous: ActiveForeignSegment | undefined,
+	request: ForeignSegmentRequest | undefined | null,
+): Promise<ActiveForeignSegment | undefined> {
+	if (request) {
+		// Resolve userid from username request
+		const requestUserId = await async function() {
+			if (previous?.username === request.username) {
+				return previous.userId;
+			} else {
+				return User.findUserByName(shard.db, request.username);
+			}
+		}();
+
+		// Resolve the requested segment id
+		const requestSegmentId = await async function() {
+			if (requestUserId != null) {
+				if (request.id === undefined) {
+					return loadDefaultPublicSegment(shard, requestUserId);
+				} else if (isValidSegmentId(request.id)) {
+					return request.id;
+				}
+			}
+		}();
+
+		// Construct a new active segment, or return the old one for quick equality check.
+		if (requestUserId === previous?.userId && requestSegmentId === previous.segmentId) {
+			return previous;
+		} else if (requestUserId == null || requestSegmentId == null) {
+			return undefined;
+		} else {
+			return {
+				segmentId: requestSegmentId,
+				userId: requestUserId,
+				username: request.username,
+			};
+		}
 	}
 }
 
-hooks.register('runnerConnector', player => {
+hooks.register('runnerConnector', async player => {
+	using disposable = new DisposableStack();
 	const { shard, userId } = player;
+
+	// Own memory segments state. The own channel subscription watches for out-of-band segment writes,
+	// e.g. from the memory-segment API endpoint.
 	let activeSegments: Set<number>;
 	let nextSegments: Set<number> | undefined;
-	let activeForeignSegment: StoredForeignSegmentRequest | null = null;
-	let subscribedUserId: string | null = null;
-	let subscriptionEffect: Effect | undefined;
-	let foreignDirty = false;
-
-	async function syncForeignSubscription() {
-		const target = activeForeignSegment?.userId ?? null;
-		if (target === subscribedUserId) {
-			return;
+	const dirtyOwnSegments = new Set<number>();
+	const ownSubscription = disposable.use(await publicSegmentChannel(shard, userId).subscribe());
+	ownSubscription.listen(message => {
+		if (message.type === 'segment') {
+			dirtyOwnSegments.add(message.id);
 		}
-		subscriptionEffect?.();
-		subscriptionEffect = undefined;
-		subscribedUserId = target;
-		foreignDirty = true;
-		if (target !== null) {
-			const subscription = await getPublicSegmentChannel(shard, target).subscribe();
-			subscription.listen(message => {
-				if (message.type === 'publicSet' || message.id === activeForeignSegment?.segmentId) {
-					foreignDirty = true;
-				}
-			});
-			subscriptionEffect = () => subscription.disconnect();
-		}
-	}
+	});
 
-	return [ () => subscriptionEffect?.(), {
+	// Foreign segment state. `RawMemory.setActiveForeignSegment()` must be invoked during this
+	// runner's lifetime, diverging from Screeps which stores that persistently for some reason.
+	// xxscreeps behavior is more consistent with `RawMemory.setActiveSegments()`.
+	let foreignSegment: ActiveForeignSegment | undefined;
+	let foreignDirty = true;
+	let foreignVisible = true;
+	let foreignChannelEffect: Effect | undefined;
+	disposable.defer(() => foreignChannelEffect?.());
+
+	return [ disposableToEffect(disposable.move()), {
 		async initialize(payload) {
+			// Reset player segments
 			activeSegments = new Set();
 			nextSegments = undefined;
-			activeForeignSegment = await loadActiveForeignSegment(shard, userId);
-			await syncForeignSubscription();
+			dirtyOwnSegments.clear();
 			payload.memoryBlob = await loadUserMemoryBlob(shard, userId);
+			// Reset foreign segments
+			foreignSegment = undefined;
+			foreignDirty = true;
+			foreignChannelEffect?.();
+			foreignChannelEffect = undefined;
 		},
 
 		async refresh(payload) {
-			// Send any newly-requested memory segments
-			if (nextSegments) {
-				payload.memorySegments = await Promise.all(Fn.map(
-					Fn.reject(nextSegments, id => activeSegments.has(id)),
-					async id => ({
-						id,
-						payload: await loadMemorySegmentBlob(shard, userId, id),
-					}),
-				));
-				activeSegments = nextSegments;
-				nextSegments = undefined;
-			}
-			// Only refetch and push to the runtime when the publisher notified us (or on target
-			// change). Otherwise the runtime holds last tick's payload and doesn't recreate the
-			// lazy-getter object.
-			if (foreignDirty) {
-				foreignDirty = false;
-				if (activeForeignSegment) {
-					const { username, userId: targetUserId, segmentId } = activeForeignSegment;
-					const [ isPublic, blob ] = await Promise.all([
-						isPublicSegment(shard, targetUserId, segmentId),
-						loadMemorySegmentBlob(shard, targetUserId, segmentId),
-					]);
-					payload.foreignSegment = isPublic && blob !== null
-						? { username, id: segmentId, bytes: blob }
-						: null;
-				} else {
-					payload.foreignSegment = null;
-				}
-			}
+			[ payload.memorySegments, payload.foreignSegment ] = await Promise.all([
+				// Load own segment payload
+				async function() {
+					const memorySegments = await Fn.pipe(
+						Fn.concat([
+							// Select any newly-requested memory segments
+							nextSegments ? Fn.reject(nextSegments, id => activeSegments.has(id)) : [],
+							// Resend active segments written out-of-band since the last tick
+							dirtyOwnSegments.intersection(nextSegments ?? activeSegments),
+						]),
+						$$ => new Set($$),
+						$$ => Fn.mapAwait($$, async id => ({
+							id,
+							payload: await loadMemorySegmentBlob(shard, userId, id),
+						})),
+					);
+					activeSegments = nextSegments ?? activeSegments;
+					nextSegments = undefined;
+					dirtyOwnSegments.clear();
+					return memorySegments;
+				}(),
+
+				// Load foreign segment payload
+				async function() {
+					if (!foreignVisible) {
+						return null;
+					} else if (foreignDirty) {
+						foreignDirty = false;
+						if (foreignSegment) {
+							const { username, userId: targetUserId, segmentId } = foreignSegment;
+							const blob = await loadMemorySegmentBlob(shard, targetUserId, segmentId);
+							if (blob !== null) {
+								return { username, id: segmentId, bytes: blob };
+							}
+						}
+						return null;
+					}
+				}(),
+			]);
 		},
 
 		async save(payload) {
@@ -103,7 +148,6 @@ hooks.register('runnerConnector', player => {
 			}
 
 			// Dispatch updates
-			const channel = getPublicSegmentChannel(shard, userId);
 			await Promise.all([
 				// Save primary memory blob
 				payload.memoryUpdated.payload && saveMemoryBlob(shard, userId, payload.memoryUpdated.payload),
@@ -114,24 +158,85 @@ hooks.register('runnerConnector', player => {
 					$$ => Fn.take($$, kMaxActiveSegments),
 					$$ => Fn.transform($$, segment => [
 						saveMemorySegmentBlob(shard, userId, segment.id, segment.payload),
-						channel.publish({ type: 'segment', id: segment.id }),
+						ownSubscription.publish({ type: 'segment', id: segment.id }),
 					])),
 
 				// Save public segment set
-				payload.publicSegmentsUpdate !== undefined && savePublicSegments(shard, userId, payload.publicSegmentsUpdate),
-				payload.publicSegmentsUpdate !== undefined && channel.publish({ type: 'publicSet' }),
+				payload.publicSegmentsUpdate &&
+					savePublicSegments(shard, userId, payload.publicSegmentsUpdate),
 
 				// Save default public segment
-				payload.defaultPublicSegmentUpdate !== undefined && saveDefaultPublicSegment(shard, userId, payload.defaultPublicSegmentUpdate),
+				payload.defaultPublicSegmentUpdate !== undefined &&
+					saveDefaultPublicSegment(shard, userId, payload.defaultPublicSegmentUpdate),
 
-				// Resolve + persist the foreign-segment request, then re-subscribe.
+				// Resolve & subscribe the foreign-segment request
+				// nb: Throwing in this chain possibly orphans 'subscriptionEffect'
 				async function() {
-					if (payload.foreignSegmentRequest !== undefined) {
-						activeForeignSegment = await saveActiveForeignSegment(shard, userId, activeForeignSegment, payload.foreignSegmentRequest);
-						await syncForeignSubscription();
+					const { foreignSegmentRequest } = payload;
+					if (foreignSegmentRequest !== undefined) {
+						const nextForeignSegment = await resolveActiveForeignSegment(shard, foreignSegment, foreignSegmentRequest);
+						if (nextForeignSegment !== foreignSegment) {
+							foreignDirty = true;
+							await Promise.all([
+								// Maybe update the subscription
+								async function() {
+									if (nextForeignSegment?.userId !== foreignSegment?.userId) {
+										foreignChannelEffect?.();
+										foreignChannelEffect = undefined;
+										if (nextForeignSegment) {
+											const subscription = await publicSegmentChannel(shard, nextForeignSegment.userId).subscribe();
+											subscription.listen(message => {
+												switch (message.type) {
+													case 'publicSet':
+														foreignVisible = message.ids.includes(foreignSegment!.segmentId);
+														break;
+
+													case 'segment':
+														if (message.id === foreignSegment!.segmentId) {
+															foreignDirty = true;
+														}
+														break;
+												}
+											});
+											foreignChannelEffect = () => subscription.disconnect();
+										}
+									}
+									foreignSegment = nextForeignSegment;
+								}(),
+								// Check visibility
+								async function() {
+									if (nextForeignSegment) {
+										foreignVisible = await isPublicSegment(shard, nextForeignSegment.userId, nextForeignSegment.segmentId);
+									}
+								}(),
+							]);
+						}
 					}
 				}(),
 			]);
 		},
 	} ];
 });
+
+// ---
+
+declare module 'xxscreeps/engine/runner/index.js' {
+	interface InitializationPayload {
+		memoryBlob: Readonly<Uint8Array> | null;
+	}
+	interface TickPayload {
+		// Player memory segments. The runtime maintains its own list of active segment ids and merges
+		// the contents of this payload into `RawMemory.segments`
+		memorySegments: SegmentPayload[];
+		// Tri-state: `undefined` = no change, `null` = clear, object = install
+		foreignSegment?: ForeignSegmentPayload | null | undefined;
+	}
+	interface TickResult {
+		activeSegmentsRequest: number[] | null;
+		foreignSegmentRequest: ForeignSegmentRequest | null | undefined;
+		memorySegmentsUpdated: SegmentPayload[] | null;
+		memoryUpdated: ReturnType<typeof flush>;
+		defaultPublicSegmentUpdate: number | null | undefined;
+		publicSegmentsUpdate: number[] | undefined;
+	}
+}

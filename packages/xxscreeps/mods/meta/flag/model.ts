@@ -29,9 +29,10 @@ export function getFlagChannel(shard: Shard, userId: string) {
  */
 export async function loadUserFlagBlob(shard: Shard, userId: string) {
 	return loadUpgradedWithWriteBack(
+		shard.db,
+		upgrade,
 		() => shard.data.get(userFlagsKey(userId), { blob: true }),
 		blob => shard.data.set(userFlagsKey(userId), blob),
-		upgrade,
 	);
 }
 

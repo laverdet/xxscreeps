@@ -80,9 +80,10 @@ export function loadMarketOrderIds(shard: Shard) {
 // probably only theoretical.
 export function loadMarketOrderBlob(shard: Shard, id: string) {
 	return loadUpgradedWithWriteBack(
+		shard.db,
+		upgradeOrder,
 		() => shard.data.get(orderBlobKey(id), { blob: true }),
 		blob => shard.data.set(orderBlobKey(id), blob),
-		upgradeOrder,
 	);
 }
 

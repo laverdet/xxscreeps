@@ -1,3 +1,4 @@
+import type { Database } from 'xxscreeps/engine/db/database.js';
 import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 
 /**
@@ -6,13 +7,14 @@ import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 export async function loadUpgradedWithWriteBack<
 	Type extends Readonly<Uint8Array> | null,
 >(
+	database: Database,
+	upgrade: (database: Database, blob: Readonly<Uint8Array>) => Promise<Readonly<Uint8Array>>,
 	load: () => Promise<Type>,
 	write: (blob: Readonly<Uint8Array>) => Promise<void>,
-	upgrade: (blob: Readonly<Uint8Array>) => Promise<Readonly<Uint8Array>>,
 ) {
 	const blob = await load();
 	if (blob) {
-		const upgradedBlob = await upgrade(blob);
+		const upgradedBlob = await upgrade(database, blob);
 		if (upgradedBlob !== blob) {
 			await write(upgradedBlob);
 			return upgradedBlob;

@@ -7,10 +7,10 @@ import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
-import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/processor.js';
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
+import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
 
