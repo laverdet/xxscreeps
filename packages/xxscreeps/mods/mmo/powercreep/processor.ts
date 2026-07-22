@@ -1,20 +1,24 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
+import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { checkCarrier } from 'xxscreeps/mods/classic/creep/creep.js';
 import { borderExitPosition, commitMove, flushActionLog, isHostileInSafeMode, kRetainActionsTime, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
 import { Tombstone } from 'xxscreeps/mods/classic/creep/tombstone.js';
+import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
-import { PowerCreep, checkRenew, createSpawnedPowerCreep } from './powercreep.js';
+import { PowerCreep, checkEnableRoom, checkRenew, checkUsePower, createSpawnedPowerCreep, powerInfoTable, powerOpsCost } from './powercreep.js';
 
 function buryPowerCreep(creep: PowerCreep) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
@@ -87,6 +91,15 @@ const intents = [
 
 	registerIntentProcessor(PowerCreep, 'withdraw', { before: 'pickup' }, processWithdraw),
 
+	registerIntentProcessor(PowerCreep, 'enableRoom', {}, (creep, context, id: string) => {
+		const target = Game.getObjectById<StructureController>(id)!;
+		if (checkEnableRoom(creep, target) === C.OK) {
+			target.isPowerEnabled = true;
+			saveAction(creep, 'attack', target.pos);
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(PowerCreep, 'renew', {}, (creep, context, id: string) => {
 		const target = Game.getObjectById<StructurePowerSpawn | StructurePowerBank>(id)!;
 		if (checkRenew(creep, target) === C.OK) {
@@ -100,6 +113,41 @@ const intents = [
 		if (checkCarrier(creep) === C.OK) {
 			killPowerCreep(creep, context);
 		}
+	}),
+
+	registerIntentProcessor(PowerCreep, 'usePower', {}, (creep, context, power: number, id: string | null) => {
+		const target = id === null ? undefined : Game.getObjectById<RoomObject>(id) ?? undefined;
+		if (checkUsePower(creep, power, target) !== C.OK) {
+			return;
+		}
+		const info = powerInfoTable[power]!;
+		const entry = creep['#powers'].find(entry => entry.power === power)!;
+		switch (power) {
+			case C.PWR_GENERATE_OPS: {
+				const { store } = creep;
+				store['#add'](C.RESOURCE_OPS, info.effect![entry.level - 1]!);
+				const overflow = -store.getFreeCapacity();
+				if (overflow > 0) {
+					const spill = Math.min(store[C.RESOURCE_OPS], overflow);
+					store['#subtract'](C.RESOURCE_OPS, spill);
+					dropResource(creep.pos, C.RESOURCE_OPS, spill);
+				}
+				break;
+			}
+			default:
+				// Powers land one at a time; an unimplemented power's intent drops without cost.
+				return;
+		}
+		creep.store['#subtract'](C.RESOURCE_OPS, powerOpsCost(info, entry.level));
+		entry.cooldownTime = Game.time + info.cooldown;
+		appendEventLog(creep.room, {
+			event: C.EVENT_POWER,
+			objectId: creep.id,
+			power,
+			targetId: target?.id,
+		});
+		saveAction(creep, 'power', target?.pos ?? creep.pos);
+		context.didUpdate();
 	}),
 ];
 

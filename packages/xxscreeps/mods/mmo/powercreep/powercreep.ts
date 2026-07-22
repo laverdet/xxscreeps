@@ -2,19 +2,19 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import type { Resource, ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
-import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, me, userGame, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, cooldownTime, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { checkCarrier, checkDrop, checkPickup, checkTransfer, checkWithdraw } from 'xxscreeps/mods/classic/creep/creep.js';
-import { OpenStore, calculateChecked } from 'xxscreeps/mods/classic/resource/store.js';
-import { checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { OpenStore, calculateChecked, checkHasResourceAmount } from 'xxscreeps/mods/classic/resource/store.js';
+import { Structure, checkIsActive, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
@@ -45,12 +45,15 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 
 	/**
 	 * Available powers, an object with power ID as a key, and an object with the power's current
-	 * `level` as a value.
+	 * `level` and remaining `cooldown` ticks as a value.
 	 * @public
 	 * @see https://docs.screeps.com/api/#PowerCreep.powers
 	 */
-	get powers(): Record<number, { level: number }> {
-		return Object.fromEntries(Fn.map(this['#powers'], ({ power, level }) => [ power, { level } ]));
+	get powers(): Record<number, { cooldown: number; level: number }> {
+		// Roster copies are read outside a game context; their cooldowns are always `0`, which
+		// short-circuits before the `Game.time` read.
+		return Object.fromEntries(Fn.map(this['#powers'], ({ cooldownTime: time, level, power }) =>
+			[ power, { cooldown: time === 0 ? 0 : cooldownTime(time), level } ]));
 	}
 
 	/**
@@ -329,6 +332,40 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => checkCarrier(this),
 			() => intents.save(this, 'suicide'));
 	}
+
+	/**
+	 * Enable powers usage in this room. The room controller should be at adjacent tile.
+	 * @param controller The room controller.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.enableRoom
+	 */
+	enableRoom(controller: StructureController) {
+		return chainIntentChecks(
+			() => checkEnableRoom(this, controller),
+			() => intents.save(this, 'enableRoom', controller.id));
+	}
+
+	/**
+	 * Apply one of the creep's powers on the specified target. You can only use powers in rooms
+	 * either without a controller, or with a power-enabled one. Only one power can be used during
+	 * the same tick, each `usePower` call will override the previous one. If the target has the same
+	 * effect of a lower or equal level, it is overridden. If the existing effect level is higher, an
+	 * error is returned.
+	 * @param power The power ID to apply, one of the `PWR_*` constants.
+	 * @param target A target game object, for powers which require one.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_ARGS`,
+	 * `ERR_NO_BODYPART`, `ERR_TIRED`, `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`,
+	 * `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.usePower
+	 */
+	usePower(power: number, target?: RoomObject) {
+		return chainIntentChecks(
+			() => checkUsePower(this, power, target),
+			() => intents.save(this, 'usePower', power, target?.id ?? null));
+	}
 }
 
 // The overlay type of `room` lies for player ergonomics — an unspawned roster member has none.
@@ -346,6 +383,56 @@ export function checkRenew(creep: PowerCreep, target: StructurePowerSpawn | Stru
 		() => checkTarget(target, StructurePowerSpawn, StructurePowerBank),
 		() => target instanceof StructurePowerSpawn ? checkIsActive(target) : C.OK,
 		() => checkRange(creep, target, 1));
+}
+
+export function checkEnableRoom(creep: PowerCreep, target: StructureController) {
+	return chainIntentChecks(
+		() => creep.my ? C.OK : C.ERR_NOT_OWNER,
+		() => checkSpawned(creep),
+		() => checkTarget(target, Structure),
+		() => checkRange(creep, target, 1),
+		() => checkTarget(target, StructureController),
+		() => checkSafeMode(target.room, C.ERR_INVALID_TARGET));
+}
+
+// A room without a controller never needs enabling; a hostile safe mode suspends powers outright.
+function checkPowersEnabled(creep: PowerCreep) {
+	const { controller } = creep.room;
+	if (controller === undefined) {
+		return C.OK;
+	}
+	if (!controller.isPowerEnabled) {
+		return C.ERR_INVALID_ARGS;
+	}
+	return checkSafeMode(creep.room, C.ERR_INVALID_ARGS);
+}
+
+/** Ops consumed per use — flat, or per-rank when the table carries an array. */
+export function powerOpsCost(info: PowerInfo, level: number) {
+	const { ops } = info;
+	return Array.isArray(ops) ? ops[level - 1]! : ops ?? 0;
+}
+
+export function checkUsePower(creep: PowerCreep, power: number, target?: RoomObject) {
+	const info: PowerInfo | undefined = powerInfoTable[power];
+	const entry = creep['#powers'].find(entry => entry.power === power);
+	return chainIntentChecks(
+		() => creep.my ? C.OK : C.ERR_NOT_OWNER,
+		() => checkSpawned(creep),
+		() => checkPowersEnabled(creep),
+		() => {
+			if (info === undefined || entry === undefined) {
+				return C.ERR_NO_BODYPART;
+			}
+			const cost = powerOpsCost(info, entry.level);
+			const { range } = info;
+			return chainIntentChecks(
+				() => cooldownTime(entry.cooldownTime) > 0 ? C.ERR_TIRED : C.OK,
+				() => cost > 0 ? checkHasResourceAmount(creep, C.RESOURCE_OPS, cost) : C.OK,
+				() => range === undefined ? C.OK : chainIntentChecks(
+					() => checkTarget(target, RoomObject),
+					() => checkRange(creep, target!, range)));
+		});
 }
 
 registerObstacleChecker(params => {
@@ -393,7 +480,7 @@ export function createPowerCreep(id: string, name: string, className: string, ow
 export function createSpawnedPowerCreep(pos: RoomPosition, entry: PowerCreep) {
 	const creep = instantiatePowerCreep(
 		entry.id, pos, entry.name, entry.className, entry['#user'], 100 * (entry.level + 1));
-	creep['#powers'] = entry['#powers'].map(({ power, level }) => ({ power, level }));
+	creep['#powers'] = entry['#powers'].map(({ level, power }) => ({ cooldownTime: 0, level, power }));
 	creep.hits = creep.hitsMax;
 	creep['#ageTime'] = entry['#ageTime'];
 	return creep;
@@ -402,9 +489,18 @@ export function createSpawnedPowerCreep(pos: RoomPosition, entry: PowerCreep) {
 // --- Account roster checks: pure functions of account power + roster + args, each returning a result
 // code. ---
 
-interface PowerInfo { className: string; level: number[] }
+export interface PowerInfo {
+	className: string;
+	cooldown: number;
+	duration?: number | number[];
+	effect?: number[];
+	level: number[];
+	ops?: number | number[];
+	range?: number;
+}
 interface PowerEntry { power: number; level: number }
-const powerInfoTable: Record<number, PowerInfo> = C.POWER_INFO;
+/** @internal */
+export const powerInfoTable: Record<number, PowerInfo> = C.POWER_INFO;
 
 /** Global power level earned from accumulated power experience. */
 function gplLevel(power: number) {
