@@ -5,7 +5,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
-import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateArea, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
@@ -538,6 +538,12 @@ function genHighwayTerrain(
 
 const kNoTags: ReadonlySet<string> = new Set();
 
+// Spread placements keep at least this Chebyshev distance from every anchor; the jitter widens the
+// eligible band below the farthest candidate so results vary naturally instead of always taking
+// the extreme corner.
+const kMinSpreadSpacing = 14;
+const kSpreadJitter = 0.7;
+
 function makeGeneratorContext(room: Room, terrain: Terrain, options: GenerateRoomOptions): RoomGeneratorContext {
 	const tags = new Map<number, Set<string>>();
 	const tagsAt = (position: RoomPosition): ReadonlySet<string> => tags.get(position['#id']) ?? kNoTags;
@@ -550,6 +556,22 @@ function makeGeneratorContext(room: Room, terrain: Terrain, options: GenerateRoo
 			shuffledSquare(min, span),
 			$$ => Fn.map($$, ([ xx, yy ]) => new RoomPosition(xx, yy, room.name)),
 			$$ => Fn.find($$, accept)),
+		findSpreadPosition(min, span, accept, anchors) {
+			const candidates = [ ...Fn.pipe(
+				iterateArea(room.name, min, min, min + span - 1, min + span - 1),
+				$$ => Fn.filter($$, accept),
+				$$ => Fn.map($$, position => ({
+					position,
+					nearest: Math.min(...anchors.map(anchor => position.getRangeTo(anchor))),
+				}))) ];
+			const best = Math.max(...candidates.map(candidate => candidate.nearest), 0);
+			if (best < kMinSpreadSpacing) {
+				return undefined;
+			}
+			const threshold = Math.max(kMinSpreadSpacing, best * kSpreadJitter);
+			const eligible = candidates.filter(candidate => candidate.nearest >= threshold);
+			return eligible[Math.floor(Math.random() * eligible.length)]!.position;
+		},
 		isPlaceable: position => isWall(position) && tagsAt(position).size === 0 &&
 			Fn.some(iterateNeighbors(position), neighbor => !isWall(neighbor)),
 		place(object, ...objectTags) {

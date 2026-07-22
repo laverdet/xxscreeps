@@ -36,6 +36,16 @@ export interface RoomGeneratorContext {
 	 */
 	findRandomPosition: (min: number, span: number, accept: (position: RoomPosition) => boolean) =>
 		RoomPosition | undefined;
+	/**
+	 * A position within [min, min + span) on both axes satisfying `accept` that stays far
+	 * (Chebyshev) from every anchor -- chosen with jitter for natural variance, and undefined when
+	 * no candidate keeps the minimum spacing.
+	 */
+	findSpreadPosition: (
+		min: number, span: number,
+		accept: (position: RoomPosition) => boolean,
+		anchors: readonly RoomPosition[],
+	) => RoomPosition | undefined;
 	/** Whether `position` is an untagged wall tile with at least one passable neighbor. */
 	isPlaceable: (position: RoomPosition) => boolean;
 	/** Inserts `object` into the room and tags its position. */

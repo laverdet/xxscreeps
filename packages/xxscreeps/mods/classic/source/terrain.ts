@@ -8,6 +8,11 @@ import * as C from 'xxscreeps:mods/constants';
 import { create as createKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
+// Rooms with three or more sources (keeper and center rooms) spread their sources across the room
+// rather than dropping each on a random wall tile, which clusters them; a failed spread signals
+// the caller to regenerate the terrain.
+const kSpreadSourceThreshold = 3;
+
 // Keeper and center rooms (the controller-less ones) bake their sources' 4000 energy capacity at
 // generation: Source's '#roomStatusDidChange' computes the same thing from the room owner, but the
 // controller processor that drives that hook never runs for a controller-less room.
@@ -19,11 +24,15 @@ hooks.register('roomGenerator', {
 		const energyCapacity = options.controller === false
 			? C.SOURCE_ENERGY_KEEPER_CAPACITY
 			: C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
+		const placed: RoomPosition[] = [];
 		for (let ii = 0; ii < count; ++ii) {
-			const position = context.findRandomPosition(3, 44, context.isPlaceable);
+			const position = count >= kSpreadSourceThreshold && placed.length > 0
+				? context.findSpreadPosition(3, 44, context.isPlaceable, placed)
+				: context.findRandomPosition(3, 44, context.isPlaceable);
 			if (position === undefined) {
 				return false;
 			}
+			placed.push(position);
 			const source = createRoomObject(new Source(), position);
 			source.energy = source.energyCapacity = energyCapacity;
 			context.place(source, 'source', 'guarded');
