@@ -52,12 +52,5 @@ const resources = [
 	C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
 	C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
 ];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const resourceSchema = registerEnumerated('ResourceType', ...resources);
+registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
-
-// ---
-
-declare module 'xxscreeps/mods/classic/resource/schema.js' {
-	interface ResourceSchema { mineral: typeof resourceSchema }
-}

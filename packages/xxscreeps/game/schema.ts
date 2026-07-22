@@ -1,10 +1,8 @@
+import type { ActionLogSchema } from 'xxscreeps:mods/game';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { compose, declare, enumerated, struct, union, vector } from 'xxscreeps/schema/index.js';
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ActionLogSchema {}
 
 export const roomPositionFormat = declare('RoomPosition', compose('int32', {
 	compose: pos => RoomPosition['#create'](pos),

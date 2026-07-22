@@ -1,6 +1,7 @@
-import { registerStruct } from 'xxscreeps/engine/schema/index.js';
+import { registerEnumerated, registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { structureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { powerBankStoreFormat } from './store.js';
 
 /** @internal */
@@ -30,3 +31,7 @@ export type PowerbankSchemaRoomSchema = typeof roomSchema;
 const roomSchema = registerStruct('Room', {
 	'#nextPowerBankTime': 'int32',
 });
+
+// Resource schema
+registerEnumerated('ResourceType', C.RESOURCE_POWER);
+C.RESOURCES_ALL.push(C.RESOURCE_POWER);

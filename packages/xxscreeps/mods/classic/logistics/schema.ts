@@ -42,11 +42,4 @@ export const storageShape = declare('Storage', struct(ownedStructureShape, {
 	store: openStoreFormat,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'transferEnergy');
-
-// ---
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { logistics: typeof actionSchema }
-}
+registerEnumerated('ActionLog.action', 'transferEnergy');

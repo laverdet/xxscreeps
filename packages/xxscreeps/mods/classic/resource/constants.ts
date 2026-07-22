@@ -25,7 +25,6 @@ export const LOOK_ENERGY = 'energy' as const;
 export const LOOK_RESOURCES = 'resource' as const;
 
 export const RESOURCE_ENERGY = 'energy' as const;
-export const RESOURCE_POWER = 'power' as const;
-export const RESOURCES_ALL: ResourceType[] = [ RESOURCE_ENERGY, RESOURCE_POWER ];
+export const RESOURCES_ALL: ResourceType[] = [ RESOURCE_ENERGY ];
 
 export const STRUCTURE_CONTAINER = 'container' as const;

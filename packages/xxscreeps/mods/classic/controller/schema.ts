@@ -45,8 +45,7 @@ export const roomSchema = registerStruct('Room', {
 	'#user': optional(Id.optionalFormat),
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
+registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
 
 export type ControllerEventRoomSchemas = [
 	typeof attackControllerEventSchema,
@@ -85,8 +84,4 @@ declare module 'xxscreeps/game/object.js' {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
-}
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { controller: typeof actionSchema }
 }

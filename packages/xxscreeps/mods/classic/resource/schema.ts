@@ -1,5 +1,6 @@
 import type { ResourceType } from './resource.js';
 import type { OpenStore, RestrictedStore, SingleStore } from './store.js';
+import type { ResourceSchema } from 'xxscreeps:mods/game';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import { structureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { composeBind, declare, enumerated, struct, variant, vector, withType } from 'xxscreeps/schema/index.js';
@@ -7,7 +8,7 @@ import * as C from 'xxscreeps:mods/constants';
 
 // Resource types
 export const optionalResourceEnumFormat = () =>
-	declare('ResourceType', enumerated(undefined, C.RESOURCE_ENERGY, C.RESOURCE_POWER, ...enumeratedForPath<ResourceSchema>()('ResourceType')));
+	declare('ResourceType', enumerated(undefined, C.RESOURCE_ENERGY, ...enumeratedForPath<ResourceSchema>()('ResourceType')));
 
 // nb: This is the same wire format as `optionalResourceEnumFormat` and 0 would be an invalid `undefined`.
 export const resourceEnumFormat = withType<ResourceType>(optionalResourceEnumFormat);
@@ -79,8 +80,3 @@ export const containerShape = declare('Container', struct(structureShape, {
 	store: openStoreFormat,
 	'#nextDecayTime': 'int32',
 }));
-
-// ---
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ResourceSchema {}

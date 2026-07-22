@@ -1,4 +1,4 @@
-import type { StructDeclaration, StructFormat, variant } from 'xxscreeps/schema/format.js';
+import type { StructDeclaration, StructFormat, WithShapeAndType, variant } from 'xxscreeps/schema/format.js';
 import type { BuilderOptions, Format } from 'xxscreeps/schema/index.js';
 import type { ReadOptions } from 'xxscreeps/schema/read.js';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
@@ -47,9 +47,8 @@ export const registerVariant:
 	(path: Path, format: Type) => { path: Path; format: Type } = registerSchema;
 
 // Returns augmented formats as array that can be spread into enumerated declarations
-type EnumeratedSchema<Type> = Type extends any[] ? Type[number] : never;
-export function enumeratedForPath<Schema>() {
-	return <Path extends string>(path: Path): EnumeratedSchema<FormatsForPath<Schema, Path>>[] => {
+export function enumeratedForPath<Schema extends string>() {
+	return <Path extends string>(path: Path): `${Schema}`[] => {
 		closedSchemaByPath.add(path);
 		return (schemaByPath.get(path) ?? []) as never;
 	};
