@@ -1,4 +1,4 @@
-import type { ExitMap, GenerateRoomOptions, RoomGeneratorContext } from './symbols.js';
+import type { ExitMap, GenerateRoomOptions, HighwayOrientation, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -13,6 +13,7 @@ import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terr
 import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
+import { hashCombine, hashMix } from 'xxscreeps/utility/utility.js';
 import { hooks } from './symbols.js';
 import 'xxscreeps:mods/terrain';
 
@@ -237,6 +238,27 @@ function *exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number) {
 	}
 }
 
+// Marks the room's exit tiles (and their inner neighbors) as open so terrain generation keeps the
+// border crossings clear.
+function markExits(grid: Grid, exits: ExitMap): void {
+	for (const xx of exits.top) {
+		grid[0]![xx]!.forceOpen = true;
+		grid[1]![xx]!.forceOpen = true;
+	}
+	for (const xx of exits.bottom) {
+		grid[49]![xx]!.forceOpen = true;
+		grid[48]![xx]!.forceOpen = true;
+	}
+	for (const yy of exits.left) {
+		grid[yy]![0]!.forceOpen = true;
+		grid[yy]![1]!.forceOpen = true;
+	}
+	for (const yy of exits.right) {
+		grid[yy]![49]!.forceOpen = true;
+		grid[yy]![48]!.forceOpen = true;
+	}
+}
+
 // Fills the room with cellular-automaton wall (and swamp) noise, rerolling the wall type until the
 // open terrain is fully connected, then smooths swamp the same way.
 function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): Grid {
@@ -245,6 +267,7 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 	let tries = 0;
 	do {
 		grid = makeGrid();
+		markExits(grid, exits);
 		tries++;
 		if (tries > 100) {
 			activeWallType = randomWallType();
@@ -253,24 +276,7 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 
 		for (const [ yy, row ] of grid.entries()) {
 			for (const [ xx, cell ] of row.entries()) {
-				if (yy === 0 && exits.top.includes(xx)) {
-					cell.forceOpen = true;
-					grid[yy + 1]![xx]!.forceOpen = true;
-					continue;
-				}
-				if (yy === 49 && exits.bottom.includes(xx)) {
-					cell.forceOpen = true;
-					grid[yy - 1]![xx]!.forceOpen = true;
-					continue;
-				}
-				if (xx === 0 && exits.left.includes(yy)) {
-					cell.forceOpen = true;
-					row[xx + 1]!.forceOpen = true;
-					continue;
-				}
-				if (xx === 49 && exits.right.includes(yy)) {
-					cell.forceOpen = true;
-					row[xx - 1]!.forceOpen = true;
+				if (cell.forceOpen && isBorder(xx, yy)) {
 					continue;
 				}
 				cell.wall = Math.random() < wallTypes[activeWallType]!.fill;
@@ -291,6 +297,243 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 		}
 	}
 	return grid;
+}
+
+// Deterministic hash of an integer lattice point to a value in [0, 1).
+function latticeValue(ix: number, iy: number): number {
+	return (hashCombine(hashMix(ix), iy) >>> 0) / 0x100000000;
+}
+
+// Smoothstep-interpolated value noise sampled at world coordinates over a lattice of `cell` tiles.
+// Sampling in world (not per-room) space is what makes wall masses continuous across room borders.
+function valueNoise(wx: number, wy: number, cell: number): number {
+	const gx = wx / cell;
+	const gy = wy / cell;
+	const ix = Math.floor(gx);
+	const iy = Math.floor(gy);
+	const tx = gx - ix;
+	const ty = gy - iy;
+	const sx = tx * tx * (3 - 2 * tx);
+	const sy = ty * ty * (3 - 2 * ty);
+	const top = latticeValue(ix, iy) + (latticeValue(ix + 1, iy) - latticeValue(ix, iy)) * sx;
+	const bottom = latticeValue(ix, iy + 1) + (latticeValue(ix + 1, iy + 1) - latticeValue(ix, iy + 1)) * sx;
+	return top + (bottom - top) * sy;
+}
+
+// Two octaves of world-coordinate value noise drive a border's mass depth: a coarse field sets the
+// depth, a fine field breaks the masses into the detached pieces the live corpus carries (dropping
+// it slabs them together).
+const kHighwayMassCell = 22;
+const kHighwayMassWeight = 0.7;
+const kHighwayDetailCell = 6;
+function edgeNoise(wx: number, wy: number): number {
+	return valueNoise(wx, wy, kHighwayMassCell) * kHighwayMassWeight +
+		valueNoise(wx + 1000, wy + 1000, kHighwayDetailCell) * (1 - kHighwayMassWeight);
+}
+
+// Orthogonal neighbor offsets. The reconnect search runs 4-connected so a carved slot is a
+// contiguous walkable channel, not a diagonal chain.
+const kOrthogonal = [ [ 0, -1 ], [ 0, 1 ], [ -1, 0 ], [ 1, 0 ] ] as const;
+
+// Open tiles reachable from (xx, yy), as a set of packed `yy * 50 + xx` keys.
+function reachableOpen(grid: Grid, xx: number, yy: number): Set<number> {
+	const reached = new Set([ yy * 50 + xx ]);
+	const stack = [ [ xx, yy ] as const ];
+	while (stack.length > 0) {
+		const [ cxx, cyy ] = stack.pop()!;
+		for (const [ dxx, dyy ] of kOrthogonal) {
+			const nxx = cxx + dxx;
+			const nyy = cyy + dyy;
+			const key = nyy * 50 + nxx;
+			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 && !grid[nyy]![nxx]!.wall && !reached.has(key)) {
+				reached.add(key);
+				stack.push([ nxx, nyy ]);
+			}
+		}
+	}
+	return reached;
+}
+
+// Breaches the thinnest seal between a cut-off exit throat and the open network: a wall-piercing
+// BFS to the nearest open tile, clearing only its shortest path so the throat opens with a slot,
+// not a bored channel. Carved tiles join `reached` for the next throat.
+function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): void {
+	const start = sy * 50 + sx;
+	const prev = new Map([ [ start, -1 ] ]);
+	// The queue grows as the search fans out; the array iterator keeps yielding the pushed tiles.
+	const queue: (readonly [ number, number ])[] = [ [ sx, sy ] ];
+	for (const [ cxx, cyy ] of queue) {
+		const key = cyy * 50 + cxx;
+		if (key !== start && reached.has(key)) {
+			for (let step = key; step !== -1; step = prev.get(step) ?? -1) {
+				const pxx = step % 50;
+				const pyy = (step - pxx) / 50;
+				if (!isBorder(pxx, pyy)) {
+					grid[pyy]![pxx]!.wall = false;
+				}
+				reached.add(step);
+			}
+			return;
+		}
+		for (const [ dxx, dyy ] of kOrthogonal) {
+			const nxx = cxx + dxx;
+			const nyy = cyy + dyy;
+			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49) {
+				const nkey = nyy * 50 + nxx;
+				if (!prev.has(nkey)) {
+					prev.set(nkey, key);
+					queue.push([ nxx, nyy ]);
+				}
+			}
+		}
+	}
+}
+
+// Connects every exit throat to the open lane, breaching only the thin seal where a wall mass or
+// lane blob has cut a throat off -- leaving the open lane (and the blobs studding it) otherwise
+// undisturbed.
+function connectExits(grid: Grid, exits: ExitMap): void {
+	const throats = [
+		...exits.top.map(xx => [ xx, 1 ] as const),
+		...exits.bottom.map(xx => [ xx, 48 ] as const),
+		...exits.left.map(yy => [ 1, yy ] as const),
+		...exits.right.map(yy => [ 48, yy ] as const),
+	];
+	if (throats.length <= 1) {
+		return;
+	}
+	const [ ax, ay ] = throats[0]!;
+	const reached = reachableOpen(grid, ax, ay);
+	for (const [ bx, by ] of throats.slice(1)) {
+		if (!reached.has(by * 50 + bx)) {
+			carveToOpen(grid, bx, by, reached);
+		}
+	}
+}
+
+// Fills and smooths swamp the way buildBaseTerrain does, so highway lanes carry the same organic
+// swamp patches normal rooms do (about half of the live highway rooms have some). swampType 0
+// means none. smoothTerrain copies every cell, so walls and exits are preserved.
+function applySwamp(grid: Grid, swampType: number): Grid {
+	if (!swampType) {
+		return grid;
+	}
+	const params = swampTypes[swampType]!;
+	for (const row of grid.values()) {
+		for (const cell of row.values()) {
+			if (!cell.forceOpen) {
+				cell.swamp = Math.random() < params.fill;
+			}
+		}
+	}
+	let smoothed = grid;
+	for (let ii = 0; ii < params.smooth; ++ii) {
+		smoothed = smoothTerrain(smoothed, params.factor, 'swamp');
+	}
+	return smoothed;
+}
+
+// About half of the live highway rooms carry swamp; the rest are clear. A highway lane is wide
+// open, so a normal-room swamp type would carpet it -- only a mild type (low fill, smoothed back
+// to a patch) lands a vanilla-sized patch. Roll no swamp half the time, else the mild type.
+const kHighwaySwampType = 1;
+function rollHighwaySwamp(): number {
+	return Math.random() < 0.5 ? 0 : kHighwaySwampType;
+}
+
+// Per-border wall-mass shape; lane masses (vertical/horizontal) run deep, crossing-corner masses
+// shallow. Each {base, amp, expo} drives edgeDepth's heavy-tailed wedge, fit to the live corpus.
+interface HighwayMass {
+	base: number;
+	amp: number;
+	expo: number;
+}
+const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 26, expo: 2.9 };
+const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 8, expo: 2.5 };
+// A coarse value-noise field thresholded into solid wall blobs that stud the open lane.
+const kHighwayBlobCell = 6;
+const kHighwayBlobThreshold = 0.82;
+
+// Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
+// (low base, high exponent), mostly shallow with a rare deep plunge. edgeNoise in [0, 1) bounds it
+// to base + amp.
+function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
+	return mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo;
+}
+
+// A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit -- 0 over
+// the exit rising to 1 at the radius -- so a throat opens as a natural mouth, not the bored tunnel
+// a reconnect cuts. Concave (sqrt) easing keeps the mass tight to the exit; 2D distance so a mass
+// also parts for a perpendicular lane-side exit.
+const kHighwayExitClearRadius = 3;
+function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ number, number ])[]): number {
+	const nearest = Math.min(...exitPoints.map(([ ex, ey ]) => Math.max(Math.abs(bx - ex), Math.abs(by - ey))));
+	if (nearest >= kHighwayExitClearRadius) {
+		return 1;
+	}
+	return Math.sqrt(nearest / kHighwayExitClearRadius);
+}
+
+// Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding
+// from the sector-facing borders -- left+right for a vertical lane, top+bottom for a horizontal
+// one, all four corners for a crossing. Wall masses (noise-driven wedge depth) + lane blobs + exit
+// recede + a slot-carve reconnect, then swamp. Every piece is tuned to the live highway corpus.
+function genHighwayTerrain(
+	exits: ExitMap,
+	rx: number,
+	ry: number,
+	orientation: HighwayOrientation,
+	swampType: number,
+): Grid {
+	const grid = makeGrid();
+	markExits(grid, exits);
+	// Room origin in world tiles. Each border samples the noise field at its own tiles' world
+	// positions, so the four masses decorrelate and every mass flows continuously across the shared
+	// sector edge.
+	const wox = rx * 50;
+	const woy = ry * 50;
+	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
+	// Crossing corners sit off the crossed lanes, so they seal nothing and want no clearance (the
+	// exit set stays empty); lane masses span the exits, so they recede for them.
+	const exitPoints = orientation === 'crossing' ? [] : [
+		...exits.top.map(xx => [ xx, 0 ] as const),
+		...exits.bottom.map(xx => [ xx, 49 ] as const),
+		...exits.left.map(yy => [ 0, yy ] as const),
+		...exits.right.map(yy => [ 49, yy ] as const),
+	];
+	// Depth (in tiles) the mass intrudes along one border, indexed by the tile `at(ii)`: the noise
+	// wedge sampled at that tile's world position, receding toward any nearby exit. A border the
+	// lane runs along carries no mass and stays zeroed, so its term never walls a lane tile.
+	const depthAlongBorder = (active: boolean, at: (ii: number) => readonly [ number, number ]) => {
+		if (!active) {
+			return new Array<number>(50).fill(0);
+		}
+		return Fn.pipe(
+			Fn.range(50),
+			$$ => Fn.map($$, ii => {
+				const [ bx, by ] = at(ii);
+				return edgeDepth(wox + bx, woy + by, mass) * exitClearance(bx, by, exitPoints);
+			}),
+			$$ => [ ...$$ ]);
+	};
+	const leftDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]);
+	const rightDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]);
+	const topDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]);
+	const bottomDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]);
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			if (cell.forceOpen) {
+				continue;
+			}
+			// Frame every non-exit border tile as wall, the way smoothTerrain does for normal rooms.
+			cell.wall = isBorder(xx, yy) ||
+				xx <= leftDepth[yy]! || 49 - xx <= rightDepth[yy]! ||
+				yy <= topDepth[xx]! || 49 - yy <= bottomDepth[xx]! ||
+				valueNoise(wox + xx, woy + yy, kHighwayBlobCell) > kHighwayBlobThreshold;
+		}
+	}
+	connectExits(grid, exits);
+	return applySwamp(grid, swampType);
 }
 
 const kNoTags: ReadonlySet<string> = new Set();
@@ -329,10 +572,20 @@ const kMaxGenerateAttempts = 50;
 // forever) after a bounded number of attempts.
 function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions) {
 	const generators = [ ...hooks.map('roomGenerator') ].sort(mappedNumericComparator(generator => generator.order));
-	const swampType = options.swampType ?? Math.floor(Math.random() * 14);
-	for (let attempt = 0; attempt < kMaxGenerateAttempts; ++attempt) {
-		const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
-		const terrain = gridToTerrain(buildBaseTerrain(exits, wallType, swampType));
+	const { rx, ry } = parseRoomName(roomName);
+	const swampType = options.swampType ??
+		(options.highway ? rollHighwaySwamp() : Math.floor(Math.random() * 14));
+	// Highway terrain is a deterministic function of world position, so a retry would rebuild it
+	// identically -- one failed attempt settles the outcome.
+	const maxAttempts = options.highway ? 1 : kMaxGenerateAttempts;
+	for (let attempt = 0; attempt < maxAttempts; ++attempt) {
+		const terrain = gridToTerrain(function() {
+			if (options.highway) {
+				return genHighwayTerrain(exits, rx, ry, options.highway, swampType);
+			}
+			const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
+			return buildBaseTerrain(exits, wallType, swampType);
+		}());
 		const room = new Room();
 		room.name = roomName;
 		const context = makeGeneratorContext(room, terrain, options);
@@ -340,7 +593,7 @@ function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions)
 			return { room, terrain };
 		}
 	}
-	throw new Error(`Failed to generate room terrain after ${kMaxGenerateAttempts} attempts`);
+	throw new Error(`Failed to generate room terrain after ${maxAttempts} attempt(s)`);
 }
 
 function gridToTerrain(grid: Grid): TerrainWriter {
