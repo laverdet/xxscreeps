@@ -6,7 +6,7 @@ const CodeSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/code$/,
 
 	async subscribe() {
-		if (!this.user) {
+		if (this.user === undefined) {
 			return () => {};
 		}
 		return Code.userCodeChannel(this.context.db, this.user).listen(message => {
@@ -29,7 +29,7 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/set-active-branch$/,
 
 	subscribe() {
-		if (!this.user) {
+		if (this.user === undefined) {
 			return () => {};
 		}
 		return Code.userCodeChannel(this.context.db, this.user).listen(message => {

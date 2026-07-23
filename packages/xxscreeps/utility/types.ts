@@ -8,6 +8,9 @@ export type CounterExtract<T, U> = T extends any ? U extends T ? T : never : nev
 // Same as `Record` but has nullable members
 export type Dictionary<Type> = Partial<Record<string, Type>>;
 
+// A non-null object which allows access to any property
+export type UnknownObject = Record<string, unknown>;
+
 // Returns all keys of a union type
 export type KeysOf<Type> = Type extends any ? keyof Type : never;
 

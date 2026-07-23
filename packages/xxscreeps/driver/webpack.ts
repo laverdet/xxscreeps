@@ -121,7 +121,7 @@ export async function compile(moduleName: string, transform: Transform) {
 			} else {
 				const info = stats!.toJson();
 				if (stats!.hasErrors()) {
-					reject((info.errors![0] as any).message);
+					reject(new Error(info.errors![0]?.message));
 				} else {
 					if (stats!.hasWarnings()) {
 						console.log(info.warnings);

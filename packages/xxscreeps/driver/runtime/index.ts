@@ -1,6 +1,7 @@
 import type { TickCompletion } from '../sandbox/index.js';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { Nullable } from 'xxscreeps/functional/types.js';
+import type { UnknownObject } from 'xxscreeps/utility/types.js';
 import { inspect } from 'node:util';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
@@ -13,9 +14,10 @@ import { setupConsole } from './console.js';
 import { makeEnvironment } from './module.js';
 import { flush, print, resultPrefix } from './print.js';
 
-export type Compiler<Type = any> = {
-	compile: (source: string, filename: string) => Type;
-	evaluate: (module: Type, linker: (specifier: string, referrer?: string) => Type) => any;
+export type RuntimeModuleNamespace = Record<string, unknown>;
+export type Compiler<Module extends object> = {
+	compile: (source: string, filename: string) => Module;
+	evaluate: (module: Module, linker: (specifier: string, referrer?: string) => Module) => RuntimeModuleNamespace;
 };
 export type Evaluate = (source: string, filename: string) => unknown;
 
@@ -73,9 +75,9 @@ const hooksComposed = function() {
 
 let me: string;
 let world: World;
-let requireMain: () => any;
+let requireMain: () => unknown;
 
-export function initialize(compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
+export function initialize<Module extends object>(compiler: Compiler<Module>, evaluate: Evaluate, data: InitializationPayload) {
 	// Set up environment
 	flushGlobals();
 	setupConsole(print);
@@ -90,7 +92,7 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, data: Initial
 
 	// Set up runtime
 	me = data.userId;
-	const modules = data.codeBlob ? Code.read(data.codeBlob) : new Map();
+	const modules = data.codeBlob ? Code.read(data.codeBlob) : new Map<string, string | Uint8Array>();
 	requireMain = makeEnvironment(modules, evaluate, compiler);
 }
 
@@ -123,15 +125,16 @@ export function tick(data: TickPayload, player = (fn: () => void) => fn()): Tick
 					// Read `main.loop` fresh each tick rather than caching the reference: a bot may swap
 					// `module.exports.loop` after first-tick setup (e.g. the rustyscreeps wasm loader replaces
 					// its bootstrap with the real loop). `require('main')` is a cache hit after the first tick.
-					const main = requireMain();
-					if (main.loop) {
+					const main = requireMain() as Record<string, unknown>;
+					if (typeof main.loop === 'function') {
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 						main.loop();
 					} else {
 						throw new Error('No `loop` function exported by `main` module');
 					}
 				});
-			} catch (err: any) {
-				const lines: string[] = err.stack.split(/\n/g);
+			} catch (error: unknown) {
+				const lines = (error as Error).stack!.split(/\n/g);
 				const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
 				console.error((index === -1 ? lines : lines.slice(0, index)).join('\n'));
 			}
@@ -139,34 +142,36 @@ export function tick(data: TickPayload, player = (fn: () => void) => fn()): Tick
 			// Run requested eval expressions
 			data.eval.forEach(payload => {
 				try {
-					// eslint-disable-next-line @typescript-eslint/no-implied-eval
-					const result = new Function('expr', 'return eval(expr)')(payload.expr);
-					if (payload.ack) {
+					// eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call, no-new-func
+					const result: unknown = new Function('expr', 'return eval(expr)')(payload.expr);
+					if (payload.ack !== undefined) {
 						const ack = tickResult.evalAck ??= [];
 						ack.push({
 							id: payload.ack,
 							result: {
 								error: false,
-								value: payload.echo ? undefined : result,
+								value: payload.echo ? undefined : String(result),
 							},
 						});
 					}
 					if (payload.echo) {
 						print(1, `${resultPrefix}${inspect(result, { colors: true })}`);
 					}
-				} catch (err: any) {
-					if (payload.ack) {
+				} catch (cause: unknown) {
+					const error = cause as UnknownObject;
+					if (payload.ack !== undefined) {
 						const ack = tickResult.evalAck ??= [];
 						ack.push({
 							id: payload.ack,
 							result: {
 								error: true,
-								value: err.message,
+								value: String(error.message),
 							},
 						});
 					}
 					if (payload.echo) {
-						print(2, err.stack ?? err.message ?? err);
+						// eslint-disable-next-line @typescript-eslint/no-base-to-string
+						print(2, String(error.stack ?? error.message ?? error));
 					}
 				}
 			});

@@ -25,11 +25,29 @@ async function getBranchNameFromQuery(db: Database, userId: string, branchName: 
 	return branchName;
 }
 
-function getModulePayloadFromQuery(query: object | null | undefined) {
+type ModulePayload = Record<string, null | string | { binary: string }>;
+
+const modulePayloadSchema: JSONSchemaType<ModulePayload> = {
+	type: 'object',
+	additionalProperties: {
+		anyOf: [
+			{ type: 'string' },
+			{
+				type: 'object',
+				properties: { binary: { type: 'string' } },
+				required: [ 'binary' ],
+			},
+			{ type: 'null', nullable: true },
+		],
+	},
+	required: [],
+};
+
+function getModulePayloadFromQuery(query: ModulePayload | null | undefined) {
 	if (!query) {
 		return new Map([ [ 'main', '' ] ]);
 	}
-	const entries = Fn.map(Object.entries(query), ([ name, content ]): [ string, any ] => {
+	const entries = Fn.map(Object.entries(query), ([ name, content ]): [ string, string | Buffer | undefined ] => {
 		const decoded = function() {
 			if (content === null) {
 				return;
@@ -43,7 +61,7 @@ function getModulePayloadFromQuery(query: object | null | undefined) {
 		}();
 		return [ name, decoded ];
 	});
-	const modules = new Map(Fn.reject(entries, entry => entry[1] === undefined));
+	const modules = new Map(Fn.filter(entries, (entry): entry is [ string, string | Buffer ] => entry[1] !== undefined));
 	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
 		modules.set('main', '');
 	}
@@ -113,7 +131,7 @@ hooks.register('route', {
 
 interface CloneBranchRequest {
 	branch?: string | null;
-	defaultModules?: object | null;
+	defaultModules?: ModulePayload | null;
 	newName: string;
 }
 
@@ -122,7 +140,7 @@ const cloneBranchRequestSchema: JSONSchemaType<CloneBranchRequest> = {
 	properties: {
 		branch: { type: 'string', nullable: true },
 		newName: { type: 'string' },
-		defaultModules: { type: 'object', nullable: true },
+		defaultModules: { ...modulePayloadSchema, nullable: true },
 	},
 	required: [ 'newName' ],
 };
@@ -140,7 +158,7 @@ hooks.register('route', {
 		// Check request
 		const branch = await async function() {
 			const { branch } = context.request.body;
-			return branch && getBranchNameFromQuery(context.db, userId, branch);
+			return branch == null ? null : getBranchNameFromQuery(context.db, userId, branch);
 		}();
 		const { newName } = context.request.body;
 		checkBranchName(newName);
@@ -150,14 +168,18 @@ hooks.register('route', {
 			throw new Error('Too many branches');
 		} else if (branches.includes(newName)) {
 			throw new Error('Branch already exists');
-		} else if (branch && !branches.includes(branch)) {
+		} else if (branch != null && !branches.includes(branch)) {
 			return;
 		}
 
 		// Create the branch
 		const timestamp = Date.now();
 		const updated = await async function() {
-			if (branch) {
+			if (branch === null) {
+				const modules = getModulePayloadFromQuery(context.request.body.defaultModules);
+				await Code.saveContent(context.db, userId, newName, modules);
+				return true;
+			} else {
 				const [ updatedBlobs, updatedStrings ] = await Promise.all([
 					context.db.data.copy(Code.buffersKey(userId, branch), Code.buffersKey(userId, newName)),
 					context.db.data.copy(Code.stringsKey(userId, branch), Code.stringsKey(userId, newName)),
@@ -167,10 +189,6 @@ hooks.register('route', {
 					updatedStrings ? undefined : context.db.data.vDel(Code.stringsKey(userId, newName)),
 				]);
 				return updatedBlobs || updatedStrings;
-			} else {
-				const modules = getModulePayloadFromQuery(context.request.body.defaultModules);
-				await Code.saveContent(context.db, userId, newName, modules);
-				return true;
 			}
 		}();
 		if (!updated) {
@@ -285,14 +303,14 @@ hooks.register('route', {
 
 interface SaveCodeRequest {
 	branch: string;
-	modules: object;
+	modules: ModulePayload;
 }
 
 const saveCodeRequestSchema: JSONSchemaType<SaveCodeRequest> = {
 	type: 'object',
 	properties: {
 		branch: { type: 'string' },
-		modules: { type: 'object' },
+		modules: modulePayloadSchema,
 	},
 	required: [ 'branch', 'modules' ],
 };
@@ -343,8 +361,9 @@ hooks.register('route', {
 			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval, no-new-func
 			new Function(expression);
 			await requestRunnerEval(context.shard, userId, expression, true);
-		} catch (err: any) {
-			await getConsoleChannel(context.shard, userId).publish(JSON.stringify([ { fd: 2, data: err.message } ]));
+		} catch (error: unknown) {
+			const { message } = error as Error;
+			await getConsoleChannel(context.shard, userId).publish(JSON.stringify([ { fd: 2, data: message } ]));
 		}
 		return { ok: 1 };
 	}),

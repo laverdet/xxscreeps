@@ -1,6 +1,7 @@
 
 import type { SubscriptionEndpoint } from '../socket.js';
 import type { PlayerLog } from 'xxscreeps/driver/runtime/print.js';
+import type { TickUsageResult } from 'xxscreeps/engine/runner/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import { kFdStdError, kFdUnescaped, resultPrefix } from 'xxscreeps/driver/runtime/print.js';
 import { getConsoleChannel, runnerUsageChannel } from 'xxscreeps/engine/runner/model.js';
@@ -38,7 +39,7 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/console$/,
 
 	subscribe(params) {
-		if (!this.user || params.user !== this.user) {
+		if (this.user === undefined || params.user !== this.user) {
 			return () => {};
 		}
 		return getConsoleChannel(this.context.shard, params.user).listen(message => {
@@ -62,14 +63,14 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 				} else {
 					const previous = frames.at(-1)?.messages;
 					if (line.data.startsWith(resultPrefix)) {
-						if (previous?.results.length) {
+						if (previous && Boolean(previous.results.length)) {
 							// Eval response
 							previous.results.push(colorize(line.data.substr(resultPrefix.length)));
 						} else {
 							// Repeated eval response
 							frames.push({ messages: { log: [], results: [ colorize(line.data.substr(resultPrefix.length)) ] } });
 						}
-					} else if (previous?.log.length) {
+					} else if (previous && Boolean(previous.log.length)) {
 						// console.log
 						previous.log.push(colorize(line.data));
 					} else {
@@ -89,16 +90,16 @@ const UsageSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/cpu$/,
 
 	async subscribe(params) {
-		if (!this.user || params.user !== this.user) {
+		if (this.user === undefined || params.user !== this.user) {
 			return () => {};
 		}
-		const usage: any = {};
+		const usage: Partial<TickUsageResult> = {};
 		const send = throttle(() => {
 			this.send(JSON.stringify(usage));
 		});
 		const subscription = await runnerUsageChannel(this.context.shard, params.user).listen(message => {
 			Object.assign(usage, message);
-			usage.cpu = Math.floor(usage.cpu);
+			usage.cpu = Math.floor(Number(usage.cpu)) || 0;
 			send.set(config.backend.socketThrottle);
 		});
 		return () => {
