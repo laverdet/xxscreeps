@@ -182,19 +182,29 @@ export function optional(element: unknown, uninitialized?: null) {
 // Structure / object type
 export type StructDeclaration = WithVariant | Record<string, Format | UnionDeclaration>;
 
+type StructMemberFormat<Member> =
+	Member extends UnionDeclaration<any, infer Format> ? Format : Member;
+
+type StructMemberIsOptional<Member> =
+	undefined extends ShapeOf<StructMemberFormat<Member>> ? true : false;
+
+type StructVariantMember<Struct> = Struct extends WithVariant<infer V> ? WithVariant<V> : unknown;
+
 type StructDeclarationShape<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
-> = {
-	[Key in Keys]: ShapeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+> = StructVariantMember<Type> & {
+	[Key in Keys as StructMemberIsOptional<Type[Key]> extends true ? never : Key]: ShapeOf<StructMemberFormat<Type[Key]>>;
+} & {
+	[Key in Keys as StructMemberIsOptional<Type[Key]> extends true ? Key : never]?: ShapeOf<StructMemberFormat<Type[Key]>>;
+};
 
 type StructDeclarationType<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
-> = {
-	[Key in Keys]: TypeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+> = StructVariantMember<Type> & {
+	[Key in Keys]: TypeOf<StructMemberFormat<Type[Key]>>;
+};
 
 export function struct<Type extends StructDeclaration>(format: Type):
 	WithShapeAndType<StructDeclarationShape<Type>, StructDeclarationType<Type>>;

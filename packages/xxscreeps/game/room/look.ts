@@ -127,7 +127,7 @@ declare module './room.js' {
 
 extend(Room, {
 	lookAt(...args: PositionParameter) {
-		const { pos } = fetchPositionArgument(this.name, ...args);
+		const { pos } = fetchPositionArgument(this.name, args);
 		if (pos?.roomName !== this.name) {
 			return [];
 		}
@@ -168,7 +168,7 @@ extend(Room, {
 	},
 
 	lookForAt(type: LookConstants, ...rest: PositionParameter) {
-		const { pos } = fetchPositionArgument(this.name, ...rest);
+		const { pos } = fetchPositionArgument(this.name, rest);
 		if (pos?.roomName !== this.name) {
 			return [];
 		}

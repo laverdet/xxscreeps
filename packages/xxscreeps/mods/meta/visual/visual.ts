@@ -1,10 +1,14 @@
+import type { LocalPosition, PositionLike } from 'xxscreeps/game/position.js';
 import type { WithShapeAndType } from 'xxscreeps/schema/format.js';
-import type { TypeOf } from 'xxscreeps/schema/index.js';
+import type { ShapeOf, TypeOf } from 'xxscreeps/schema/index.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+
+type PointAsTuple = [ xx: number, yy: number ];
+type PointParameter = PointAsTuple | [ pos: LocalPosition ] | [ pos: PositionLike ];
 
 // Declare schema and types
 const color = {
@@ -121,7 +125,7 @@ const rectSchema = struct({
 export interface PolyStyle extends Partial<TypeOf<typeof polySchema>['s']> {}
 const polySchema = struct({
 	...variant('p'),
-	points: vector(array(2, 'double') as WithShapeAndType<[ number, number ]>),
+	points: vector(array(2, 'double') as WithShapeAndType<PointAsTuple>),
 	s: struct({
 		...fill,
 		...line,
@@ -175,24 +179,17 @@ const textSchema = struct({
 
 const visualSchema = variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema);
 export type VisualEntry = TypeOf<typeof visualSchema>;
+type VisualEntryShape = ShapeOf<typeof visualSchema>;
 export const schema = build(declare('Visual', vector(visualSchema)));
 const writeSchema = makeWriter(schema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
-type LocalPoint = {
-	x: number;
-	y: number;
-};
-type RoomPoint = LocalPoint & {
-	roomName: string;
-};
-
-function encodeRoomPosition(pos: RoomPoint) {
+function encodeRoomPosition(pos: PositionLike): LocalPosition {
 	const { rx, ry } = parseRoomName(pos.roomName);
 	return { x: rx + pos.x / 50, y: ry + pos.y / 50 };
 }
 
-export function decodeRoomPosition(coord: { x: number; y: number }) {
+export function decodeRoomPosition(coord: LocalPosition) {
 	const rx = Math.floor(coord.x);
 	const ry = Math.floor(coord.y);
 	return {
@@ -202,10 +199,20 @@ export function decodeRoomPosition(coord: { x: number; y: number }) {
 	};
 }
 
-function *extractPositions(args: any[], includeRoom: boolean): Iterable<any> {
+// Strip leading `LocalPosition` to `PointAsTuple` and leave the rest at the end.
+type ExtractPositions<Args extends readonly unknown[]> =
+	Args extends readonly [ infer First, ...infer Rest ]
+		? First extends LocalPosition
+			? [ ...PointAsTuple, ...ExtractPositions<Rest> ]
+			: [ First, ...ExtractPositions<Rest> ]
+		: Args;
+
+function extractPositions<Args extends readonly unknown[]>(args: Args, includeRoom: boolean): ExtractPositions<Args>;
+function *extractPositions(args: unknown[], includeRoom: boolean) {
 	for (const arg of args) {
-		if (typeof arg.x === 'number') {
-			const point = includeRoom ? encodeRoomPosition(arg) : arg;
+		const position = arg as Partial<PositionLike>;
+		if (typeof position.x === 'number') {
+			const point = includeRoom ? encodeRoomPosition(position as PositionLike) : position as LocalPosition;
 			yield point.x;
 			yield point.y;
 		} else {
@@ -216,7 +223,7 @@ function *extractPositions(args: any[], includeRoom: boolean): Iterable<any> {
 
 // Per-room visual state. `size` tracks cumulative serialized bytes for limit enforcement
 // (500 KB per room, 1000 KB for map). Shared across all RoomVisual instances for the same room.
-type RoomVisualState = { visuals: VisualEntry[]; size: number };
+type RoomVisualState = { visuals: VisualEntryShape[]; size: number };
 const tickVisuals = new Map<string, RoomVisualState>();
 
 // Save visuals to schema blob
@@ -231,10 +238,10 @@ export function flush() {
 
 /**
  * Base class for room and map visuals. The `Point` type parameter constrains which position
- * argument forms are accepted: `RoomVisual` accepts bare `x, y` pairs, `LocalPoint`, or
- * `RoomPoint`; `MapVisual` accepts only `RoomPoint`.
+ * argument forms are accepted: `RoomVisual` accepts bare `x, y` pairs, `LocalPosition`, or
+ * `PositionLike`; `MapVisual` accepts only `PositionLike`.
  */
-class VisualOf<Point extends unknown[]> {
+class VisualOf<Point extends PointParameter> {
 	readonly #state;
 	readonly #encodePositions;
 	readonly #limit;
@@ -273,11 +280,13 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.import
 	 */
 	import(text: string) {
+		type SerializedVisual = Partial<VisualEntryShape> & { t?: string };
 		for (const row of text.split('\n')) {
 			if (row === '') continue;
-			const data = JSON.parse(row);
+			const data = JSON.parse(row) as SerializedVisual;
 			const type = data.t;
 			delete data.t;
+			// @ts-expect-error
 			this.#push({ [Variant]: type, ...data, s: data.s ?? {} });
 		}
 		return this;
@@ -294,7 +303,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.circle
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
-		const [ xx, yy, style ] = extractPositions(args, this.#encodePositions);
+		type Signature = [ pos: LocalPosition, style?: CircleStyle ];
+		const [ xx, yy, style ] = extractPositions(args as Signature, this.#encodePositions);
 		this.#push({ [Variant]: 'c', x: xx, y: yy, s: style ?? {} });
 		return this;
 	}
@@ -312,7 +322,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.line
 	 */
 	line(...args: [ ...pos1: Point, ...pos2: Point, style?: LineStyle ]) {
-		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#encodePositions);
+		type Signature = [ pos1: LocalPosition, pos2: LocalPosition, style?: LineStyle ];
+		const [ x1, y1, x2, y2, style ] = extractPositions(args as Signature, this.#encodePositions);
 		this.#push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
 		return this;
 	}
@@ -327,14 +338,15 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#RoomVisual.poly
 	 * @see https://docs.screeps.com/api/#Game.map-visual.poly
 	 */
-	poly(points: (LocalPoint | RoomPoint | [number, number])[], style?: PolyStyle) {
-		const pairs = [
-			...Fn.map(points, point =>
+	poly(points: (LocalPosition | PositionLike | PointAsTuple)[], style?: PolyStyle) {
+		const pairs = Fn.pipe(
+			points,
+			$$ => Fn.map($$, (point): PointAsTuple =>
 				Array.isArray(point)
-					? point :
-					[ ...extractPositions([ point ], this.#encodePositions) ] as [ number, number ]),
-		];
-		this.#push({ [Variant]: 'p', points: pairs, s: style ?? {} } as VisualEntry);
+					? point
+					: [ ...extractPositions([ point ] as const, this.#encodePositions) ]),
+			$$ => [ ...$$ ]);
+		this.#push({ [Variant]: 'p', points: pairs, s: style ?? {} });
 		return this;
 	}
 
@@ -351,7 +363,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.rect
 	 */
 	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
-		const [ xx, yy, width, height, style ] = extractPositions(args, this.#encodePositions);
+		type Signature = [ pos: LocalPosition, width: number, height: number, style?: RectStyle ];
+		const [ xx, yy, width, height, style ] = extractPositions(args as Signature, this.#encodePositions);
 		this.#push({ [Variant]: 'r', x: xx, y: yy, w: width, h: height, s: style ?? {} });
 		return this;
 	}
@@ -369,7 +382,8 @@ class VisualOf<Point extends unknown[]> {
 	 * @see https://docs.screeps.com/api/#Game.map-visual.text
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
-		const [ xx, yy, style ] = extractPositions(args, this.#encodePositions);
+		type Signature = [ pos: LocalPosition, style?: TextStyle ];
+		const [ xx, yy, style ] = extractPositions(args as Signature, this.#encodePositions);
 		this.#push({ [Variant]: 't', x: xx, y: yy, text, s: style ?? {} });
 		return this;
 	}
@@ -397,7 +411,7 @@ class VisualOf<Point extends unknown[]> {
 		return this.#state.size;
 	}
 
-	#push(visual: VisualEntry) {
+	#push(visual: VisualEntryShape) {
 		const entrySize = JSON.stringify(visual).length + 9;
 		if (this.#state.size + entrySize > this.#limit) {
 			throw new Error(`${this.#description} size has exceeded ${this.#limit >> 10} KB limit`);
@@ -427,7 +441,7 @@ class VisualOf<Point extends unknown[]> {
  * @public
  * @see https://docs.screeps.com/api/#RoomVisual
  */
-export class RoomVisual extends VisualOf<[ x: number, y: number ] | [ pos: LocalPoint ] | [ pos: RoomPoint ]> {
+export class RoomVisual extends VisualOf<PointParameter> {
 	/**
 	 * You can directly create new `RoomVisual` object in any room, even if it's invisible to your
 	 * script.
@@ -460,7 +474,7 @@ export class RoomVisual extends VisualOf<[ x: number, y: number ] | [ pos: Local
  * @public
  * @see https://docs.screeps.com/api/#Game-map-visual
  */
-export class MapVisual extends VisualOf<[ pos: RoomPoint ]> {
+export class MapVisual extends VisualOf<[ pos: PositionLike ]> {
 	constructor() {
 		super('MapVisual', {
 			state: getOrSet(tickVisuals, 'map', () => ({ visuals: [], size: 0 })),
