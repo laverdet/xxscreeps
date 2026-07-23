@@ -66,3 +66,9 @@ declare module 'xxscreeps:mods/game' {
 
 	interface RoomSchema { factory: [ FactoryRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { FactoryIntents } from 'xxscreeps/mods/modern/factory/processor.js';
+
+	interface Intent { factory: FactoryIntents }
+}

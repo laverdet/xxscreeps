@@ -68,10 +68,8 @@ function updateRoomStatus(room: Room, level: number, userId: string | null | und
 	checkActiveStructures(room);
 }
 
+export type ControllerIntents = typeof intents;
 // Register intent processors
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { controller: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attackController', {

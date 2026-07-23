@@ -26,10 +26,8 @@ export function registerHarvestProcessor<Type extends RoomObject>(
 	return target.prototype[ProcessHarvest] = process as RoomObject[typeof ProcessHarvest];
 }
 
+export type HarvestableIntents = [ typeof intent ];
 // Register `harvest` action processor
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { harvestable: typeof intent }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intent = registerIntentProcessor(Creep, 'harvest', {
 	before: 'move',

@@ -12,12 +12,9 @@ import { checkOrderParams } from './market.js';
 import { deleteOrder, incrementUserCredits, insertOrder, loadAndReadMarketOrder, loadUserCredits, updateOrderAmount } from './model.js';
 import { Order } from './order.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { wallstreet: typeof intents }
-}
-
 export type OrderIntent = [ type: OrderType, resourceType: ResourceType, price: number, totalAmount: number ];
 
+export type WallStreetIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTerminal, 'createOrder', {}, (terminal, context, orders: OrderIntent[]) => {

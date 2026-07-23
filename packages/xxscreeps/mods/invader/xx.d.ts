@@ -4,3 +4,9 @@ declare module 'xxscreeps:mods/game' {
 
 	interface RoomSchema { invader: [ InvaderRoomSchema, InvaderSchemaRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { InvaderIntents } from 'xxscreeps/mods/invader/processor.js';
+
+	interface Intent { invader: InvaderIntents }
+}

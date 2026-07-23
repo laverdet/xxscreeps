@@ -2,6 +2,7 @@ import type { ProcessorContext } from './room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { Intent } from 'xxscreeps:mods/processor';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
 
@@ -40,6 +41,13 @@ type RemapNull<Type> = Type extends any[] ? {
 	[Key in keyof Type]: RemapNull<Type[Key]>;
 } : NullToUndefined<Type>;
 
+// Fake type for coalescing registered processors
+export interface IntentDeclaration<Type extends object, Intent extends string, Data> {
+	type: Type;
+	intent: Intent;
+	data: Data;
+}
+
 // Register RoomObject intent processor
 export function registerIntentProcessor<Type extends object, Intent extends string, Data extends AllowedTypes[]>(
 	receiver: abstract new(...args: any[]) => Type,
@@ -51,7 +59,7 @@ export function registerIntentProcessor<Type extends object, Intent extends stri
 		internal?: true;
 	},
 	process: (receiver: Type, context: ProcessorContext, ...data: Data) => void,
-): void | { type: Type; intent: Intent; data: RemapNull<Data> } {
+): null | IntentDeclaration<Type, Intent, RemapNull<Data>> {
 	const toArray = (constraint: string | string[] | undefined) =>
 		constraint === undefined ? [] :
 		typeof constraint === 'string' ? [ constraint ] : constraint;
@@ -68,19 +76,21 @@ export function registerIntentProcessor<Type extends object, Intent extends stri
 		process,
 		receiver,
 	});
+	return null;
 }
-export interface Intent {}
 
 // Types for intent processors
-type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, void>;
+type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, null>;
 export type IntentReceivers = Room | Intents['type'];
-export type IntentsForReceiver<Type extends IntentReceivers> = Type extends any
-	? CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'] : never;
+export type IntentsForReceiver<Type extends IntentReceivers> =
+	Type extends any
+		? CounterExtract<Intents, IntentDeclaration<Type, any, any>>['intent']
+		: never;
 export type IntentParameters<Type extends IntentReceivers, Intent extends string> =
-	CounterExtract<Intents, { type: Type; intent: Intent; data: any }>['data'];
+	CounterExtract<Intents, IntentDeclaration<Type, Intent, any>>['data'];
 
 type IntentsForHelper<Type extends IntentReceivers> =
-	CounterExtract<Intents, { type: Type; intent: any; data: any }>;
+	CounterExtract<Intents, IntentDeclaration<Type, any, any>>;
 
 export type IntentListFor<Type extends IntentReceivers> = {
 	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>[];

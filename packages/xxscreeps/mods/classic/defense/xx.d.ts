@@ -3,3 +3,9 @@ declare module 'xxscreeps:mods/game' {
 
 	interface RoomSchema { defense: DefenseRoomSchemas }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { DefenseIntents } from 'xxscreeps/mods/classic/defense/processor.js';
+
+	interface Intent { defense: DefenseIntents }
+}

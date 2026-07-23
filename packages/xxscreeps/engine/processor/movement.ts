@@ -11,12 +11,7 @@ import { getOrSet } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { registerIntentProcessor } from './index.js';
 
-// Add cross-room movement
-declare module './index.js' {
-	interface Intent {
-		movement: typeof intents;
-	}
-}
+export type MovementIntents = [ typeof intents ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = registerIntentProcessor(Room, 'import', { internal: true }, (room, context, objectPayload: string) => {
 	const object = readRoomObject(latin1ToBuffer(objectPayload));

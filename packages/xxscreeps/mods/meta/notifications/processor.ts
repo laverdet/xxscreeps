@@ -36,6 +36,7 @@ Creep.prototype['#sendAttackNotify'] =
 			}
 		};
 
+export type NotificationsIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'notifyWhenAttacked', {}, (creep, context, enabled: boolean) => {
@@ -52,7 +53,3 @@ const intents = [
 		}
 	}),
 ];
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { notifications: typeof intents }
-}

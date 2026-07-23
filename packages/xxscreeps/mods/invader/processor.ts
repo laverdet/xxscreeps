@@ -93,11 +93,9 @@ registerRoomTickProcessor((room, context) => {
 	}
 });
 
+export type InvaderIntents = typeof intents;
 // Intent processors. Includes the backend-only `requestInvader` (Room) and the four
 // invader-core actions driven by the NPC loop.
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { invader: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {

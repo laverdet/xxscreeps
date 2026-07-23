@@ -46,6 +46,7 @@ function killPowerCreep(creep: PowerCreep, context: ProcessorContext) {
 	context.setActive();
 }
 
+export type PowerCreepIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	// The intent carries only the roster id; `claimSpawn` validates it against the authoritative
@@ -132,9 +133,3 @@ registerObjectTickProcessor(PowerCreep, (creep, context) => {
 		context.wakeAt(creep['#ageTime']);
 	}
 });
-
-// ---
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { powerCreep: typeof intents }
-}

@@ -3,9 +3,7 @@ import * as C from 'xxscreeps:mods/constants';
 import { incrementGlobalPowerLevel } from './model.js';
 import { StructurePowerSpawn, checkProcessPower } from './powerspawn.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { powerspawn: typeof intents }
-}
+export type PowerspawnIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructurePowerSpawn, 'processPower', {}, (powerSpawn, context) => {

@@ -10,9 +10,7 @@ type BoostEffects = Partial<Record<string, number>>;
 type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 type ReactionTimeLookup = Partial<Record<string, number>>;
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { chemistry: typeof intents }
-}
+export type ChemistryIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureLab, 'runReaction', {}, (lab, context, id1: string, id2: string) => {

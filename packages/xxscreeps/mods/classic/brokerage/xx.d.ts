@@ -6,3 +6,9 @@ declare module 'xxscreeps:mods/game' {
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 	interface StructureTerminalSchema {}
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { BrokerageIntents } from 'xxscreeps/mods/classic/brokerage/processor.js';
+
+	interface Intent { brokerage: BrokerageIntents }
+}

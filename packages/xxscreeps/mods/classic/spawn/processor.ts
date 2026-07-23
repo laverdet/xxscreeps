@@ -60,9 +60,7 @@ function consumeEnergy(spawn: StructureSpawn, amount: number, structures = getEn
 	throw new Error('Did not subtract energy correctly.');
 }
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { spawn: typeof intents }
-}
+export type SpawnIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'placeSpawn', { internal: true },

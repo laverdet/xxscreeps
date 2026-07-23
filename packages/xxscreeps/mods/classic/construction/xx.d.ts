@@ -11,3 +11,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { construction: ConstructionLook }
 	interface RoomSchema { construction: [ ConstructionRoomSchema, ...ConstructionEventRoomSchemas ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { ConstructionIntents } from 'xxscreeps/mods/classic/construction/processor.js';
+
+	interface Intent { construction: ConstructionIntents }
+}

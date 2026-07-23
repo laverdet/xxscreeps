@@ -5,10 +5,7 @@ import * as C from 'xxscreeps:mods/constants';
 import { ObserverSpy, create as createObserverSpy } from './observer-spy.js';
 import { StructureObserver, checkObserveRoom } from './observer.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { observer: typeof intents }
-}
-
+export type ObserverIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureObserver, 'observeRoom', {}, (observer, context, target: string) => {

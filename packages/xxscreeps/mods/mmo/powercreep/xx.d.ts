@@ -5,3 +5,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { powerCreep: PowerCreepLook }
 	interface RoomSchema { powerCreep: [ PowerCreepRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { PowerCreepIntents } from 'xxscreeps/mods/mmo/powercreep/processor.js';
+
+	interface Intent { powerCreep: PowerCreepIntents }
+}

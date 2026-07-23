@@ -5,3 +5,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { nuker: NukerLook }
 	interface RoomSchema { nuker: NukerRoomSchemas }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { NukerIntents } from 'xxscreeps/mods/modern/nuker/processor.js';
+
+	interface Intent { nuker: NukerIntents }
+}

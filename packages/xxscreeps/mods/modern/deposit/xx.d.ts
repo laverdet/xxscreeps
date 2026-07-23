@@ -5,3 +5,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { deposit: DepositLook }
 	interface RoomSchema { deposit: [ DepositRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { DepositIntents } from 'xxscreeps/mods/modern/deposit/processor.js';
+
+	interface Intent { deposit: DepositIntents }
+}
