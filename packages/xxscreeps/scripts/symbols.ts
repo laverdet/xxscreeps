@@ -1,5 +1,7 @@
 import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
 import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
 type ExitSide = 'top' | 'right' | 'bottom' | 'left';
@@ -15,23 +17,22 @@ export interface GenerateRoomOptions {
 
 export interface RoomGeneratorContext {
 	options: GenerateRoomOptions;
-	/** The room being generated. Insert objects through `place` so their tiles are tagged. */
+	/** The room being generated. Insert objects through `place` so their positions are tagged. */
 	room: Room;
+	/** The room's generated terrain. */
+	terrain: Terrain;
 	/**
-	 * Rolls uniformly random tiles within [min, min + span) on both axes until one satisfies
-	 * `accept`, returning undefined after 1000 failed rolls to signal terrain that can't host the
-	 * object.
+	 * The first position in random order within [min, min + span) on both axes satisfying `accept`,
+	 * or undefined when the terrain can't host the object anywhere.
 	 */
-	findRandomTile: (min: number, span: number, accept: (xx: number, yy: number) => boolean) =>
-		readonly [ number, number ] | undefined;
-	/** Whether (xx, yy) is an untagged wall tile with at least one passable neighbor. */
-	isPlaceable: (xx: number, yy: number) => boolean;
-	/** Whether (xx, yy) is a wall tile. */
-	isWall: (xx: number, yy: number) => boolean;
-	/** Inserts `object` into the room and tags its tile. */
+	findRandomPosition: (min: number, span: number, accept: (position: RoomPosition) => boolean) =>
+		RoomPosition | undefined;
+	/** Whether `position` is an untagged wall tile with at least one passable neighbor. */
+	isPlaceable: (position: RoomPosition) => boolean;
+	/** Inserts `object` into the room and tags its position. */
 	place: (object: RoomObject, ...tags: string[]) => void;
-	/** Tags applied by earlier placements at (xx, yy). */
-	tagsAt: (xx: number, yy: number) => ReadonlySet<string>;
+	/** Tags applied by earlier placements at `position`. */
+	tagsAt: (position: RoomPosition) => ReadonlySet<string>;
 }
 
 export const hooks = makeHookRegistration<{
