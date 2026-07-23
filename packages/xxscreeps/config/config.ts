@@ -272,7 +272,7 @@ export interface Config {
  */
 export const defaults = {
 	backend: {
-		allowGuestAccess: true,
+		allowGuestAccess: Boolean(true),
 		bind: '*',
 		socketThrottle: 125,
 	},

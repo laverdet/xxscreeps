@@ -42,14 +42,10 @@ const IndexEndpoint: Endpoint = {
 			return { error: 'not authenticated' };
 		}
 		const { entries, respondents } = await getConversationIndex(context.db, userId);
-		const userRecords = await Fn.mapAwait(respondents, async id => {
-			const user = await context.db.data.hmGet(User.infoKey(id), [ 'username', 'badge' ]);
-			return {
-				_id: id,
-				...user.username != null && { username: user.username },
-				...user.badge != null && { badge: JSON.parse(user.badge) as unknown },
-			};
-		});
+		const userRecords = await Fn.mapAwait(respondents, async id => ({
+			_id: id,
+			...await User.loadBackendUserInfo(context.db, id),
+		}));
 		const users = Fn.fromEntries(userRecords, user => [ user._id, user ]);
 		const messages = entries.map(entry => ({ _id: entry.id, message: toClientMessage(entry.message) }));
 		return { ok: 1, messages, users };

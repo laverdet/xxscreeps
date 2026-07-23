@@ -160,7 +160,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					const objects: Record<string, unknown> = {};
 					for (const object of room['#objects']) {
 						asUnion(object);
-						const value = object[Render](previousTime === -1 ? undefined : previousTime);
+						const value = object[Render]?.(previousTime === -1 ? undefined : previousTime);
 						if (value) {
 							if (value._id) {
 								objects[value._id] = value;
@@ -188,12 +188,8 @@ export const roomSubscription: SubscriptionEndpoint = {
 					// Get users not yet seen
 					async function() {
 						const entries = await Fn.mapAwait(visibleUsers, async id => {
-							const info = await shard.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]);
-							const rendered = {
-								username: info.username,
-								badge: info.badge == null ? {} : JSON.parse(info.badge) as unknown,
-							};
-							return [ id, rendered ] as const;
+							const info = await User.loadBackendUserInfo(shard.db, id);
+							return [ id, info ] as const;
 						});
 						visibleUsers.clear();
 						return Fn.fromEntries(entries);

@@ -1,9 +1,11 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { UnknownObject } from 'xxscreeps/utility/types.js';
 import { gzip } from 'node:zlib';
-import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
+import { anySchema, hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
@@ -11,20 +13,24 @@ import { isValidSegmentId, kMaxMemorySegmentLength } from './memory.js';
 import { loadMemorySegmentBlob, loadUserMemoryString, publicSegmentChannel, saveMemorySegmentBlob } from './model.js';
 
 const invalidPath = 'Incorrect memory path';
-const emptyObject = Object.create(null);
+const emptyObject = Object.create(null) as UnknownObject;
 
-async function loadAndParse(shard: Shard, userId: string, path?: string) {
+async function loadAndParse(shard: Shard, userId: string, path: string) {
 	const string = await loadUserMemoryString(shard, userId);
 	try {
 		if (string === null) {
-			return path ? invalidPath : null;
+			return path === '' ? null : invalidPath;
 		}
-		const memory = JSON.parse(string);
-		if (path) {
-			const value = path.split('.').reduce((memory, key) => key in memory ? memory[key] : emptyObject, memory);
-			return value === emptyObject ? invalidPath : value;
-		} else {
+		const memory = JSON.parse(string) as UnknownObject;
+		if (path === '') {
 			return memory;
+		} else {
+			const accumulate = (memory: unknown, key: string) =>
+				memory && typeof memory === 'object' && key in memory
+					? (memory as UnknownObject)[key]
+					: emptyObject;
+			const value = Fn.reduce(path.split('.'), memory, accumulate);
+			return value === emptyObject ? invalidPath : value;
 		}
 	} catch {
 		return invalidPath;
@@ -35,15 +41,15 @@ hooks.register('subscription', {
 	pattern: /^user:(?<user>[^/]+)\/memory\/(?<shard>[^/]+)\/(?<path>.+)$/,
 
 	subscribe(params) {
-		const { user } = params;
+		const { user, path } = params;
 		const { shard } = this.context;
-		if (!this.user || user !== this.user) {
+		if (this.user === undefined || user !== this.user || path === undefined) {
 			return () => {};
 		}
-		let previous: any;
+		let previous: string | undefined;
 		const check = throttle(() => mustNotReject(async () => {
 			// Load memory and send if updated
-			const memory = JSON.stringify(`${await loadAndParse(shard, user, params.path)}`);
+			const memory = JSON.stringify(String(await loadAndParse(shard, user, path)));
 			if (previous !== memory) {
 				previous = memory;
 				this.send(memory);
@@ -59,15 +65,15 @@ hooks.register('subscription', {
 });
 
 interface MemoryGetRequest {
-	path?: string | null;
+	path: string;
 }
 
 const memoryGetRequestSchema: JSONSchemaType<MemoryGetRequest> = {
 	type: 'object',
 	properties: {
-		path: { type: 'string', nullable: true },
+		path: { type: 'string' },
 	},
-	required: [],
+	required: [ 'path' ],
 };
 
 hooks.register('route', {
@@ -78,7 +84,7 @@ hooks.register('route', {
 		if (userId == null) {
 			return;
 		}
-		const memory = await loadAndParse(context.shard, userId, context.request.query.path ?? undefined);
+		const memory = await loadAndParse(context.shard, userId, context.request.query.path);
 		if (memory === undefined) {
 			return { ok: 1 };
 		}
@@ -93,17 +99,17 @@ hooks.register('route', {
 });
 
 interface MemoryPostRequest {
-	path?: string | null;
-	value?: string | null;
+	path: string;
+	value?: unknown;
 }
 
 const memoryPostRequestSchema: JSONSchemaType<MemoryPostRequest> = {
 	type: 'object',
 	properties: {
-		path: { type: 'string', nullable: true },
-		value: { type: 'string', nullable: true },
+		path: { type: 'string' },
+		value: anySchema,
 	},
-	required: [],
+	required: [ 'path' ],
 };
 
 hooks.register('route', {

@@ -12,7 +12,7 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 	const saying = creep['#saying'];
 	if (
 		saying &&
-		(!previousTime || previousTime < saying.time) &&
+		(previousTime === undefined || previousTime < saying.time) &&
 		(saying.isPublic || creep.my)
 	) {
 		actionLog.say = {
