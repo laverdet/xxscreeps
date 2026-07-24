@@ -1,4 +1,4 @@
-import type { StructureInvaderCore } from '../invader-core.js';
+import type { StructureInvaderCore } from './invader-core.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { Creep, PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';

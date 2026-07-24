@@ -15,7 +15,6 @@ declare module 'xxscreeps:backend' {
 declare module 'xxscreeps:mods/constants' {
 	export * from 'xxscreeps/game/constants/index.js';
 
-	export * from 'xxscreeps/mods/classic/invader/constants.js';
 	export * from 'xxscreeps/mods/meta/flag/constants.js';
 	export * from 'xxscreeps/mods/portal/constants.js';
 }

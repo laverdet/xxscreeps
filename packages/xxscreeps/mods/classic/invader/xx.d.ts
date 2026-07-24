@@ -1,8 +1,7 @@
 declare module 'xxscreeps:mods/game' {
-	import type { InvaderRoomSchema } from 'xxscreeps/mods/classic/invader/game.js';
-	import type { InvaderSchemaRoomSchema } from 'xxscreeps/mods/classic/invader/schema.js';
+	import type { InvaderRoomSchema } from 'xxscreeps/mods/classic/invader/schema.js';
 
-	interface RoomSchema { invader: [ InvaderRoomSchema, InvaderSchemaRoomSchema ] }
+	interface RoomSchema { invader: [ InvaderRoomSchema ] }
 }
 
 declare module 'xxscreeps:mods/processor' {
