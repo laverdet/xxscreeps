@@ -4,7 +4,7 @@ import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner
 import type { CPU } from 'xxscreeps/game/game.js';
 import * as assert from 'node:assert/strict';
 import * as process from 'node:process';
-import * as Runtime from 'xxscreeps/driver/runtime/index.js';
+import { initialize as runtimeInitialize, tick as runtimeTick } from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 
 const kPleaseHalt = 'Please halt this sandbox.';
@@ -44,13 +44,13 @@ hooks.register('gameInitializer', (game, data) => {
 // @ts-expect-error
 globalThis.__assert = assert;
 
-export function initialize(require: NodeJS.Require, compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
-	Runtime.initialize(compiler, evaluate, data);
+export function initialize<Module extends object>(require: NodeJS.Require, compiler: Compiler<Module>, evaluate: Evaluate, data: InitializationPayload) {
+	runtimeInitialize(compiler, evaluate, data);
 }
 
 export function tick(data: TickPayload): TickCompletion {
 	let didHalt = false as boolean;
-	const completion = Runtime.tick(data, fn => {
+	const completion = runtimeTick(data, fn => {
 		try {
 			fn();
 		} catch (error) {

@@ -39,7 +39,7 @@ export type StructureRoomSchema = typeof ruinSchema;
 const ruinSchema = registerVariant('Room.objects', compose(ruinShape, Ruin));
 
 // Register `Game.structures`
-hooks.register('gameInitializer', Game => Game.structures = Object.create(null));
+hooks.register('gameInitializer', Game => Game.structures = Object.create(null) as Record<string, AnyStructure>);
 
 // ---
 

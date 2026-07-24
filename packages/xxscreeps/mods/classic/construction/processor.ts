@@ -15,10 +15,7 @@ import { checkBuild, checkDismantle, checkRepair } from './creep.js';
 import { checkCreateConstructionSite } from './room.js';
 import { structureFactories } from './symbols.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { construction: typeof intents }
-}
-
+export type ConstructionIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite', {},

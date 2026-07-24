@@ -1,4 +1,5 @@
 import * as Crypto from 'node:crypto';
+import * as Consumers from 'node:stream/consumers';
 import { config } from 'xxscreeps/config/index.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 
@@ -16,24 +17,17 @@ const kTokenExpiry = 120;
 
 async function encrypt(data: string | Buffer) {
 	const key = secret();
-	const hmac = Crypto.createHmac('sha3-224', key);
 	const iv = Crypto.randomBytes(16);
+	const cipher = Crypto.createCipheriv('aes-128-cbc', key, iv);
+	cipher.end(data);
+	const encrypted = await Consumers.buffer(cipher);
+	const hmac = Crypto.createHmac('sha3-224', key);
 	hmac.update(iv);
-	const chunks = await new Promise<Buffer[]>((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		const cipher = Crypto.createCipheriv('aes-128-cbc', key, iv);
-		cipher.on('data', chunk => {
-			hmac.update(chunk);
-			chunks.push(chunk);
-		});
-		cipher.on('end', () => resolve(chunks));
-		cipher.on('error', error => reject(error));
-		cipher.end(data);
-	});
+	hmac.update(encrypted);
 	return Buffer.concat([
 		hmac.digest().subarray(0, 8),
 		iv,
-		...chunks,
+		encrypted,
 	]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -45,16 +39,10 @@ async function decrypt(data: string) {
 	if (!hmac.digest().subarray(0, 8).equals(buffer.subarray(0, 8))) {
 		return;
 	}
-	const chunks = await new Promise<Buffer[]>((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		const iv = buffer.subarray(8, 24);
-		const cipher = Crypto.createDecipheriv('aes-128-cbc', key, iv);
-		cipher.on('data', chunk => chunks.push(chunk));
-		cipher.on('end', () => resolve(chunks));
-		cipher.on('error', error => reject(error));
-		cipher.end(buffer.subarray(24));
-	});
-	return Buffer.concat(chunks);
+	const iv = buffer.subarray(8, 24);
+	const cipher = Crypto.createDecipheriv('aes-128-cbc', key, iv);
+	cipher.end(buffer.subarray(24));
+	return Consumers.buffer(cipher);
 }
 
 export function makeToken(id: string) {

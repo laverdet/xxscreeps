@@ -1,6 +1,8 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { kInvaderUserId } from 'xxscreeps/mods/invader/game.js';
 import * as C from 'xxscreeps:mods/constants';
 import { checkCreepNotifyWhenAttacked, checkStructureNotifyWhenAttacked } from './game.js';
 import { sendNotification } from './model.js';
@@ -27,8 +29,8 @@ Creep.prototype['#sendAttackNotify'] =
 				const sourceUser = source?.['#user'];
 				if (
 					userId != null && sourceUser !== userId &&
-					userId !== '2' && userId !== '3' &&
-					sourceUser !== '2' && sourceUser !== '3'
+					userId !== kInvaderUserId && userId !== kSourceKeeperUserId &&
+					sourceUser !== kInvaderUserId && sourceUser !== kSourceKeeperUserId
 				) {
 					const message = `Your ${label} in room ${this.room.name} is under attack!`;
 					context.task(sendNotification(context.shard, userId, 'msg', message));
@@ -36,6 +38,7 @@ Creep.prototype['#sendAttackNotify'] =
 			}
 		};
 
+export type NotificationsIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'notifyWhenAttacked', {}, (creep, context, enabled: boolean) => {
@@ -52,7 +55,3 @@ const intents = [
 		}
 	}),
 ];
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { notifications: typeof intents }
-}

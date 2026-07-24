@@ -21,7 +21,7 @@ const schema = declare('Flags', compose(vector(compose(flagShape, Flag)), {
 export const { read, write, upgrade } = makeReaderAndWriter(schema, { materialize: true, release: true });
 
 // Register LOOK_ type for `Flag`
-export type FlagLook = typeof look;
+export type FlagLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Flag>()(C.LOOK_FLAGS);
 export type FlagFind = typeof find;

@@ -6,3 +6,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { structure: StructureLook }
 	interface RoomSchema { structure: [ StructureRoomSchema, StructureSchemaRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { StructureIntents } from 'xxscreeps/mods/classic/structure/processor.js';
+
+	interface Intent { structure: StructureIntents }
+}

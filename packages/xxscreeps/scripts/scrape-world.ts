@@ -31,6 +31,7 @@ import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js'
 import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { StructureRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { StructureKeeperLair } from 'xxscreeps/mods/classic/source/keeper-lair.js';
 import { Source } from 'xxscreeps/mods/classic/source/source.js';
 import { StructureExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
@@ -246,7 +247,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'keeperLair': {
 				const keeperLair = new StructureKeeperLair();
 				withStructure(object, keeperLair);
-				keeperLair['#user'] = '3';
+				keeperLair['#user'] = kSourceKeeperUserId;
 				return keeperLair;
 			}
 

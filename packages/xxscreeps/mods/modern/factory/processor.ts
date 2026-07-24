@@ -5,9 +5,7 @@ import { saveAction } from 'xxscreeps/game/object.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureFactory, checkProduce, getCommodityRecipe } from './factory.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { factory: typeof intents }
-}
+export type FactoryIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureFactory, 'produce', {}, (factory, context, resourceType: ResourceType) => {

@@ -1,3 +1,8 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.extension = 3000;
+CONSTRUCTION_COST.spawn = 15000;
+
 export const STRUCTURE_SPAWN = 'spawn' as const;
 export const STRUCTURE_EXTENSION = 'extension' as const;
 

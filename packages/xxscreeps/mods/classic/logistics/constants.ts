@@ -1,3 +1,8 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.link = 5000;
+CONSTRUCTION_COST.storage = 30000;
+
 export const STRUCTURE_LINK = 'link' as const;
 export const STRUCTURE_STORAGE = 'storage' as const;
 

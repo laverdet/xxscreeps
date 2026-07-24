@@ -27,6 +27,7 @@ function findPlacement(world: World, roomName: string) {
 		$$ => Fn.find($$, from => Fn.some(iterateNeighbors(from), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL)));
 }
 
+export type PowerBankIntents = [ typeof placePowerBankIntent ];
 // Placement runs at the room intent stage so it reads terrain via the live `world.map`.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const placePowerBankIntent = registerIntentProcessor(
@@ -43,6 +44,3 @@ const placePowerBankIntent = registerIntentProcessor(
 		room['#insertObject'](bank);
 		context.wakeAt(bank['#nextDecayTime']);
 	});
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { powerBank: typeof placePowerBankIntent }
-}

@@ -6,3 +6,9 @@ declare module 'xxscreeps:mods/game' {
 	interface Look { creep: CreepLook }
 	interface RoomSchema { creep: [ ...CreepRoomSchemas, ...CreepEventRoomSchemas ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { CreepIntents } from 'xxscreeps/mods/classic/creep/processor.js';
+
+	interface Intent { creep: CreepIntents }
+}

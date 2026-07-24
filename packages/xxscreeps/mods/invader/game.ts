@@ -7,6 +7,8 @@ import * as C from 'xxscreeps:mods/constants';
 import { StructureInvaderCore } from './invader-core.js';
 import { invaderCoreShape } from './schema.js';
 
+export const kInvaderUserId = '2';
+
 export type InvaderRoomSchema = typeof invaderCoreSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const invaderCoreSchema = registerVariant('Room.objects', compose(invaderCoreShape, StructureInvaderCore));

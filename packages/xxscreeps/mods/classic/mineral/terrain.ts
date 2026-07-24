@@ -1,8 +1,7 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from './constants.js';
 import { create as createExtractor } from './extractor.js';
@@ -21,8 +20,6 @@ const mineralPool: ResourceType[] = [
 	C.RESOURCE_CATALYST,
 ];
 
-const iterateGridInRange = makeLocalIterateInRangeTo(0, 49);
-
 function pickMineralDensity(): number {
 	const random = Math.random();
 	return C.MINERAL_DENSITY_PROBABILITY.findIndex(
@@ -32,22 +29,21 @@ function pickMineralDensity(): number {
 hooks.register('roomGenerator', {
 	order: 2,
 	generate(context) {
-		const { options, room } = context;
+		const { options } = context;
 		const mineralType = options.mineral ?? mineralPool[Math.floor(Math.random() * mineralPool.length)]!;
 		if (mineralType === false) {
 			return true;
 		}
-		const tile = context.findRandomTile(4, 42, (xx, yy) =>
-			context.isPlaceable(xx, yy) && !Fn.some(iterateGridInRange(xx, yy, 4), ([ nxx, nyy ]) => {
-				const tags = context.tagsAt(nxx, nyy);
+		const position = context.findRandomPosition(4, 42, candidate =>
+			context.isPlaceable(candidate) && !Fn.some(iterateInRangeTo(candidate, 4), near => {
+				const tags = context.tagsAt(near);
 				return tags.has('source') || tags.has('controller');
 			}));
-		if (tile === undefined) {
+		if (position === undefined) {
 			return false;
 		}
-		const pos = new RoomPosition(tile[0], tile[1], room.name);
 		const density = pickMineralDensity();
-		const mineral = createRoomObject(new Mineral(), pos);
+		const mineral = createRoomObject(new Mineral(), position);
 		mineral.mineralType = mineralType;
 		mineral.density = density;
 		mineral.mineralAmount = C.MINERAL_DENSITY[density]!;
@@ -56,7 +52,7 @@ hooks.register('roomGenerator', {
 		// harvestable without the player owning it (vanilla blocks harvest only when the
 		// extractor belongs to someone else).
 		if (options.controller === false) {
-			context.place(createExtractor(pos, null));
+			context.place(createExtractor(position, null));
 		}
 		return true;
 	},

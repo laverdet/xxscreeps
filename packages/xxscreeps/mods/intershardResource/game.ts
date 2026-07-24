@@ -14,7 +14,7 @@ declare module 'xxscreeps/game/game.js' {
 	}
 }
 hooks.register('gameInitializer', Game => {
-	Game.resources = Object.create(null);
+	Game.resources = Object.create(null) as Record<string, number>;
 	for (const key of INTERSHARD_RESOURCES) {
 		Game.resources[key] = 0;
 	}

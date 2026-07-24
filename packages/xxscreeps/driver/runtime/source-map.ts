@@ -1,9 +1,10 @@
 import * as Base64 from 'js-base64';
 import * as SourceMap from 'source-map-support';
 
-declare const globalThis: any;
 const sourceContent = new Map<string, string>();
-const runtimeSourceMap = globalThis.runtimeSourceMap;
+// @ts-expect-error
+const runtimeSourceMap = globalThis.runtimeSourceMap as string;
+// @ts-expect-error
 delete globalThis.runtimeSourceMap;
 SourceMap.install({
 	environment: 'node',

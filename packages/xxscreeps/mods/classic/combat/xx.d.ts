@@ -12,3 +12,9 @@ declare module 'xxscreeps:mods/game' {
 	}
 	interface RoomSchema { combat: CombatRoomSchemas }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { CombatIntents } from 'xxscreeps/mods/classic/combat/processor.js';
+
+	interface Intent { combat: CombatIntents }
+}

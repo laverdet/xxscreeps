@@ -13,10 +13,12 @@ declare module 'xxscreeps/engine/runner/index.js' {
 
 hooks.register('runnerConnector', player => [ undefined, {
 	async save(result) {
-		const validPayloads = Fn.filter(result.visuals, ({ roomName }) =>
-			roomName === '*' || roomName === 'map' || player.world.terrain.has(roomName));
-		const payload = new Map(Fn.map(validPayloads, payload =>
-			[ payload.roomName, payload.blob ]));
+		const payload = Fn.pipe(
+			result.visuals,
+			$$ => Fn.filter($$, ({ roomName }) =>
+				roomName === '*' || roomName === 'map' || player.world.terrain.has(roomName)),
+			$$ => Fn.map($$, payload => [ payload.roomName, payload.blob ] as const),
+			$$ => new Map($$));
 		await publishVisualsBlobsForNextTick(player.shard, player.userId, payload);
 	},
 } ]);

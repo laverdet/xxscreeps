@@ -116,7 +116,7 @@ Creep.prototype['#applyDamage'] = function(applyDamage) {
 		if (
 			type === C.EVENT_ATTACK_TYPE_MELEE &&
 				source instanceof Creep &&
-				!this.room.controller?.safeMode
+				this.room.controller?.safeMode === undefined
 		) {
 			const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER, 'attack');
 			if (counterAttack) {

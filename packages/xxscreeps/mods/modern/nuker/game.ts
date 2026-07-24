@@ -16,7 +16,7 @@ const find = registerFindHandlers({
 	[C.FIND_NUKES]: room => room['#lookFor'](C.LOOK_NUKES),
 });
 
-export type NukerLook = typeof look;
+export type NukerLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Nuke>()(C.LOOK_NUKES);
 

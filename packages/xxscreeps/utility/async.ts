@@ -189,6 +189,7 @@ export function listenEvent<
 }
 
 // Exits immediately if a promise rejects
+/** @deprecated */
 export function mustNotReject(task: (() => PromiseLike<any>) | PromiseLike<any> | undefined) {
 	if (task) {
 		void (async function() {

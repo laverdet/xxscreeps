@@ -1,3 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.terminal = 100000;
+
 export const STRUCTURE_TERMINAL = 'terminal' as const;
 
 export const TERMINAL_CAPACITY = 300000;

@@ -38,7 +38,7 @@ export interface TickResult {
 		id: string;
 		result: {
 			error: boolean;
-			value: string;
+			value: string | undefined;
 		};
 	}[];
 	intentPayloads: Record<string, RoomIntentPayload>;

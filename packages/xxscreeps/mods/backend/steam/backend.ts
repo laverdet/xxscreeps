@@ -5,15 +5,15 @@ import './openid.js';
 import './ticket.js';
 
 const { steamApiKey } = config.backend;
-if (!steamApiKey) {
+if (steamApiKey === undefined) {
 	console.warn('Config `backend.steamApiKey` missing; Steam login inactive');
 }
 
 hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
-		const providers = await User.findProvidersForUser(db, userId);
-		if (providers.steam) {
-			userInfo.steam = { id: providers.steam };
+		const { steam } = await User.findProvidersForUser(db, userId);
+		if (steam !== undefined) {
+			userInfo.steam = { id: steam };
 		}
 	}
 });

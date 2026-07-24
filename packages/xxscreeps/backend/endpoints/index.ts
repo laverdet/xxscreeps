@@ -22,7 +22,7 @@ export function installEndpointHandlers(koa: Koa<State, Context>, router: Router
 		router[endpoint.method ?? 'get'](endpoint.path, async (context, next) => {
 			const value = await endpoint.execute(context);
 			if (value === undefined) {
-				return next();
+				return next() satisfies Promise<any> as Promise<unknown>;
 			} else if (value !== true) {
 				context.body = value;
 			}

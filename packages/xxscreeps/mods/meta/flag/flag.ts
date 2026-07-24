@@ -89,7 +89,7 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	setPosition(x: number, y: number): C.ErrorCode;
 	setPosition(target: RoomObject | RoomPosition): C.ErrorCode;
 	setPosition(...args: [ number, number ] | [ RoomObject | RoomPosition]) {
-		const { pos } = fetchPositionArgument(this.pos.roomName, ...args);
+		const { pos } = fetchPositionArgument(this.pos.roomName, args);
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
 			(): undefined => {

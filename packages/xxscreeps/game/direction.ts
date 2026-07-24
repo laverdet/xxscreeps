@@ -38,6 +38,7 @@ export function getDirection(dx: number, dy: number) {
 }
 
 export function getOffsetsFromDirection(direction: Direction) {
+	// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 	switch (direction) {
 		case C.TOP: return { dx: 0, dy: -1 } as const;
 		case C.TOP_RIGHT: return { dx: 1, dy: -1 } as const;

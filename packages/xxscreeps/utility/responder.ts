@@ -51,7 +51,6 @@ export async function negotiateResponderClient<Type, Result>(path: string, singl
 		}
 	}();
 	const [ close, responder ] = await new Promise<ResponderResult<Type, Result>>((resolve, reject) => {
-		// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
 		onClose(error => reject(error));
 		onMessage(message => {
 			if (message.type === 'responderReady') {

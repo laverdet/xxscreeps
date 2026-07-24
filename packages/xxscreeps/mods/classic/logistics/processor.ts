@@ -5,9 +5,7 @@ import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureLink, checkTransferEnergy } from './link.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { logistics: typeof intents }
-}
+export type LogisticsIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureLink, 'transferEnergy', {}, (link, context, id: string, amount: number) => {

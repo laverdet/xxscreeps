@@ -12,10 +12,9 @@ import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kSourceKeeperUserId } from './game.js';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
-
-const kKeeperUserId = '3';
 
 registerHarvestProcessor(Source, (creep, source, context) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
@@ -54,7 +53,7 @@ registerObjectTickProcessor(Source, (source, context) => {
 registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 	const keeperName = `Keeper${keeperLair.id}`;
 	const keeper = keeperLair.room['#lookFor'](C.LOOK_CREEPS).find(creep =>
-		creep['#user'] === kKeeperUserId && creep.name === keeperName);
+		creep['#user'] === kSourceKeeperUserId && creep.name === keeperName);
 
 	const { ticksToSpawn } = keeperLair;
 	if (ticksToSpawn === undefined) {
@@ -73,18 +72,18 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 			...Fn.map(Fn.range(13), () => C.MOVE),
 			...Fn.transform(Fn.range(10), () => [ C.ATTACK, C.RANGED_ATTACK ]),
 		];
-		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, kKeeperUserId);
+		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, kSourceKeeperUserId);
 		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;
 		keeperLair.room['#insertObject'](newKeeper);
 		keeperLair['#nextSpawnTime'] = 0;
-		activateNPC(keeperLair.room, kKeeperUserId);
+		activateNPC(keeperLair.room, kSourceKeeperUserId);
 		context.setActive();
 	}
 	// Make sure to wake room when it's time to spawn a new keeper
 	context.wakeAt(keeperLair['#nextSpawnTime']);
 });
 
-registerNPC(kKeeperUserId, Game => {
+registerNPC(kSourceKeeperUserId, Game => {
 	let loop = false;
 	const creeps = Object.values(Game.creeps);
 	for (const creep of creeps) {

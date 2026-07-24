@@ -8,6 +8,7 @@ import { recordTransaction } from './model.js';
 import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
 import { Transaction } from './transaction.js';
 
+export type BrokerageIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTerminal, 'send', {}, (
@@ -66,9 +67,3 @@ const intents = [
 		context.didUpdate();
 	}),
 ];
-
-// ---
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { brokerage: typeof intents }
-}

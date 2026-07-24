@@ -68,10 +68,8 @@ function updateRoomStatus(room: Room, level: number, userId: string | null | und
 	checkActiveStructures(room);
 }
 
+export type ControllerIntents = typeof intents;
 // Register intent processors
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { controller: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attackController', {
@@ -168,9 +166,9 @@ const intents = [
 	registerIntentProcessor(Creep, 'signController', {}, (creep, context, id: string, message: string | null) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkSignController(creep, controller, message) === C.OK) {
-			controller.room['#sign'] = message ? {
+			controller.room['#sign'] = Boolean(message) ? {
 				datetime: Date.now(),
-				text: message.substr(0, 100),
+				text: message!.slice(0, 100),
 				time: Game.time,
 				userId: creep['#user'],
 			} : undefined;

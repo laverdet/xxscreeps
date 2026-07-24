@@ -3,7 +3,7 @@ import type { RoomObject } from 'xxscreeps/game/object.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { userGame } from 'xxscreeps/game/index.js';
-import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position.js';
+import { RoomPosition, fetchPositionArgument, fetchRoom } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { extend, instantiate } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -37,8 +37,10 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 extend(Room, {
-	createFlag(arg1, arg2, ...args) {
-		const { pos, rest } = fetchPositionArgumentRest(this.name, arg1, arg2, ...args);
+	createFlag(...args: unknown[]) {
+		type Rest = [ name?: string | undefined, color?: Color | undefined, secondaryColor?: Color | undefined ];
+		type Signature = [ xx: number, yy: number, ...Rest ] | [ target: RoomObject | RoomPosition, ...Rest ];
+		const { pos, rest } = fetchPositionArgument(this.name, args as Signature);
 		const flags = userGame!.flags;
 		const name = rest[0] ?? Fn.pipe(
 			Fn.range(),

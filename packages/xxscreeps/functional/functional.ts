@@ -1,6 +1,7 @@
 // The point of this is that it should *in theory* be "shakable" since the result is an exotic
 // module export. I'm not certain that actually happens in practice, but I am confident that it is
 // possible.
+export * from './array/partition.js';
 export * from './array/reverse.js';
 export * from './array/slice.js';
 export * from './asyncIterable/collect.js';

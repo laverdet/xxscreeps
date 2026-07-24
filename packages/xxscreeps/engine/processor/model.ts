@@ -149,7 +149,7 @@ export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
 		shard.scratch.vDel(key),
 	]);
 	return payloads.map(json => {
-		const value: { userId: string; intents: RoomIntentPayload } = JSON.parse(json);
+		const value = JSON.parse(json) as { userId: string; intents: RoomIntentPayload };
 		return value;
 	});
 }

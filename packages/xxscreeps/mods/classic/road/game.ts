@@ -7,7 +7,7 @@ import { roadShape } from './schema.js';
 // Export `StructureRoad` to runtime globals
 registerGlobal(StructureRoad);
 
-export type RoadRoomSchema = typeof schema;
+export type RoadRoomSchema = [ typeof schema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerVariant('Room.objects', compose(roadShape, StructureRoad));
 

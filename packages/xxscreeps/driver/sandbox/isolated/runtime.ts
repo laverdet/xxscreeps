@@ -1,7 +1,8 @@
 import type ivm from 'isolated-vm';
+import type { Compiler, Evaluate, RuntimeModuleNamespace } from 'xxscreeps/driver/runtime/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { CPU } from 'xxscreeps/game/game.js';
-import * as Runtime from 'xxscreeps/driver/runtime/index.js';
+import { initialize as runtimeInitialize } from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 
 export { tick } from 'xxscreeps/driver/runtime/index.js';
@@ -67,26 +68,26 @@ export function initialize(
 ) {
 	isolate = isolate_;
 	// Evaluation for plain JS scripts
-	const evaluate: Runtime.Evaluate = (source, filename): unknown => {
+	const evaluate: Evaluate = (source, filename): unknown => {
 		const script = isolate_.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
 
 	// Compilation for ES Modules
 	type WithFilename = ivm.Module & Record<'filename', string>;
-	const compiler: Runtime.Compiler<WithFilename> = {
+	const compiler: Compiler<WithFilename> = {
 		compile(source, filename) {
 			const module = isolate_.compileModuleSync(source, { filename }) as WithFilename;
 			module.filename = filename;
 			return module;
 		},
-		evaluate(module, linker): unknown {
+		evaluate(module, linker) {
 			module.instantiateSync(context, (specifier, referrer) =>
 				linker(specifier, (referrer as WithFilename).filename));
 			module.evaluateSync();
-			return module.namespace.deref();
+			return module.namespace.deref() as RuntimeModuleNamespace;
 		},
 	};
 
-	Runtime.initialize(compiler, evaluate, data);
+	runtimeInitialize(compiler, evaluate, data);
 }

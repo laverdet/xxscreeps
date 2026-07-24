@@ -27,12 +27,15 @@ export const kMaxRoomCoordinate = kRoomSize - 1;
 
 export type PositionParameter = [ position: RoomPosition ] | [ target: RoomObject ] | [ x: number, y: number ];
 
-export interface PositionLike {
+export interface LocalPosition {
+	x: number;
+	y: number;
+}
+
+export interface PositionLike extends LocalPosition {
 	['#id']?: undefined;
 	['#rx']?: undefined;
 	['#ry']?: undefined;
-	x: number;
-	y: number;
 	roomName: string;
 }
 
@@ -170,7 +173,7 @@ export class RoomPosition {
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
 	getDirectionTo(...args: [number, number] | [RoomObject | RoomPosition]) {
-		const { pos } = fetchPositionArgument(this.roomName, ...args);
+		const { pos } = fetchPositionArgument(this.roomName, args);
 		if (!pos) return undefined;
 
 		return getDirection(
@@ -191,7 +194,7 @@ export class RoomPosition {
 	getRangeTo(x: number, y: number): number;
 	getRangeTo(target: RoomObject | RoomPosition): number;
 	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
-		const { xx, yy, room } = fetchArguments(...args);
+		const { xx, yy, room } = fetchArguments(args);
 		if (room !== 0 && (this['#id'] & 0xffff) !== room) {
 			return Infinity;
 		}
@@ -210,7 +213,7 @@ export class RoomPosition {
 	isEqualTo(x: number, y: number): boolean;
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
-		const { pos } = fetchPositionArgument(this.roomName, ...args);
+		const { pos } = fetchPositionArgument(this.roomName, args);
 		return this['#id'] === (pos ? pos['#id'] : 0);
 	}
 
@@ -226,8 +229,8 @@ export class RoomPosition {
 	 */
 	isNearTo(x: number, y: number): boolean;
 	isNearTo(target: RoomObject | RoomPosition): boolean;
-	isNearTo(...args: [any]) {
-		return this.getRangeTo(...args) <= 1;
+	isNearTo(...args: unknown[]) {
+		return this.getRangeTo(...args as [ number, number ]) <= 1;
 	}
 
 	/**
@@ -243,7 +246,7 @@ export class RoomPosition {
 	inRangeTo(x: number, y: number, range: number): boolean;
 	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
-		const { xx, yy, room, rest } = fetchArguments(...args);
+		const { xx, yy, room, rest } = fetchArguments(args);
 		if (room !== 0 && (this['#id'] & 0xffff) !== room) {
 			return false;
 		}
@@ -378,9 +381,13 @@ export class RoomPosition {
 	findPathTo(target: RoomObject | RoomPosition, options: FindPathOptions & { serialize: true }): string;
 	findPathTo(x: number, y: number, options: FindPathOptions): RoomPath | string;
 	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions): RoomPath | string;
-	findPathTo(...args: any): RoomPath | string {
-		const { pos, extra } = fetchPositionArgument(this.roomName, ...args);
-		return fetchRoom(this.roomName).findPath(this, pos!, extra);
+	findPathTo(...args: unknown[]): RoomPath | string {
+		type Rest = [ options?: FindPathOptions | undefined ];
+		type Signature =
+			[ xx: number, yy: number, ...Rest ] |
+			[ target: RoomObject | RoomPosition, ...Rest ];
+		const { pos, rest: [ options ] } = fetchPositionArgument(this.roomName, args as Signature);
+		return fetchRoom(this.roomName).findPath(this, pos!, options);
 	}
 
 	/**
@@ -428,79 +435,73 @@ declare module './runtime.js' {
 
 //
 // Function argument handlers
-export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
+type PositionArgument = [ xx: number, yy: number ] | [ target: RoomObject | RoomPosition ];
+
+type PositionArgumentRest<Args extends readonly unknown[]> =
+	Args extends readonly [ number, number, ...infer Rest ]
+		? Rest
+		: Args extends readonly [ RoomObject | LocalPosition, ...infer Rest ]
+			? Rest
+			: never;
+
+export function fetchArguments<Args extends [ ...PositionArgument, ...unknown[] ]>(args: Args): {
+	xx: number;
+	yy: number;
+	room: number;
+	rest: PositionArgumentRest<Args>;
+};
+export function fetchArguments(args: unknown[]) {
+	const [ arg1 ] = args;
 	if (typeof arg1 === 'object' && arg1 !== null) {
-		const int = arg1['#id'] ?? arg1?.pos?.['#id'];
+		type Arg = LocalPosition & { ['#id']?: number; pos?: RoomPosition };
+		const target = arg1 as Arg;
+		const int = target['#id'] ?? target.pos?.['#id'];
+		const rest = args.slice(1);
 		if (int === undefined) {
 			return {
-				xx: arg1.x,
-				yy: arg1.y,
+				xx: target.x,
+				yy: target.y,
 				room: 0,
-				rest: [ arg2, arg3, ...rest ],
+				rest,
 			};
 		} else {
 			return {
 				xx: (int >>> 16) & 0xff,
 				yy: (int >>> 24) & 0xff,
 				room: int & 0xffff,
-				rest: [ arg2, arg3, ...rest ],
+				rest,
 			};
 		}
 	}
-	return {
-		xx: arg1 as number,
-		yy: arg2 as number,
-		room: 0,
-		rest: [ arg3, ...rest ],
-	};
+	const [ xx, yy, ...rest ] = args as [ number, number, ...unknown[] ];
+	return { xx, yy, room: 0, rest };
 }
 
-export function fetchPositionArgument<Extra = any>(
-	fromRoom: string, arg1?: any, arg2?: any, arg3?: Extra, ...rest: any
-): { pos: RoomPosition | undefined; extra: Extra | undefined; rest: any } {
+export function fetchPositionArgument<Args extends [ ...PositionArgument, ...unknown[] ]>(fromRoom: string, args: Args): {
+	pos: RoomPosition | undefined;
+	rest: PositionArgumentRest<Args>;
+};
+export function fetchPositionArgument(fromRoom: string, args: unknown[]) {
+	const [ arg1 ] = args;
 	if (typeof arg1 === 'object' && arg1 !== null) {
-		if (arg1 instanceof RoomPosition) {
-			return { pos: arg1, extra: arg2, rest };
-		} else if (arg1.pos instanceof RoomPosition) {
-			return { pos: arg1.pos, extra: arg2, rest };
+		const pos = function() {
+			if (arg1 instanceof RoomPosition) {
+				return arg1;
+			} else {
+				const { pos } = arg1 as { pos?: unknown };
+				if (pos instanceof RoomPosition) {
+					return pos;
+				}
+			}
+		}();
+		return { pos, rest: args.slice(1) };
+	} else {
+		const [ xx, yy, ...rest ] = args as [ number, number, ...unknown[] ];
+		try {
+			return { pos: new RoomPosition(xx, yy, fromRoom), rest };
+		} catch {
+			return { pos: undefined, rest };
 		}
-	}
-	try {
-		return {
-			pos: new RoomPosition(arg1, arg2, fromRoom),
-			extra: arg3,
-			rest,
-		};
-	} catch {
-		return {
-			pos: undefined,
-			extra: undefined,
-			rest,
-		};
-	}
-}
-
-export function fetchPositionArgumentRest<Rest extends any[]>(
-	fromRoom: string,
-	arg1: any, arg2: any, ...rest: Rest
-): { pos: RoomPosition | undefined; rest: Rest } {
-	if (typeof arg1 === 'object' && arg1 !== null) {
-		if (arg1 instanceof RoomPosition) {
-			return { pos: arg1, rest: [ arg2, ...rest ] as never };
-		} else if (arg1.pos instanceof RoomPosition) {
-			return { pos: arg1.pos, rest: [ arg2, ...rest ] as never };
-		}
-	}
-	try {
-		return {
-			pos: new RoomPosition(arg1, arg2, fromRoom),
-			rest,
-		};
-	} catch {
-		return {
-			pos: undefined,
-			rest,
-		};
 	}
 }
 

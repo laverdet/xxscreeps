@@ -1,5 +1,4 @@
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import { StructureController } from './controller.js';
 
@@ -13,12 +12,11 @@ hooks.register('roomGenerator', {
 		}
 		room['#user'] = null;
 		room['#level'] = 0;
-		const tile = context.findRandomTile(5, 40, context.isPlaceable);
-		if (tile === undefined) {
+		const position = context.findRandomPosition(5, 40, context.isPlaceable);
+		if (position === undefined) {
 			return false;
 		}
-		const controller = createRoomObject(new StructureController(), new RoomPosition(tile[0], tile[1], room.name));
-		context.place(controller, 'controller');
+		context.place(createRoomObject(new StructureController(), position), 'controller');
 		return true;
 	},
 });

@@ -37,10 +37,10 @@ const find = registerFindHandlers({
 // Register LOOK_ type for `Resource`
 export type ResourceLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const look = registerLook<Resource>()(C.LOOK_RESOURCES);
-export type EnergyLook = typeof lookEnergy;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const lookEnergy = registerLook<Resource>()(C.LOOK_ENERGY);
+const look = [
+	registerLook<Resource>()(C.LOOK_RESOURCES),
+	registerLook<Resource>()(C.LOOK_ENERGY),
+];
 
 // These need to be declared separately I guess
 export type ResourceRoomSchemas = [ typeof containerSchema, typeof resourceSchema ];

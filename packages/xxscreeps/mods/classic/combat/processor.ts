@@ -13,10 +13,6 @@ import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps:mods/constants';
 import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { combat: typeof intents }
-}
-
 const kRangedMassAttackPower = [ 1, 1, 0.4, 0.1 ];
 
 export function notifyAttackDamage(target: RoomObject, context: ProcessorContext, source: RoomObject | null) {
@@ -51,6 +47,7 @@ export function captureDamageWithNotify(
 		object => notifyAttackDamage(object, context, source));
 }
 
+export type CombatIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attack', {

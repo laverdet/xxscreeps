@@ -23,7 +23,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `ConstructionSite`
-export type ConstructionLook = typeof look;
+export type ConstructionLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
 
@@ -73,10 +73,12 @@ hooks.register('gameInitializer', () => {
 });
 
 extend(Room, {
-	createConstructionSite(this: Room, ...args: any[]) {
+	createConstructionSite(this: Room, ...args: unknown[]) {
 
 		// Extract overloaded parameters
-		const { xx, yy, rest } = fetchArguments(...args);
+		type Rest = [ structureType: ConstructibleStructureType, name?: string | undefined ];
+		type Signature = [ xx: number, yy: number, ...Rest ] | [ pos: RoomPosition, ...Rest ];
+		const { xx, yy, rest } = fetchArguments(args as Signature);
 		if (args[0] instanceof RoomPosition && args[0].roomName !== this.name) {
 			return C.ERR_INVALID_ARGS;
 		}

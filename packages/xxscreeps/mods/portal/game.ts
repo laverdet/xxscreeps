@@ -6,7 +6,7 @@ import { portalShape } from './schema.js';
 
 registerGlobal(StructurePortal);
 
-export type PortalRoomSchema = typeof schema;
+export type PortalRoomSchema = [ typeof schema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerVariant('Room.objects', compose(portalShape, StructurePortal));
 

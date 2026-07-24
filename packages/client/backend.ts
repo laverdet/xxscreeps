@@ -23,8 +23,7 @@ if (clientPackage) {
 
 		// Serve client assets directly from steam package
 		koa.use(async (context, next): Promise<unknown> => {
-			const path = context.request.path === '/'
-				? 'index.html' : context.request.path.substr(1);
+			const path = context.request.path === '/' ? 'index.html' : context.request.path.slice(1);
 			const file = files[path];
 			if (file === undefined) {
 				return next();

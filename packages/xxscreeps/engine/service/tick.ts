@@ -1,3 +1,4 @@
+import type { Config } from 'xxscreeps/config/config.js';
 import * as fs from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
 import jsYaml from 'js-yaml';
@@ -22,7 +23,7 @@ export async function watch(onUpdate?: () => void) {
 						return;
 					}
 					stat = nextStat;
-					const config: any = jsYaml.load(await fsPromises.readFile(configPath, 'utf8'));
+					const config = jsYaml.load(await fsPromises.readFile(configPath, 'utf8')) as Config;
 					const readTickSpeed = Number(config.game?.tickSpeed);
 					if (!Number.isNaN(readTickSpeed)) {
 						if (configTickSpeed !== readTickSpeed) {

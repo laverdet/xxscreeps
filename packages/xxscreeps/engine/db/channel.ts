@@ -83,7 +83,7 @@ class Subscription<Message> extends DisposableResource {
 		const disposable = new DisposableStack();
 		const listeners = new Set<Listener<Message>>();
 		const [ effect, subscription ] = await pubsub.subscribe(name, message => {
-			const payload = json ? JSON.parse(message) : message;
+			const payload = json ? JSON.parse(message) as Message : message as Message;
 			for (const listener of listeners) {
 				listener(payload);
 			}
@@ -127,7 +127,7 @@ class Subscription<Message> extends DisposableResource {
 	}
 
 	publish(message: Message) {
-		const value: any = this.json ? JSON.stringify(message) : message;
+		const value = this.json ? JSON.stringify(message) : message as string;
 		return this.subscription.publish(value);
 	}
 

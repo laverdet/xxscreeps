@@ -7,3 +7,9 @@ declare module 'xxscreeps:mods/game' {
 	}
 	interface RoomSchema { powerbank: [ PowerbankRoomSchema, PowerbankSchemaRoomSchema ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { PowerBankIntents } from 'xxscreeps/mods/modern/powerbank/processor.js';
+
+	interface Intent { powerBank: PowerBankIntents }
+}

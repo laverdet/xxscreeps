@@ -5,6 +5,7 @@ import type { GameState } from 'xxscreeps/game/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
+import type { UnknownObject } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
@@ -62,7 +63,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const results = getOrSet(this.#findCache, type, () => findHandlers.get(type)?.(this) ?? []);
 
 		// Copy or filter result
-		return options.filter ? results.filter(iteratee(options.filter)) : results.slice();
+		return Boolean(options.filter) ? results.filter(iteratee(options.filter!)) : results.slice();
 	}
 
 	/**
@@ -217,10 +218,15 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * serialized data because otherwise there will be circular references.
 	 */
 	private toJSON(): unknown {
-		const result: any = {};
+		const result: UnknownObject = {};
 		for (const ii in this) {
-			const value: any = this[ii];
-			if (!(typeof value === 'object' && value.room === this)) {
+			const value = this[ii];
+			if (
+				typeof value !== 'object' ||
+				!value ||
+				// @ts-expect-error
+				value.room !== this
+			) {
 				result[ii] = this[ii];
 			}
 		}

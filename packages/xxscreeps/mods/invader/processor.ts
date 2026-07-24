@@ -25,12 +25,13 @@ import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kInvaderUserId } from './game.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
 import { calcReward, templates } from './strongholds.js';
 
 // Register invader NPC
-registerNPC('2', loop);
+registerNPC(kInvaderUserId, loop);
 
 // Register invader generator
 registerRoomTickProcessor((room, context) => {
@@ -79,7 +80,7 @@ registerRoomTickProcessor((room, context) => {
 			validExits.sort(mappedNumericComparator(pos => origin.getRangeTo(pos)));
 
 			// Send the boys
-			activateNPC(room, '2');
+			activateNPC(room, kInvaderUserId);
 			for (let ii = 0; ii < 3; ++ii) {
 				const role = ([ 'melee', 'healer', 'ranged' ] as const)[ii % 3]!;
 				const exit = validExits[ii];
@@ -93,17 +94,15 @@ registerRoomTickProcessor((room, context) => {
 	}
 });
 
+export type InvaderIntents = typeof intents;
 // Intent processors. Includes the backend-only `requestInvader` (Room) and the four
 // invader-core actions driven by the NPC loop.
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { invader: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
 		const pos = new RoomPosition(xx, yy, room.name);
 		room['#insertObject'](create(pos, role, strength, Game.time + 200));
-		activateNPC(room, '2');
+		activateNPC(room, kInvaderUserId);
 		context.setActive();
 	}),
 
@@ -115,7 +114,7 @@ const intents = [
 			if (endTime > Game.time + C.CONTROLLER_RESERVE_MAX) {
 				return;
 			}
-			reserve(context, controller, '2', endTime);
+			reserve(context, controller, kInvaderUserId, endTime);
 			saveAction(core, 'reserveController', controller.pos);
 			appendEventLog(controller.room, {
 				event: C.EVENT_RESERVE_CONTROLLER,
@@ -171,7 +170,7 @@ const intents = [
 		if (checkCreateCreep(core) === C.OK) {
 			// Incubate the defender on the core's own tile (`#ageTime === 0` marks it spawning); the
 			// object tick processor spawns it onto an adjacent tile once the timer elapses.
-			const creep = Creep.create(core.pos, body, name, '2');
+			const creep = Creep.create(core.pos, body, name, kInvaderUserId);
 			creep['#ageTime'] = 0;
 			core.room['#insertObject'](creep);
 			const needTime = C.INVADER_CORE_CREEP_SPAWN_TIME[core.level]! * body.length;
@@ -257,17 +256,17 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 
 // One structure of a deployed stronghold, created at its template position with the per-type loot
 // and hit points. A decaying peer is pinned to the collapse time so it never reads a past expiry
-// while the room sleeps until collapse. The caller stamps the shared collapse timer and id.
+// while the room sleeps until collapse. The caller stamps the shared collapse timer.
 function createPeer(type: StrongholdStructure['type'], pos: RoomPosition, rewardLevel: number, collapseTime: number) {
 	switch (type) {
 		case C.STRUCTURE_RAMPART: {
-			const rampart = createRampart(pos, '2');
+			const rampart = createRampart(pos, kInvaderUserId);
 			rampart.hits = C.STRONGHOLD_RAMPART_HITS[rewardLevel]!;
 			rampart['#nextDecayTime'] = collapseTime;
 			return rampart;
 		}
 		case C.STRUCTURE_TOWER: {
-			const tower = createTower(pos, '2');
+			const tower = createTower(pos, kInvaderUserId);
 			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_CAPACITY);
 			return tower;
 		}
@@ -297,7 +296,6 @@ function *strongholdTemplate(core: StructureInvaderCore, template: StrongholdTem
 		const pos = new RoomPosition(core.pos.x + entry.dx, core.pos.y + entry.dy, core.pos.roomName);
 		const peer = createPeer(entry.type, pos, rewardLevel, collapseTime);
 		peer['#collapseTime'] = collapseTime;
-		peer['#strongholdId'] = core.id;
 		yield peer;
 	}
 }
@@ -329,7 +327,8 @@ function crushStrongholdTiles(core: StructureInvaderCore, template: StrongholdTe
 }
 
 // Deploy the stronghold: drop the deploy timer, start the shared collapse timer, and spawn the
-// template peers carrying that same timer and id so the whole stronghold vanishes together.
+// template peers carrying that same timer so the whole stronghold vanishes together. Unowned peers
+// are recorded on the core as its property.
 function deployStronghold(core: StructureInvaderCore, context: ProcessorContext) {
 	const templateName = core['#templateName'];
 	if (templateName === undefined) {
@@ -337,12 +336,14 @@ function deployStronghold(core: StructureInvaderCore, context: ProcessorContext)
 	}
 	const template = templates[templateName];
 	core['#deployTime'] = 0;
-	core['#strongholdId'] = core.id;
 	const duration = Math.round(C.STRONGHOLD_DECAY_TICKS * (0.9 + Math.random() * 0.2));
 	const collapseTime = core['#collapseTime'] = Game.time + duration;
 	crushStrongholdTiles(core, template);
 	for (const peer of strongholdTemplate(core, template, collapseTime)) {
 		core.room['#insertObject'](peer);
+		if (peer['#user'] === null) {
+			core['#ownedNeutralStructureIds'].push(peer.id);
+		}
 	}
 	context.wakeAt(collapseTime);
 	context.didUpdate();
@@ -363,7 +364,7 @@ const bodies = {
 
 export function create(pos: RoomPosition, role: Role, strength: Strength, ageTime: number) {
 	const body = bodies[`${strength}${role}` as const]();
-	const creep = Creep.create(pos, body, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, '2');
+	const creep = Creep.create(pos, body, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, kInvaderUserId);
 	creep['#ageTime'] = ageTime;
 	return creep;
 }

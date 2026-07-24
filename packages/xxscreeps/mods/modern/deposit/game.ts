@@ -11,7 +11,7 @@ const find = registerFindHandlers({
 	[C.FIND_DEPOSITS]: room => room['#lookFor'](C.LOOK_DEPOSITS),
 });
 
-export type DepositLook = typeof look;
+export type DepositLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Deposit>()(C.LOOK_DEPOSITS);
 

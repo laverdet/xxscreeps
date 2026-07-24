@@ -188,12 +188,8 @@ export const roomSubscription: SubscriptionEndpoint = {
 					// Get users not yet seen
 					async function() {
 						const entries = await Fn.mapAwait(visibleUsers, async id => {
-							const info = await shard.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]);
-							const rendered = {
-								username: info.username,
-								badge: info.badge == null ? {} : JSON.parse(info.badge) as unknown,
-							};
-							return [ id, rendered ] as const;
+							const info = await User.loadBackendUserInfo(shard.db, id);
+							return [ id, info ] as const;
 						});
 						visibleUsers.clear();
 						return Fn.fromEntries(entries);

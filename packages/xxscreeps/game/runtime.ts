@@ -32,8 +32,6 @@ globalThis.enumerable = (target: object, key: string, descriptor: PropertyDescri
 
 registerGlobal('_', lodash);
 
-registerGlobal(function Deposit() {});
-
 hooks.register('runtimeConnector', {
 	initialize() {
 		for (const [ identifier, value ] of Object.entries(C)) {

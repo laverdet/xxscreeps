@@ -257,9 +257,7 @@ export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearo
 	return baseFatigue;
 }
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { creep: typeof intents }
-}
+export type CreepIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, processDrop),

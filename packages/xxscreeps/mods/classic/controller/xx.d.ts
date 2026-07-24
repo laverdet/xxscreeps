@@ -8,3 +8,9 @@ declare module 'xxscreeps:mods/game' {
 	}
 	interface RoomSchema { controller: [ ...ControllerRoomSchemas, ...ControllerEventRoomSchemas ] }
 }
+
+declare module 'xxscreeps:mods/processor' {
+	import type { ControllerIntents } from 'xxscreeps/mods/classic/controller/processor.js';
+
+	interface Intent { controller: ControllerIntents }
+}

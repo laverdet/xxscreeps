@@ -64,5 +64,12 @@ declare module 'xxscreeps:mods/game' {
 		RESOURCE_ESSENCE = 'essence',
 	}
 
+	interface ConstructionCost { factory: 100000 }
 	interface RoomSchema { factory: [ FactoryRoomSchema ] }
+}
+
+declare module 'xxscreeps:mods/processor' {
+	import type { FactoryIntents } from 'xxscreeps/mods/modern/factory/processor.js';
+
+	interface Intent { factory: FactoryIntents }
 }

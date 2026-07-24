@@ -8,6 +8,9 @@ export type CounterExtract<T, U> = T extends any ? U extends T ? T : never : nev
 // Same as `Record` but has nullable members
 export type Dictionary<Type> = Partial<Record<string, Type>>;
 
+// A non-null object which allows access to any property
+export type UnknownObject = Record<string, unknown>;
+
 // Returns all keys of a union type
 export type KeysOf<Type> = Type extends any ? keyof Type : never;
 
@@ -41,9 +44,6 @@ export type Union<T, K extends keyof any = T extends any ? keyof T : never> =
 // Converts T | U to T & U
 export type UnionToIntersection<Union> =
 	(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;
-
-// Turns `T[]` into `T`, or returns `T` if it's not an array
-export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
 
 // Returns an object with a given key
 export type WithKey<Path extends keyof any> = Record<Path, any>;

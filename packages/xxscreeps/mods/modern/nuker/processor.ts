@@ -11,9 +11,6 @@ import * as C from 'xxscreeps:mods/constants';
 import { Nuke, create as createNuke } from './nuke.js';
 import { StructureNuker, checkLaunchNuke } from './nuker.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { nuker: typeof intents }
-}
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
@@ -31,6 +28,7 @@ interface NukeImpactState {
 const nukeImpactState = new Map<Room, NukeImpactState>();
 hooks.register('flushContext', () => nukeImpactState.clear());
 
+export type NukerIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureNuker, 'launchNuke', {}, (nuker, context, targetPosId: number) => {

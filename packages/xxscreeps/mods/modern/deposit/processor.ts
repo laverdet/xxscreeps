@@ -69,6 +69,7 @@ registerObjectTickProcessor(Deposit, (deposit, context) => {
 	}
 });
 
+export type DepositIntents = [ typeof placeDepositIntent ];
 // Placement runs at the room intent stage so it can read terrain via the live `world.map`.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const placeDepositIntent = registerIntentProcessor(
@@ -85,6 +86,3 @@ const placeDepositIntent = registerIntentProcessor(
 		context.didUpdate();
 		context.wakeAt(deposit['#nextDecayTime']);
 	});
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { deposit: typeof placeDepositIntent }
-}
