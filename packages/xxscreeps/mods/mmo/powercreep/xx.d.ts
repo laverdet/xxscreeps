@@ -1,11 +1,12 @@
 declare module 'xxscreeps:mods/game' {
 	import type { PowerCreepFind, PowerCreepLook, PowerCreepRoomSchema } from 'xxscreeps/mods/mmo/powercreep/game.js';
 	import type { PowerCreep } from 'xxscreeps/mods/mmo/powercreep/powercreep.js';
-	import type { PowerCreepEventRoomSchemas } from 'xxscreeps/mods/mmo/powercreep/schema.js';
+	import type { PowerCreepEventRoomSchemas, PowerEventType } from 'xxscreeps/mods/mmo/powercreep/schema.js';
 
 	enum ActionLogSchema {
 		power = 'power',
 	}
+	interface EventLog { power: PowerEventType	}
 	interface Find { powerCreep: PowerCreepFind }
 	interface Look { powerCreep: PowerCreepLook }
 	interface RoomObjects { powerCreep: PowerCreep }

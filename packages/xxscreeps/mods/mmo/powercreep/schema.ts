@@ -1,3 +1,4 @@
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
@@ -73,13 +74,15 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 
 registerEnumerated('ActionLog.action', 'power');
 
-export type PowerCreepEventRoomSchemas = [ typeof powerEventSchema ];
+export type PowerCreepEventRoomSchemas = [ typeof powerEventVariantSchema ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const powerEventSchema = registerVariant('Room.eventLog', declare('PowerEvent', struct({
+export type PowerEventType = TypeOf<typeof powerEventSchema>;
+const powerEventSchema = declare('PowerEvent', struct({
 	...variant(C.EVENT_POWER),
 	event: constant(C.EVENT_POWER),
 	objectId: Id.format,
 	power: 'int8',
 	targetId: optional(Id.format),
-})));
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const powerEventVariantSchema = registerVariant('Room.eventLog', powerEventSchema);
