@@ -6,6 +6,4 @@ export const INVADER_CORE_EXPAND_TIME = [ undefined, 4000, 3500, 3000, 2500, 200
 export const INVADER_CORE_CONTROLLER_POWER = 2;
 export const INVADER_CORE_CONTROLLER_DOWNGRADE = 5000;
 
-export const INVADERS_ENERGY_GOAL = 100000;
-
 export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;

@@ -1,0 +1,1 @@
+export const INVADERS_ENERGY_GOAL = 100000;

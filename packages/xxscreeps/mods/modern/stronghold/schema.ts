@@ -41,13 +41,6 @@ export const invaderCoreShape = declare('InvaderCore', struct(ownedStructureShap
 	'#templateName': enumerated(undefined, 'bunker1', 'bunker2', 'bunker3', 'bunker4', 'bunker5'),
 }));
 
-// Track energy mined on room
-export type InvaderSchemaRoomSchema = typeof roomSchema;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const roomSchema = registerStruct('Room', {
-	'#invaderEnergyTarget': 'int32',
-});
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const structureSchema = registerStruct('Structure', {
 	'#collapseTime': 'int32',
@@ -56,5 +49,5 @@ const structureSchema = registerStruct('Structure', {
 // ---
 
 declare module 'xxscreeps/mods/classic/structure/schema.js' {
-	interface StructureSchema { invaderSchema: [ typeof structureSchema ] }
+	interface StructureSchema { strongholdSchema: [ typeof structureSchema ] }
 }
