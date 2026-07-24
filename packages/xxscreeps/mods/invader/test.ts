@@ -15,6 +15,7 @@ import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { lookForStructureAt, lookForStructures } from '../classic/structure/structure.js';
+import { kInvaderUserId } from './game.js';
 import { create as createInvaderCore } from './invader-core.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:
@@ -333,13 +334,13 @@ describe('mods/invader', () => {
 
 		const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
 
-		// `activateNPC` registers invader NPC '2' as this room's loop driver; the `simulate` harness
+		// `activateNPC` registers invader NPC kInvaderUserId as this room's loop driver; the `simulate` harness
 		// seeds rooms with an active NPC into the processor queue (mirroring the main-service boot), so
 		// these `peekRoom` cases process without a stand-in human presence creep.
 		const coreInNeutralRoom = simulate({
 			W1N1: room => {
 				room['#insertObject'](createInvaderCore(corePos, 2, 0));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -349,7 +350,7 @@ describe('mods/invader', () => {
 				const controller = room.controller!;
 				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE + 1;
 				assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
-				assert.strictEqual(room['#user'], '2', 'room user becomes 2 once reserved');
+				assert.strictEqual(room['#user'], kInvaderUserId, 'room user becomes 2 once reserved');
 				const core = findRoomCore(room)!;
 				const action = core['#actionLog'].find(entry => entry.type === 'reserveController');
 				assert.ok(action, 'expected reserveController action log entry');
@@ -373,7 +374,7 @@ describe('mods/invader', () => {
 				room['#user'] = '101';
 				room.controller!['#reservationEndTime'] = 5000;
 				room['#insertObject'](createInvaderCore(corePos, 2, 0));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -387,17 +388,17 @@ describe('mods/invader', () => {
 			});
 		}));
 
-		// Synthetic state: invader "owns" the controller (level > 0 with #user='2'). No code path
+		// Synthetic state: invader "owns" the controller (level > 0 with #user=kInvaderUserId). No code path
 		// reaches this state today; the upgradeController processor exists for the stronghold
 		// deployment path that will set it.
 		const coreOwnsController = simulate({
 			W1N1: room => {
 				room['#level'] = 1;
-				room['#user'] = '2';
-				room.controller!['#user'] = '2';
+				room['#user'] = kInvaderUserId;
+				room.controller!['#user'] = kInvaderUserId;
 				room.controller!['#downgradeTime'] = 1000;
 				room['#insertObject'](createInvaderCore(corePos, 2, 0));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -416,12 +417,12 @@ describe('mods/invader', () => {
 		const refillScene = simulate({
 			W1N1: room => {
 				room['#insertObject'](createInvaderCore(corePos, 2, 0));
-				room['#insertObject'](createTower(new RoomPosition(26, 25, 'W1N1'), '2'));
+				room['#insertObject'](createTower(new RoomPosition(26, 25, 'W1N1'), kInvaderUserId));
 			},
 		});
 
 		test('transferEnergy accepts in-room tower target', () => refillScene(async ({ poke }) => {
-			const results = await poke('W1N1', '2', (Game, room) => {
+			const results = await poke('W1N1', kInvaderUserId, (Game, room) => {
 				const core = findRoomCore(room)!;
 				const tower = lookForStructures(room, C.STRUCTURE_TOWER)[0]!;
 				// Oversized amounts pass the check and clamp at the processor
@@ -432,12 +433,12 @@ describe('mods/invader', () => {
 
 		const collapsing = simulate({
 			W1N1: room => {
-				room['#user'] = '2';
+				room['#user'] = kInvaderUserId;
 				room.controller!['#reservationEndTime'] = 5000;
 				const core = createInvaderCore(corePos, 2, 0);
 				core['#collapseTime'] = 1; // expires by Game.time === 1 on the first processed tick
 				room['#insertObject'](core);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -446,7 +447,7 @@ describe('mods/invader', () => {
 			await peekRoom('W1N1', (room, Game) => {
 				assert.strictEqual(findRoomCore(room), undefined, 'core should be removed after collapse');
 				assert.ok(room.controller!['#reservationEndTime'] > Game.time, 'reservation is left to expire on its own');
-				assert.strictEqual(room['#user'], '2', 'room stays reserved by the NPC');
+				assert.strictEqual(room['#user'], kInvaderUserId, 'room stays reserved by the NPC');
 			});
 		}));
 
@@ -462,7 +463,7 @@ describe('mods/invader', () => {
 
 		const reservedThenKilled = simulate({
 			W1N1: room => {
-				room['#user'] = '2';
+				room['#user'] = kInvaderUserId;
 				room.controller!['#reservationEndTime'] = 5000;
 				const core = createInvaderCore(corePos, 2, 0);
 				core.hits = 1; // single attack drops it; the kill path is what we're exercising
@@ -481,7 +482,7 @@ describe('mods/invader', () => {
 				await peekRoom('W1N1', (room, Game) => {
 					assert.strictEqual(findRoomCore(room), undefined, 'core should be removed');
 					assert.ok(room.controller!['#reservationEndTime'] > Game.time, 'reservation is left to expire on its own');
-					assert.strictEqual(room['#user'], '2', 'room stays reserved by the NPC');
+					assert.strictEqual(room['#user'], kInvaderUserId, 'room stays reserved by the NPC');
 					assert.strictEqual(room.find(C.FIND_RUINS).length, 1, 'damage-destroy leaves a Ruin');
 					const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 					assert.ok(destroyed, 'damage-destroy emits EVENT_OBJECT_DESTROYED');
@@ -502,7 +503,7 @@ describe('mods/invader', () => {
 		const spawnScene = (level = 5, decorate?: (room: Room) => void) => simulate({
 			W1N1: room => {
 				room['#insertObject'](createInvaderCore(corePos, level, 0));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 				decorate?.(room);
 			},
 		});
@@ -510,7 +511,7 @@ describe('mods/invader', () => {
 		// Inject the NPC-internal `createCreep` intent. NPCs are filtered out of the player intent
 		// pipeline, so the processor is otherwise only reachable from the (slice 5) behavior loop.
 		const requestCreep = (shard: Shard, coreId: string, creepBody = body, name = 'def') =>
-			pushIntentsForRoomNextTick(shard, 'W1N1', '2', { object: { [coreId]: { createCreep: [ creepBody, name ] } } });
+			pushIntentsForRoomNextTick(shard, 'W1N1', kInvaderUserId, { object: { [coreId]: { createCreep: [ creepBody, name ] } } });
 
 		test('createCreep inserts a spawning defender and records the spawn', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
 			const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
@@ -524,7 +525,7 @@ describe('mods/invader', () => {
 				assert.ok(core.spawning.remainingTime > 0, 'spawn timer is still counting down');
 				const def = findCreep(room, 'def');
 				assert.ok(def, 'defender creep is inserted');
-				assert.strictEqual(def['#user'], '2', 'defender is owned by the invader NPC');
+				assert.strictEqual(def['#user'], kInvaderUserId, 'defender is owned by the invader NPC');
 				assert.ok(def.spawning, 'defender is still incubating');
 				assert.ok(def.pos.isEqualTo(corePos), 'incubating defender sits on the core tile');
 			});
@@ -549,7 +550,7 @@ describe('mods/invader', () => {
 		// tile and must keep retrying without dropping the defender.
 		const blockedScene = spawnScene(5, room => {
 			for (const pos of iterateNeighbors(corePos)) {
-				room['#insertObject'](createCreep(pos, [ C.MOVE ], `block_${pos.x}_${pos.y}`, '2'));
+				room['#insertObject'](createCreep(pos, [ C.MOVE ], `block_${pos.x}_${pos.y}`, kInvaderUserId));
 			}
 		});
 
@@ -579,13 +580,13 @@ describe('mods/invader', () => {
 			const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
 			await requestCreep(shard, coreId);
 			await tick();
-			const result = await poke('W1N1', '2', (Game, room) => findRoomCore(room)['#createCreep'](body, 'other'));
+			const result = await poke('W1N1', kInvaderUserId, (Game, room) => findRoomCore(room)['#createCreep'](body, 'other'));
 			assert.strictEqual(result, C.ERR_BUSY, 'a busy core rejects a second createCreep');
 		}));
 
 		test('createCreep is rejected on a core level that cannot spawn', () => spawnScene(1)(async ({ poke }) => {
 			// `INVADER_CORE_CREEP_SPAWN_TIME[1] === 0` — level 1 cores never spawn defenders.
-			const result = await poke('W1N1', '2', (Game, room) => findRoomCore(room)['#createCreep'](body, 'def'));
+			const result = await poke('W1N1', kInvaderUserId, (Game, room) => findRoomCore(room)['#createCreep'](body, 'def'));
 			assert.strictEqual(result, C.ERR_INVALID_TARGET, 'a non-spawning level is rejected');
 		}));
 	});
@@ -601,7 +602,7 @@ describe('mods/invader', () => {
 				const core = createInvaderCore(corePos, 2, 1);
 				core['#templateName'] = 'bunker2';
 				room['#insertObject'](core);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -644,8 +645,8 @@ describe('mods/invader', () => {
 				assert.ok(lookForStructureAt(room, stackedPos, C.STRUCTURE_ROAD), 'road shares the tile');
 				assert.ok(lookForStructureAt(room, stackedPos, C.STRUCTURE_RAMPART), 'rampart shares the tile');
 
-				assert.strictEqual(tower['#user'], '2', 'tower is owned by the invader NPC');
-				assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
+				assert.strictEqual(tower['#user'], kInvaderUserId, 'tower is owned by the invader NPC');
+				assert.strictEqual(rampart['#user'], kInvaderUserId, 'rampart is owned by the invader NPC');
 				for (const peer of [ tower, rampart, container, roads[0]! ]) {
 					assert.strictEqual(peer['#collapseTime'], collapseTime, 'peer shares the core collapse timer');
 					assert.deepStrictEqual(peer.effects, [
@@ -678,7 +679,7 @@ describe('mods/invader', () => {
 				room['#insertObject'](site);
 				room['#insertObject'](createSite(new RoomPosition(25, 26, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
 				room['#insertObject'](createRoad(new RoomPosition(24, 25, 'W1N1')));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -712,7 +713,7 @@ describe('mods/invader', () => {
 				const container = createContainer(corePos);
 				container['#collapseTime'] = 1;
 				room['#insertObject'](container);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -726,19 +727,19 @@ describe('mods/invader', () => {
 			});
 		}));
 
-		// A core that took over the room controller (level > 0, owned by '2'), then collapses: the
-		// controller is released to neutral while its reservation, when any, is left to expire on its own.
+		// A core that took over the room controller (level > 0, owned by '2'), then collapses: the controller is
+		// released to neutral while its reservation, when any, is left to expire on its own.
 		const ownedThenCollapsing = simulate({
 			W1N1: room => {
 				room['#level'] = 1;
-				room['#user'] = '2';
-				room.controller!['#user'] = '2';
+				room['#user'] = kInvaderUserId;
+				room.controller!['#user'] = kInvaderUserId;
 				room.controller!['#downgradeTime'] = 1000;
 				room.controller!['#upgradeInvulnerableUntil'] = 1000;
 				const core = createInvaderCore(corePos, 2, 0);
 				core['#collapseTime'] = 1;
 				room['#insertObject'](core);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -770,13 +771,13 @@ describe('mods/invader', () => {
 		};
 
 		const insertRampart = (room: Room, xx: number, yy: number) => {
-			const rampart = createRampart(new RoomPosition(xx, yy, 'W1N1'), '2');
+			const rampart = createRampart(new RoomPosition(xx, yy, 'W1N1'), kInvaderUserId);
 			rampart['#nextDecayTime'] = farFuture;
 			room['#insertObject'](rampart);
 		};
 
 		const insertTower = (room: Room, xx: number, yy: number, energy: number) => {
-			const tower = createTower(new RoomPosition(xx, yy, 'W1N1'), '2');
+			const tower = createTower(new RoomPosition(xx, yy, 'W1N1'), kInvaderUserId);
 			tower.store['#add'](C.RESOURCE_ENERGY, energy);
 			room['#insertObject'](tower);
 		};
@@ -792,7 +793,7 @@ describe('mods/invader', () => {
 				insertTower(room, 24, 25, 15);
 				insertRampart(room, 24, 25);
 				insertTower(room, 25, 27, 0);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -812,12 +813,12 @@ describe('mods/invader', () => {
 			W1N1: room => {
 				room['#insertObject'](deployedCore(1, 'bunker1'));
 				insertTower(room, 24, 24, C.TOWER_CAPACITY);
-				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'melee', '2'));
-				room['#insertObject'](createCreep(new RoomPosition(25, 27, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'ranged', '2'));
-				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'pointBlank', '2'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'melee', kInvaderUserId));
+				room['#insertObject'](createCreep(new RoomPosition(25, 27, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'ranged', kInvaderUserId));
+				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'pointBlank', kInvaderUserId));
 				room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ ...Fn.map(Fn.range(9), () => C.TOUGH), C.MOVE ], 'near', '100'));
 				room['#insertObject'](createCreep(new RoomPosition(30, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'far', '100'));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -836,7 +837,7 @@ describe('mods/invader', () => {
 			W1N1: room => {
 				room['#insertObject'](deployedCore(2, 'bunker2'));
 				decorate?.(room);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -856,7 +857,7 @@ describe('mods/invader', () => {
 			W1N1: room => {
 				room['#insertObject'](deployedCore(3, 'bunker3'));
 				decorate?.(room);
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 
@@ -869,7 +870,7 @@ describe('mods/invader', () => {
 		}));
 
 		test('a filled population slot is skipped', () => bunker3Scene(room => {
-			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', kInvaderUserId));
 		})(async ({ tick, peekRoom }) => {
 			await tick();
 			await peekRoom('W1N1', room => {
@@ -880,7 +881,7 @@ describe('mods/invader', () => {
 		// A rampart walkway from the defender to the hostile's doorstep: simple-melee movement is
 		// confined to ramparts, so the defender advances along it and attacks from its end.
 		const walkwayScene = bunker2Scene(room => {
-			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', kInvaderUserId));
 			insertRampart(room, 24, 25);
 			insertRampart(room, 25, 24);
 			insertRampart(room, 26, 25);
@@ -903,7 +904,7 @@ describe('mods/invader', () => {
 		// No rampart path reaches the hostile: the defender holds its rampart rather than chasing over
 		// open ground.
 		const isolatedScene = bunker2Scene(room => {
-			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', kInvaderUserId));
 			insertRampart(room, 24, 25);
 			room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'intruder', '100'));
 		});
@@ -925,7 +926,7 @@ describe('mods/invader', () => {
 				insertTower(room, 26, 25, 0);
 				insertRampart(room, 26, 25);
 				room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'scout', '100'));
-				activateNPC(room, '2');
+				activateNPC(room, kInvaderUserId);
 			},
 		});
 

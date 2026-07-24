@@ -3,6 +3,7 @@ import { createRoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kSourceKeeperUserId } from './game.js';
 import { keeperLairShape } from './schema.js';
 
 /**
@@ -29,6 +30,6 @@ export class StructureKeeperLair extends withOverlay(OwnedStructure, keeperLairS
 
 export function create(pos: RoomPosition) {
 	const keeperLair = createRoomObject(new StructureKeeperLair(), pos);
-	keeperLair['#user'] = '3';
+	keeperLair['#user'] = kSourceKeeperUserId;
 	return keeperLair;
 }

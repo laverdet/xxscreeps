@@ -4,6 +4,7 @@ import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kInvaderUserId } from './game.js';
 import { StructureInvaderCore } from './invader-core.js';
 
 bindRenderer(StructureInvaderCore, (core, next, previousTime) => {
@@ -68,9 +69,9 @@ hooks.register('route', {
 			throw new Error('Not room owner');
 		}
 		const creeps = room.find(C.FIND_CREEPS);
-		if (creeps.filter(creep => creep['#user'] === '2').length >= 5) {
+		if (creeps.filter(creep => creep['#user'] === kInvaderUserId).length >= 5) {
 			throw new Error('Too many invaders');
-		} else if (creeps.some(creep => creep['#user'] !== userId && creep['#user'] !== '2')) {
+		} else if (creeps.some(creep => creep['#user'] !== userId && creep['#user'] !== kInvaderUserId)) {
 			throw new Error('Hostile creeps exist');
 		}
 

@@ -11,6 +11,7 @@ import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structu
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kInvaderUserId } from './game.js';
 import { invaderCoreShape } from './schema.js';
 
 /**
@@ -121,13 +122,14 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 }
 
 // Callers insert the returned core and are responsible for waking the invader NPC that drives it
-// (`activateNPC(room, '2')` + `context.setActive()`), the same way `requestInvader` does for creeps.
+// (`activateNPC(room, kInvaderUserId)` + `context.setActive()`), the same way `requestInvader` does
+// for creeps.
 export function create(pos: RoomPosition, level: number, deployTime: number) {
 	const core = assign(createRoomObject(new StructureInvaderCore(), pos), {
 		hits: C.INVADER_CORE_HITS,
 		level,
 	});
-	core['#user'] = '2';
+	core['#user'] = kInvaderUserId;
 	core['#deployTime'] = deployTime;
 	return core;
 }
@@ -149,7 +151,7 @@ export function checkReserveController(core: StructureInvaderCore, target: Struc
 			if (target.level > 0) {
 				return C.ERR_INVALID_TARGET;
 			}
-			if (target['#reservationEndTime'] > Game.time && target.room['#user'] !== '2') {
+			if (target['#reservationEndTime'] > Game.time && target.room['#user'] !== kInvaderUserId) {
 				return C.ERR_INVALID_TARGET;
 			}
 		});
@@ -167,13 +169,13 @@ export function checkAttackController(core: StructureInvaderCore, target: Struct
 			if (!reserved && !owned) {
 				return C.ERR_INVALID_TARGET;
 			}
-			if (owned && target['#user'] === '2') {
+			if (owned && target['#user'] === kInvaderUserId) {
 				return C.ERR_INVALID_TARGET;
 			}
-			if (reserved && target.room['#user'] === '2') {
+			if (reserved && target.room['#user'] === kInvaderUserId) {
 				return C.ERR_INVALID_TARGET;
 			}
-			if (target.safeMode !== undefined && target['#user'] !== '2') {
+			if (target.safeMode !== undefined && target['#user'] !== kInvaderUserId) {
 				return C.ERR_INVALID_TARGET;
 			}
 			if (target.upgradeBlocked !== undefined) {
@@ -189,7 +191,7 @@ export function checkUpgradeController(core: StructureInvaderCore, target: Struc
 		() => checkTarget(target, StructureController),
 		() => checkSameRoom(core, target),
 		() => {
-			if (target.level === 0 || target['#user'] !== '2') {
+			if (target.level === 0 || target['#user'] !== kInvaderUserId) {
 				return C.ERR_NOT_OWNER;
 			}
 			if (target.upgradeBlocked !== undefined) {

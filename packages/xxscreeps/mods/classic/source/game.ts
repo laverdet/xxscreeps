@@ -9,6 +9,8 @@ import { StructureKeeperLair } from './keeper-lair.js';
 import { keeperLairShape, sourceShape } from './schema.js';
 import { Source } from './source.js';
 
+export const kSourceKeeperUserId = '3';
+
 // Export `Source` and `StructureKeeperLair` to runtime globals
 registerGlobal(Source);
 registerGlobal(StructureKeeperLair);
