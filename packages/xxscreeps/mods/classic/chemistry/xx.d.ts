@@ -1,5 +1,6 @@
 declare module 'xxscreeps:mods/game' {
 	import type { ChemistryRoomSchema } from 'xxscreeps/mods/classic/chemistry/game.js';
+	import type { StructureLab } from 'xxscreeps/mods/classic/chemistry/lab.js';
 
 	enum ActionLogSchema {
 		reaction1 = 'reaction1',
@@ -48,6 +49,7 @@ declare module 'xxscreeps:mods/game' {
 	}
 
 	interface ConstructionCost { lab: 50000 }
+	interface RoomObjects { lab: StructureLab }
 	interface RoomSchema { chemistry: [ ChemistryRoomSchema ] }
 }
 

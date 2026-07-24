@@ -1,3 +1,4 @@
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
@@ -43,14 +44,17 @@ export const ruinShape = declare('Ruin', struct(roomObjectShape, {
 	}),
 }));
 
-export type StructureSchemaRoomSchema = typeof destroyedEventSchema;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const destroyedEventSchema = registerVariant('Room.eventLog', declare('DestroyedEvent', struct({
+export type StructureSchemaRoomSchema = typeof destroyedEventVariantSchema;
+
+export type DestroyedEventType = TypeOf<typeof destroyedEventSchema>;
+const destroyedEventSchema = declare('DestroyedEvent', struct({
 	...variant(C.EVENT_OBJECT_DESTROYED),
 	event: constant(C.EVENT_OBJECT_DESTROYED),
 	objectId: Id.format,
 	type: 'string',
-})));
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const destroyedEventVariantSchema = registerVariant('Room.eventLog', destroyedEventSchema);
 
 // ---
 

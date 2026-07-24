@@ -5,7 +5,7 @@ import type { GameState } from 'xxscreeps/game/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { UnknownObject } from 'xxscreeps/utility/types.js';
-import type { RoomConstructor, Room as RoomInterface } from 'xxscreeps:mods/game';
+import type { RoomConstructor, Room as RoomInterface, RoomObjects } from 'xxscreeps:mods/game';
 import { withStatics } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
@@ -15,7 +15,7 @@ import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
 import { shape } from './schema.js';
 import { findHandlers, lookConstants } from './symbols.js';
 
-export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
+export type AnyRoomObject = Exclude<RoomObjects[keyof RoomObjects], { '#lookType': null }>;
 
 export interface Room extends RoomInterface {}
 

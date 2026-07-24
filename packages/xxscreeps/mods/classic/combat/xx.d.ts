@@ -1,5 +1,5 @@
 declare module 'xxscreeps:mods/game' {
-	import type { CombatRoomSchemas } from 'xxscreeps/mods/classic/combat/schema.js';
+	import type { AttackEventType, CombatRoomSchemas, HealEventType } from 'xxscreeps/mods/classic/combat/schema.js';
 
 	enum ActionLogSchema {
 		attack = 'attack',
@@ -9,6 +9,10 @@ declare module 'xxscreeps:mods/game' {
 		rangedAttack = 'rangedAttack',
 		rangedHeal = 'rangedHeal',
 		rangedMassAttack = 'rangedMassAttack',
+	}
+	interface EventLog {
+		attack: AttackEventType;
+		heal: HealEventType;
 	}
 	interface RoomSchema { combat: CombatRoomSchemas }
 }

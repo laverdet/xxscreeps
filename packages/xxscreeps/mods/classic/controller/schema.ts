@@ -1,3 +1,4 @@
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
@@ -48,34 +49,40 @@ export const roomSchema = registerStruct('Room', {
 registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
 
 export type ControllerEventRoomSchemas = [
-	typeof attackControllerEventSchema,
-	typeof reserveControllerEventSchema,
-	typeof upgradeControllerEventSchema,
+	typeof attackControllerEventVariantSchema,
+	typeof reserveControllerEventVariantSchema,
+	typeof upgradeControllerEventVariantSchema,
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const attackControllerEventSchema = registerVariant('Room.eventLog', declare('AttackControllerEvent', struct({
+export type AttackControllerEventType = TypeOf<typeof attackControllerEventSchema>;
+const attackControllerEventSchema = declare('AttackControllerEvent', struct({
 	...variant(C.EVENT_ATTACK_CONTROLLER),
 	event: constant(C.EVENT_ATTACK_CONTROLLER),
 	objectId: Id.format,
-})));
-
+}));
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const reserveControllerEventSchema = registerVariant('Room.eventLog', declare('ReserveControllerEvent', struct({
+const attackControllerEventVariantSchema = registerVariant('Room.eventLog', attackControllerEventSchema);
+
+export type ReserveControllerEventType = TypeOf<typeof reserveControllerEventSchema>;
+const reserveControllerEventSchema = declare('ReserveControllerEvent', struct({
 	...variant(C.EVENT_RESERVE_CONTROLLER),
 	event: constant(C.EVENT_RESERVE_CONTROLLER),
 	objectId: Id.format,
 	amount: 'int32',
-})));
-
+}));
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const upgradeControllerEventSchema = registerVariant('Room.eventLog', declare('UpgradeControllerEvent', struct({
+const reserveControllerEventVariantSchema = registerVariant('Room.eventLog', reserveControllerEventSchema);
+
+export type UpgradeControllerEventType = TypeOf<typeof upgradeControllerEventSchema>;
+const upgradeControllerEventSchema = declare('UpgradeControllerEvent', struct({
 	...variant(C.EVENT_UPGRADE_CONTROLLER),
 	event: constant(C.EVENT_UPGRADE_CONTROLLER),
 	objectId: Id.format,
 	amount: 'int32',
 	energySpent: 'int32',
-})));
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const upgradeControllerEventVariantSchema = registerVariant('Room.eventLog', upgradeControllerEventSchema);
 
 // ---
 
