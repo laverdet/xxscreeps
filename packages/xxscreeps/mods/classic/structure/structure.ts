@@ -176,10 +176,13 @@ export function checkActiveStructures(room: Room) {
 	const byType: Record<string, OwnedStructure[]> = {};
 	for (const object of room['#immediateObjects']()) {
 		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
-			if (object['#user'] === null) {
-				// Owner-less structures are always active and count against no one's quota
+			const user = object['#user'];
+			if (user === null || user.length <= 2) {
+				// Owner-less and system-user structures are always active and count against no one's
+				// quota. Divergence from Screeps, whose equivalent runtime check reports system
+				// structures inactive while its processor, which never checks, fires them anyway.
 				object['#active'] = true;
-			} else if (object['#user'] === userId) {
+			} else if (user === userId) {
 				(byType[object.structureType] ??= []).push(object);
 			} else {
 				object['#active'] = false;

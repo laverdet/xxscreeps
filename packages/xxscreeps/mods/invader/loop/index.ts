@@ -1,32 +1,12 @@
 import type { StructureInvaderCore } from '../invader-core.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
-import { Game } from 'xxscreeps/game/index.js';
+import type { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
+import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import * as C from 'xxscreeps:mods/constants';
 import findAttack from './find-attack.js';
 import healer from './healer.js';
 import shootAtWill from './shoot-at-will.js';
-
-// Stronghold-template behaviors (refillTowers, refillCreeps, focusClosest) depend on a
-// deployed stronghold's towers/ramparts, which aren't implemented yet. Only the controller
-// driver lives here for now.
-function handleController(core: StructureInvaderCore) {
-	const controller = core.room.controller;
-	if (!controller) {
-		return;
-	}
-	if (controller['#user'] === '2' && controller.level > 0) {
-		if ((controller.ticksToDowngrade ?? Infinity) < C.INVADER_CORE_CONTROLLER_DOWNGRADE - 25) {
-			core['#upgradeController'](controller);
-		}
-		return;
-	}
-	const reserved = controller['#reservationEndTime'] > Game.time;
-	if (!reserved || controller.room['#user'] === '2') {
-		core['#reserveController'](controller);
-	} else {
-		core['#attackController'](controller);
-	}
-}
+import { strongholdBehavior } from './stronghold.js';
 
 export function loop(Game: GameConstructor) {
 	const room = Object.values(Game.rooms)[0];
@@ -34,16 +14,30 @@ export function loop(Game: GameConstructor) {
 		return false;
 	}
 
-	// Drive invader cores
-	const cores = Object.values(Game.structures).filter(
+	const creeps = Object.values(Game.creeps);
+	const structures = Object.values(Game.structures);
+	const cores = structures.filter(
 		(structure): structure is StructureInvaderCore =>
 			structure.structureType === C.STRUCTURE_INVADER_CORE);
-	for (const core of cores) {
-		handleController(core);
+
+	// A room with an invader core is a stronghold; its creeps are defenders driven by the core's
+	// behavior rather than the raid logic below.
+	if (cores.length > 0) {
+		const context = {
+			defenders: creeps.filter(creep => !creep.spawning),
+			hostiles: room.find(C.FIND_HOSTILE_CREEPS).filter(creep => creep['#user'] !== '3'),
+			towers: structures.filter(
+				(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER),
+			ramparts: structures.filter(
+				(structure): structure is StructureRampart => structure.structureType === C.STRUCTURE_RAMPART),
+		};
+		for (const core of cores) {
+			strongholdBehavior(core)({ core, ...context });
+		}
+		return true;
 	}
 
-	// Drive invader creeps
-	const creeps = Object.values(Game.creeps);
+	// Drive invader raid creeps
 	if (creeps.length > 0) {
 		const healers = creeps.filter(
 			creep => creep.getActiveBodyparts(C.HEAL) > 0);
@@ -63,5 +57,5 @@ export function loop(Game: GameConstructor) {
 		}
 	}
 
-	return cores.length > 0 || creeps.length > 0;
+	return creeps.length > 0;
 }

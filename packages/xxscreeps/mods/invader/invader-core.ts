@@ -92,8 +92,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 
 	/**
 	 * Push energy into a tower or creep in the same room. `amount` defaults to the target's free
-	 * capacity for energy; oversized amounts clamp at the processor. The stronghold refill
-	 * behaviors are this action's driver and arrive in a later slice.
+	 * capacity for energy; oversized amounts clamp at the processor.
 	 */
 	'#transferEnergy'(target: StructureTower | Creep, amount?: number) {
 		return chainIntentChecks(
@@ -105,8 +104,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 	/**
 	 * Incubate an NPC defender on the core's own tile. The spawn takes
 	 * `INVADER_CORE_CREEP_SPAWN_TIME[level]` ticks per body part and materializes on an adjacent
-	 * tile once it elapses. The stronghold population behaviors that supply bodies and boosts arrive
-	 * in a later slice.
+	 * tile once it elapses. Boosts arrive with the bunker4/5 populations.
 	 */
 	'#createCreep'(body: PartType[], name: string) {
 		return chainIntentChecks(

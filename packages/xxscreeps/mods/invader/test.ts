@@ -1,10 +1,13 @@
+import type { StructureInvaderCore } from './invader-core.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { create as createRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
@@ -613,13 +616,11 @@ describe('mods/invader', () => {
 			});
 		}));
 
-		test('deploy spawns the bunker template with loot, scaled ramparts, and a shared id', () => deployScene(async ({ tick, peekRoom }) => {
+		test('deploy spawns the bunker template with loot, scaled ramparts, and a shared timer', () => deployScene(async ({ tick, peekRoom }) => {
 			await tick(2);
 			await peekRoom('W1N1', (room, Game) => {
 				const core = findRoomCore(room)!;
 				const collapseTime = core['#collapseTime'];
-				const strongholdId = core['#strongholdId'];
-				assert.ok(strongholdId !== null, 'the core carries a stronghold id');
 
 				// Two towers and two containers distinguish bunker2 from the single-of-each stub.
 				const towers = lookForStructures(room, C.STRUCTURE_TOWER);
@@ -647,11 +648,14 @@ describe('mods/invader', () => {
 				assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
 				for (const peer of [ tower, rampart, container, roads[0]! ]) {
 					assert.strictEqual(peer['#collapseTime'], collapseTime, 'peer shares the core collapse timer');
-					assert.strictEqual(peer['#strongholdId'], strongholdId, 'peer shares the stronghold id');
 					assert.deepStrictEqual(peer.effects, [
 						{ effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: collapseTime - Game.time },
 					], 'peer surfaces the shared collapse timer');
 				}
+				assert.deepStrictEqual(
+					[ ...core['#ownedNeutralStructureIds'] ].sort(),
+					[ ...containers, ...roads ].map(peer => peer.id).sort(),
+					'the core records its unowned peers and no others');
 				// Pinned to the collapse time so they don't decay (and read a past expiry, which throws)
 				// while the stronghold room sleeps between deploy and collapse.
 				for (const peer of [ rampart, container, roads[0]! ]) {
@@ -745,6 +749,193 @@ describe('mods/invader', () => {
 				assert.strictEqual(room['#user'], null, 'room ownership released');
 				assert.strictEqual(room.controller?.level, 0, 'controller downgraded to neutral');
 				assert.strictEqual(room.controller.effects, undefined, 'controller invulnerability cleared');
+			});
+		}));
+	});
+
+	describe('stronghold defense', () => {
+		const corePos = new RoomPosition(25, 25, 'W1N1');
+		// Far enough out that no fixture timer expires while a test ticks.
+		const farFuture = 50000;
+		const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
+		const findCreep = (room: Room, name: string) => room.find(C.FIND_CREEPS).find(creep => creep.name === name);
+		const energyAt = (room: Room, xx: number, yy: number) =>
+			lookForStructureAt(room, new RoomPosition(xx, yy, 'W1N1'), C.STRUCTURE_TOWER)?.store.getUsedCapacity(C.RESOURCE_ENERGY);
+
+		const deployedCore = (level: number, templateName: StructureInvaderCore['#templateName']) => {
+			const core = createInvaderCore(corePos, level, 0);
+			core['#templateName'] = templateName;
+			core['#collapseTime'] = farFuture;
+			return core;
+		};
+
+		const insertRampart = (room: Room, xx: number, yy: number) => {
+			const rampart = createRampart(new RoomPosition(xx, yy, 'W1N1'), '2');
+			rampart['#nextDecayTime'] = farFuture;
+			room['#insertObject'](rampart);
+		};
+
+		const insertTower = (room: Room, xx: number, yy: number, energy: number) => {
+			const tower = createTower(new RoomPosition(xx, yy, 'W1N1'), '2');
+			tower.store['#add'](C.RESOURCE_ENERGY, energy);
+			room['#insertObject'](tower);
+		};
+
+		// Level 5 refills unconditionally (`towerRefillChance[5] === 1`). Three towers pin the selection
+		// branches: the emptiest protected one wins over a fuller protected one, and an unprotected tower
+		// is never refilled no matter how empty.
+		const refillScene = simulate({
+			W1N1: room => {
+				room['#insertObject'](deployedCore(5, 'bunker5'));
+				insertTower(room, 26, 25, 5);
+				insertRampart(room, 26, 25);
+				insertTower(room, 24, 25, 15);
+				insertRampart(room, 24, 25);
+				insertTower(room, 25, 27, 0);
+				activateNPC(room, '2');
+			},
+		});
+
+		test('the core refills the emptiest rampart-protected tower', () => refillScene(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(energyAt(room, 26, 25), C.TOWER_CAPACITY, 'the emptiest protected tower is refilled to capacity');
+				assert.strictEqual(energyAt(room, 24, 25), 15, 'only one tower is refilled per tick');
+				assert.strictEqual(energyAt(room, 25, 27), 0, 'an unprotected tower is never refilled');
+			});
+		}));
+
+		// A hostile pair at range 2 and range 5 from the core: every attacker picks the closest one.
+		// The melee defender sits adjacent to it, one ranger at range 2 (rangedAttack), one at range 1
+		// (rangedMassAttack).
+		const focusScene = simulate({
+			W1N1: room => {
+				room['#insertObject'](deployedCore(1, 'bunker1'));
+				insertTower(room, 24, 24, C.TOWER_CAPACITY);
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'melee', '2'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 27, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'ranged', '2'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.RANGED_ATTACK, C.MOVE ], 'pointBlank', '2'));
+				room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ ...Fn.map(Fn.range(9), () => C.TOUGH), C.MOVE ], 'near', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(30, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'far', '100'));
+				activateNPC(room, '2');
+			},
+		});
+
+		test('towers and defenders in reach all attack the hostile closest to the core', () => focusScene(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				const near = findCreep(room, 'near')!;
+				const damage = C.TOWER_POWER_ATTACK + C.ATTACK_POWER + C.RANGED_ATTACK_POWER + C.RANGED_ATTACK_POWER;
+				assert.strictEqual(near.hits, near.hitsMax - damage, 'tower, melee, ranger, and point-blank ranger all hit the closest hostile');
+				const far = findCreep(room, 'far')!;
+				assert.strictEqual(far.hits, far.hitsMax, 'the farther hostile is untouched');
+			});
+		}));
+
+		const bunker2Scene = (decorate?: (room: Room) => void) => simulate({
+			W1N1: room => {
+				room['#insertObject'](deployedCore(2, 'bunker2'));
+				decorate?.(room);
+				activateNPC(room, '2');
+			},
+		});
+
+		test('bunker2 spawns its population slot with the weak defender body', () => bunker2Scene()(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(findRoomCore(room)?.spawning?.name, 'defender0', 'the core starts spawning its missing defender');
+				const defender = findCreep(room, 'defender0')!;
+				assert.strictEqual(defender.body.length, 30);
+				assert.strictEqual(defender.body.filter(part => part.type === C.ATTACK).length, 15);
+				assert.strictEqual(defender.body.filter(part => part.type === C.MOVE).length, 15);
+				assert.strictEqual(defender.body[0]?.type, C.ATTACK, 'attack parts lead the body');
+			});
+		}));
+
+		const bunker3Scene = (decorate?: (room: Room) => void) => simulate({
+			W1N1: room => {
+				room['#insertObject'](deployedCore(3, 'bunker3'));
+				decorate?.(room);
+				activateNPC(room, '2');
+			},
+		});
+
+		test('the population spawns one defender at a time', () => bunker3Scene()(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(findRoomCore(room)?.spawning?.name, 'defender0', 'the first missing slot spawns first');
+				assert.strictEqual(findCreep(room, 'defender1'), undefined, 'the second slot waits its turn');
+			});
+		}));
+
+		test('a filled population slot is skipped', () => bunker3Scene(room => {
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+		})(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(findRoomCore(room)?.spawning?.name, 'defender1', 'the missing slot spawns while the live defender keeps its name');
+			});
+		}));
+
+		// A rampart walkway from the defender to the hostile's doorstep: simple-melee movement is
+		// confined to ramparts, so the defender advances along it and attacks from its end.
+		const walkwayScene = bunker2Scene(room => {
+			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+			insertRampart(room, 24, 25);
+			insertRampart(room, 25, 24);
+			insertRampart(room, 26, 25);
+			room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ ...Fn.map(Fn.range(9), () => C.TOUGH), C.MOVE ], 'intruder', '100'));
+		});
+
+		test('a defender advances along ramparts and attacks from the walkway end', () => walkwayScene(async ({ tick, peekRoom }) => {
+			await tick(2);
+			await peekRoom('W1N1', room => {
+				const defender = findCreep(room, 'defender0')!;
+				assert.ok(defender.pos.isEqualTo(new RoomPosition(26, 25, 'W1N1')), 'defender walked the rampart tiles toward the intruder');
+			});
+			await tick();
+			await peekRoom('W1N1', room => {
+				const intruder = findCreep(room, 'intruder')!;
+				assert.ok(intruder.hits < intruder.hitsMax, 'defender attacks once adjacent');
+			});
+		}));
+
+		// No rampart path reaches the hostile: the defender holds its rampart rather than chasing over
+		// open ground.
+		const isolatedScene = bunker2Scene(room => {
+			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.ATTACK, C.MOVE ], 'defender0', '2'));
+			insertRampart(room, 24, 25);
+			room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'intruder', '100'));
+		});
+
+		test('a defender never leaves the ramparts to chase', () => isolatedScene(async ({ tick, peekRoom }) => {
+			await tick(2);
+			await peekRoom('W1N1', room => {
+				const defender = findCreep(room, 'defender0')!;
+				assert.ok(defender.pos.isEqualTo(new RoomPosition(24, 25, 'W1N1')), 'defender holds its rampart when no rampart path reaches the hostile');
+			});
+		}));
+
+		// While the deploy timer runs, only the controller is driven — no refill, no attacks.
+		const deployingScene = simulate({
+			W1N1: room => {
+				const core = createInvaderCore(corePos, 5, farFuture);
+				core['#templateName'] = 'bunker5';
+				room['#insertObject'](core);
+				insertTower(room, 26, 25, 0);
+				insertRampart(room, 26, 25);
+				room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.TOUGH, C.MOVE ], 'scout', '100'));
+				activateNPC(room, '2');
+			},
+		});
+
+		test('a deploying core runs no defense behaviors', () => deployingScene(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(energyAt(room, 26, 25), 0, 'no tower refill while deploying');
+				const scout = findCreep(room, 'scout')!;
+				assert.strictEqual(scout.hits, scout.hitsMax, 'no attacks while deploying');
+				assert.strictEqual(findRoomCore(room)?.spawning, null, 'no population spawning while deploying');
 			});
 		}));
 	});
