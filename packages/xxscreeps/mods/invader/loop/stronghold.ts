@@ -113,8 +113,8 @@ function makeSafeSearchOptions({ ramparts }: StrongholdContext): RoomSearchOptio
 	return {
 		ignoreCreeps: true,
 		costCallback(roomName, matrix) {
-			const costs = [ ...Fn.map(ramparts, rampart =>
-				[ rampart.pos, Math.max(1, matrix.get(rampart.pos.x, rampart.pos.y)) ] as const) ];
+			const costs = ramparts.map(rampart =>
+				[ rampart.pos, Math.max(1, matrix.get(rampart.pos.x, rampart.pos.y)) ] as const);
 			matrix._bits.fill(0xff);
 			for (const [ pos, cost ] of costs) {
 				matrix.set(pos.x, pos.y, cost);
