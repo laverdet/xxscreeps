@@ -28,26 +28,6 @@ export function appendEventLog(room: Room, event: AnyEventLog) {
 	} as never);
 }
 
-declare module './room.js' {
-	interface Room {
-		/**
-		 * Returns an array of events happened on the previous tick in this room.
-		 * @param raw If this parameter is false or undefined, the method returns a parsed array of
-		 * event objects. If `raw` is truthy, then raw JSON in string format is returned.
-		 * @returns An array of events. Each event represents some game action in the following format:
-		 * `{ event: EVENT_ATTACK, objectId: '54bff72ab32a10f73a57d017', data: { ... } }`. The `data`
-		 * property is different for each event type, see the
-		 * [official documentation](https://docs.screeps.com/api/#Room.getEventLog) for details.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.getEventLog
-		 */
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		getEventLog(raw: true): string;
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		getEventLog(raw?: false): GameEvent[];
-	}
-}
-
 extend(Room, {
 	// @ts-expect-error
 	getEventLog(raw = false) {

@@ -1,3 +1,6 @@
+declare module 'xxscreeps:mods/main';
+declare module 'xxscreeps:mods/schema';
+
 declare module 'xxscreeps:backend' {
 	interface Context {
 		authenticateForProvider: (provider: string, providerId: string) => Promise<string>;

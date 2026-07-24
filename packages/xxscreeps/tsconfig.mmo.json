@@ -5,7 +5,7 @@
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},
 	},
-	"include": [ "mods/mmo", "config/**/xx.d.ts", "mods/classic/**/xx.d.ts", "mods/modern/**/xx.d.ts" ],
+	"include": [ "mods/mmo", "game/**/xx.d.ts", "mods/classic/**/xx.d.ts", "mods/modern/**/xx.d.ts" ],
 	"references": [
 		{ "path": "./tsconfig.json" },
 	],

@@ -1,5 +1,4 @@
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
-import type { Terrain } from 'xxscreeps/game/terrain.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { getOffsetsFromDirection } from 'xxscreeps/game/direction.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -23,74 +22,6 @@ export type RoomPath = {
 	dy: -1 | 0 | 1;
 	direction: Direction;
 }[];
-
-declare module './room.js' {
-
-	namespace Room {
-		/**
-		 * Serialize a path array into a short string representation, which is suitable to store in
-		 * memory.
-		 * @param path A path array retrieved from
-		 * [`Room.findPath`](https://docs.screeps.com/api/#Room.findPath).
-		 * @returns A serialized string form of the given path.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.serializePath
-		 */
-		const serializePath: (path: RoomPath) => string;
-
-		/**
-		 * Deserialize a short string path representation into an array form.
-		 * @param path A serialized path string.
-		 * @returns A path array.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.deserializePath
-		 */
-		const deserializePath: (path: string) => RoomPath;
-	}
-
-	interface Room {
-		/**
-		 * Find the exit direction en route to another room. Please note that this method is not
-		 * required for inter-room movement, you can simply pass the target in another room into
-		 * [`Creep.moveTo`](https://docs.screeps.com/api/#Creep.moveTo) method.
-		 * @param room Another room name or room object.
-		 * @returns The room direction constant, one of the following: `FIND_EXIT_TOP`,
-		 * `FIND_EXIT_RIGHT`, `FIND_EXIT_BOTTOM`, `FIND_EXIT_LEFT`. Or one of the following error codes:
-		 * `ERR_NO_PATH`, `ERR_INVALID_ARGS`
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.findExitTo
-		 */
-		findExitTo: (room: Room | string) => any;
-
-		/**
-		 * Get a [`Room.Terrain`](https://docs.screeps.com/api/#Room-Terrain) object which provides fast
-		 * access to static terrain data. This method works for any room in the world even if you have
-		 * no access to it.
-		 * @returns Returns new [`Room.Terrain`](https://docs.screeps.com/api/#Room-Terrain) object.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.getTerrain
-		 */
-		getTerrain: () => Terrain;
-
-		/**
-		 * Find an optimal path inside the room between fromPos and toPos using [Jump Point Search
-		 * algorithm](http://en.wikipedia.org/wiki/Jump_point_search).
-		 * @param origin The start position.
-		 * @param goal The end position.
-		 * @param options An object of {@link FindPathOptions}.
-		 * @returns An array with path steps in the following format:
-		 * `[ { x: 10, y: 5, dx: 1, dy: 0, direction: RIGHT }, ... ]`
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.findPath
-		 */
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize: true }): string;
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions): RoomPath | string;
-	}
-}
 
 Object.assign(Room, {
 	serializePath(path: RoomPath) {

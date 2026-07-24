@@ -4,8 +4,9 @@ import type { InspectOptionsStylized } from 'node:util';
 import type { GameState } from 'xxscreeps/game/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import type { Terrain } from 'xxscreeps/game/terrain.js';
 import type { UnknownObject } from 'xxscreeps/utility/types.js';
+import type { RoomConstructor, Room as RoomInterface } from 'xxscreeps:mods/game';
+import { withStatics } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
@@ -16,6 +17,8 @@ import { findHandlers, lookConstants } from './symbols.js';
 
 export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
 
+export interface Room extends RoomInterface {}
+
 /**
  * An object representing the room in which your units and structures are in. It can be used to look
  * around, find paths, etc. Every `RoomObject` in the room contains its linked `Room` instance in
@@ -23,15 +26,7 @@ export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': nul
  * @public
  * @see https://docs.screeps.com/api/#Room
  */
-export class Room extends withOverlay(BufferObject, shape) {
-	/**
-	 * An object which provides fast access to room terrain data. These objects can be constructed for
-	 * any room in the world even if you have no access to it.
-	 * @public
-	 * @see https://docs.screeps.com/api/#Room-Terrain
-	 */
-	declare static Terrain: typeof Terrain;
-
+export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObject, shape)) {
 	#didInitialize = false;
 	readonly #findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	readonly #lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));

@@ -58,14 +58,3 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 		return create(site.pos, site['#user']);
 	},
 });
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * The Storage structure of this room, if present, otherwise undefined.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.storage
-		 */
-		storage: StructureStorage | undefined;
-	}
-}
