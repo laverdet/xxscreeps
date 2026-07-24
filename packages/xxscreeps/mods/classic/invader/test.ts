@@ -14,7 +14,7 @@ import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { lookForStructureAt, lookForStructures } from '../classic/structure/structure.js';
+import { lookForStructureAt, lookForStructures } from '../structure/structure.js';
 import { kInvaderUserId } from './game.js';
 import { create as createInvaderCore } from './invader-core.js';
 
@@ -22,7 +22,7 @@ import { create as createInvaderCore } from './invader-core.js';
 //   TOP -> W7N8 (y=0 edge), RIGHT -> W6N7 (x=49 edge),
 //   BOTTOM -> W7N6 (y=49 edge), LEFT -> W8N7 (x=0 edge)
 
-describe('mods/invader', () => {
+describe('mods/classic/invader', () => {
 	describe('exit filtering', () => {
 		const dummyPos = new RoomPosition(25, 25, 'W7N7');
 
