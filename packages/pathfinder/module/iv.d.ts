@@ -1,5 +1,4 @@
 export const module: import('@isolated-vm/experimental').NativeModule;
-export const path: string;
 
 interface RoomEntry {
 	room: number;

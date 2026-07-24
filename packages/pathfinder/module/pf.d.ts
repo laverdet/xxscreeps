@@ -1,5 +1,3 @@
-export const path: string;
-
 interface RoomEntry {
 	room: number;
 	terrain: Readonly<Uint8Array>;
