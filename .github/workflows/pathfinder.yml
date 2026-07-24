@@ -2,10 +2,7 @@ name: '@xxscreeps/pathfinder'
 
 on:
   push:
-    paths:
-      - .github/workflows/pathfinder.yml
-      - packages/pathfinder/**
-      - pnpm-lock.yaml
+    branches: [ main ]
   pull_request:
     paths:
       - .github/workflows/pathfinder.yml
@@ -110,7 +107,7 @@ jobs:
           tool: /c/msys64/usr/bin/pacman
           packages: |
             mingw-w64-%a-boost
-            mingw64/mingw-w64-%a-cmake>=4.3.0
+            mingw64/mingw-w64-%a-cmake>=4.4.0
             mingw64/mingw-w64-%a-ninja
           path: |
             /c/msys64/usr/bin
@@ -151,21 +148,6 @@ jobs:
           }
           EOF
           echo "ECO_STD=/$(cygpath.exe -m "$RUNNER_TOOL_CACHE/stl.modules.json")" >> "$GITHUB_ENV"
-
-          # Patch cmake
-          # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/12053
-          patch --batch --forward --unified /c/msys64/mingw64/share/cmake/Modules/Compiler/Clang-CXX-CXXImportStd.cmake <<"EOF"
-          @@ -4,8 +4,7 @@
-             elseif (CMAKE_CXX_STANDARD_LIBRARY STREQUAL "libstdc++")
-               set(_clang_modules_json_impl "libstdc++")
-             else ()
-          -    set(CMAKE_CXX_COMPILER_IMPORT_STD_ERROR_MESSAGE "Only `libc++` and `libstdc++` are supported" PARENT_SCOPE)
-          -    return ()
-          +    set(_clang_modules_json_impl "libc++")
-             endif ()
-
-             if (NOT CMAKE_CXX_STDLIB_MODULES_JSON)
-          EOF
           echo ::endgroup::
 
       # Setup desired nodejs version (except alpine, which will have to deal with what it got)
@@ -176,13 +158,18 @@ jobs:
 
       # Setup repository
       - uses: actions/checkout@v5
+      - if: matrix.host.container == 'alpine:edge'
+        run: npm install -g pnpm@11.13.0
+      - if: matrix.host.container != 'alpine:edge'
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - shell: sh
         name: pnpm install
         run: |
-          npm config set script-shell /bin/sh
-          npm install -g pnpm
+          pnpm config set script-shell /bin/sh
           pnpm install --frozen-lockfile --ignore-scripts
-          npx tsc -b
+          pnpm run -s build
 
       # Build
       - shell: sh
@@ -300,12 +287,14 @@ jobs:
 
       # Setup
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - shell: sh
         name: pnpm install
         run: |
-          npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
-          npx tsc -b
+          pnpm run -s build
       - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.host.triplet }}
@@ -323,8 +312,8 @@ jobs:
       - shell: sh
         name: Test
         run: |
-          pnpm run build
-          pnpm run test
+          pnpm run -s build
+          pnpm run -s test
 
   release:
     name: Release
@@ -341,12 +330,17 @@ jobs:
           # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
           # standard.
           node-version: 24
+      - if: matrix.host.container == 'alpine:edge'
+        run: npm install -g pnpm@11.13.0
+      - if: matrix.host.container != 'alpine:edge'
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - shell: sh
         name: pnpm install
         run: |
-          npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
-          pnpm run build
+          pnpm run -s build
 
       # Receive artifacts
       - id: artifacts

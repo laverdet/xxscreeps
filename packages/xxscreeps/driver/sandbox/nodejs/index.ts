@@ -7,9 +7,8 @@ import { createRequire } from 'node:module';
 import * as process from 'node:process';
 import * as vm from 'node:vm';
 import { resolve } from '@loaderkit/resolve/esm';
-import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { makeModSourceText } from 'xxscreeps/config/loader.js';
-import { mods } from 'xxscreeps/config/mods.js';
+import { asyncLoaderFileSystem, mods } from 'xxscreeps/config/mods.js';
 import { privateTransformLoader } from 'xxscreeps/driver/private/transform.js';
 import { makePackagesModule } from 'xxscreeps/engine/schema/build/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -46,7 +45,7 @@ const resolver = function() {
 					}
 				}();
 				const resolveReferrer = referrer?.startsWith('xxscreeps:') ? import.meta.url : referrer;
-				const { url } = await resolve(defaultAsyncFileSystem, alias, new URL(resolveReferrer ?? import.meta.url));
+				const { url } = await resolve(asyncLoaderFileSystem, alias, new URL(resolveReferrer ?? import.meta.url));
 				return url.href;
 			});
 		}
