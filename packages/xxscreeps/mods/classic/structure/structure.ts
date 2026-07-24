@@ -155,7 +155,7 @@ export class OwnedStructure extends withOverlay(Structure, ownedStructureShape) 
 	}
 
 	override '#addToMyGame'(game: GameConstructor) {
-		game.structures[this.id] = this as never;
+		game.structures[this.id] = this satisfies Structure as unknown as AnyStructure;
 	}
 
 	'#sendAttackNotify'(_context: ProcessorContext, _source: RoomObject | undefined) {}

@@ -1,7 +1,8 @@
 import type { ProcessorContext } from './room.js';
+import type { ExpandModInterface } from '../schema/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { CounterExtract, Implementation } from 'xxscreeps/utility/types.js';
 import type { Intent } from 'xxscreeps:mods/processor';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
@@ -80,7 +81,7 @@ export function registerIntentProcessor<Type extends object, Intent extends stri
 }
 
 // Types for intent processors
-type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, null>;
+type Intents = ExpandModInterface<Intent>;
 export type IntentReceivers = Room | Intents['type'];
 export type IntentsForReceiver<Type extends IntentReceivers> =
 	Type extends any

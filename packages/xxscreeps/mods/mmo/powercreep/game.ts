@@ -58,9 +58,9 @@ const find = registerFindHandlers({
 	[C.FIND_HOSTILE_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS).filter(creep => !creep.my),
 });
 
-export type PowerCreepLook = typeof look;
+export type PowerCreepLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const look = [ registerLook<PowerCreep>()(C.LOOK_POWER_CREEPS) ];
+const look = registerLook<PowerCreep>()(C.LOOK_POWER_CREEPS);
 
 registerGlobal(PowerCreep);
 declare module 'xxscreeps/game/runtime.js' {

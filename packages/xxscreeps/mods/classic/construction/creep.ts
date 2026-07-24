@@ -78,7 +78,7 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 			// `build`
 			const { room } = target;
 			if (structureFactories.get(target.structureType)?.obstacle) {
-				const creepFilter = room.controller?.safeMode ? (creep: Creep) => creep.my : () => true;
+				const creepFilter = room.controller?.safeMode === undefined ? () => true : (creep: Creep) => creep.my;
 				for (const creep of room.lookForAt(C.LOOK_CREEPS, target.pos.x, target.pos.y)) {
 					if (creepFilter(creep)) {
 						return C.ERR_INVALID_TARGET;

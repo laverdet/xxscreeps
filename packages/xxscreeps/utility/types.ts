@@ -45,8 +45,5 @@ export type Union<T, K extends keyof any = T extends any ? keyof T : never> =
 export type UnionToIntersection<Union> =
 	(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;
 
-// Turns `T[]` into `T`, or returns `T` if it's not an array
-export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
-
 // Returns an object with a given key
 export type WithKey<Path extends keyof any> = Record<Path, any>;

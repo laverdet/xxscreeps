@@ -8,7 +8,7 @@ import { creepShape, tombstoneShape } from './schema.js';
 import { Tombstone } from './tombstone.js';
 
 // Add `creeps` to global `Game` object
-hooks.register('gameInitializer', Game => Game.creeps = Object.create(null));
+hooks.register('gameInitializer', Game => Game.creeps = Object.create(null) as Record<string, Creep>);
 
 // Export `Creep` & `Tombstone` to runtime globals
 registerGlobal(Creep);

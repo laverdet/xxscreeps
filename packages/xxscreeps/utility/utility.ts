@@ -49,25 +49,25 @@ export function asyncDisposableToEffect(disposable: AsyncDisposable) {
 }
 
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
-type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return
-	? (this: Type, ...args: Args) => Return : {
-		configurable?: boolean;
-		enumerable?: boolean;
-		writable?: boolean;
-		get?: (this: Type) => any;
-		set?: (this: Type, value: any) => void;
-		value?: any;
-	};
+type AddThis<Type, Fn> =
+	Fn extends (...args: infer Args) => infer Return
+		? (this: Type, ...args: Args) => Return
+		: {
+			configurable?: boolean;
+			enumerable?: boolean;
+			writable?: boolean;
+			get?: (this: Type) => unknown;
+			set?: (this: Type, value: any) => void;
+			value?: unknown;
+		};
 export function extend<Type, Proto extends {
 	[Key in keyof Type]?: AddThis<Type, Type[Key]>;
-}>(ctor: abstract new (...args: any[]) => Type, proto: Proto | ((next: Type) => Proto)) {
-	const ext = typeof proto === 'function'
-		? proto(Object.getPrototypeOf(ctor.prototype)) : proto;
-	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(ext))) {
+}>(ctor: abstract new (...args: any[]) => Type, proto: Proto) {
+	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(proto))) {
 		if (info.value && typeof info.value === 'function') {
 			Object.defineProperty(ctor.prototype, key, { ...info, enumerable: false });
 		} else {
-			Object.defineProperty(ctor.prototype, key, info.value);
+			Object.defineProperty(ctor.prototype, key, info.value as PropertyDescriptor);
 		}
 	}
 }

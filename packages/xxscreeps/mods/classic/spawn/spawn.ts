@@ -179,8 +179,8 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	 * `dryRun` flag instead.
 	 * @see https://docs.screeps.com/api/#StructureSpawn.canCreateCreep
 	 */
-	canCreateCreep(body: any, name?: any) {
-		return checkSpawnCreep(this, body, name ?? getUniqueName(name => userGame?.creeps[name] !== undefined), null, null);
+	canCreateCreep(body: PartType[], name?: string) {
+		return checkSpawnCreep(this, body, name ?? `${Math.random()}`, null, null);
 	}
 
 	/**
@@ -202,13 +202,20 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	 * [`StructureSpawn.spawnCreep`](https://docs.screeps.com/api/#StructureSpawn.spawnCreep) instead.
 	 * @see https://docs.screeps.com/api/#StructureSpawn.createCreep
 	 */
-	createCreep(body: any, name: any, memory?: any) {
-		const result = this.spawnCreep(
-			body,
-			name ?? getUniqueName(name => userGame?.creeps[name] !== undefined),
-			{ memory },
-		);
-		return result === C.OK ? name : result;
+	createCreep(body: PartType[], name: string, memory?: object): Exclude<ReturnType<typeof checkSpawnCreep>, typeof C.OK> | string;
+	createCreep(body: PartType[], memory?: object): Exclude<ReturnType<typeof checkSpawnCreep>, typeof C.OK> | string;
+	createCreep(body: PartType[], ...args: unknown[]) {
+		const [ name, memory ] = function() {
+			const [ first, second ] = args;
+			if (typeof first === 'object' && second === undefined) {
+				return [ undefined, first ];
+			} else {
+				return [ first as string, second ];
+			}
+		}();
+		const intentName = name ?? getUniqueName(name => userGame?.creeps[name] !== undefined);
+		const result = this.spawnCreep(body, intentName, { memory });
+		return result === C.OK ? intentName : result;
 	}
 
 	/**

@@ -29,6 +29,7 @@ const payload = Fn.fromEntries(await Fn.pipe(
 			room['#objects'],
 			$$ => Fn.map($$, object => {
 				const info = function() {
+					// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 					switch (object['#lookType']) {
 						case 'structure':
 							return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;

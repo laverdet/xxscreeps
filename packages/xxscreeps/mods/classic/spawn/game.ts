@@ -18,7 +18,7 @@ declare module 'xxscreeps/game/game.js' {
 		spawns: Record<string, StructureSpawn>;
 	}
 }
-hooks.register('gameInitializer', Game => Game.spawns = Object.create(null));
+hooks.register('gameInitializer', Game => Game.spawns = Object.create(null) as Record<string, StructureSpawn>);
 
 hooks.register('roomInitializer', room => {
 	room.energyAvailable = 0;

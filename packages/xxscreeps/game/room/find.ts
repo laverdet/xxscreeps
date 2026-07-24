@@ -7,16 +7,16 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods
-export type FindHandler = (room: Room) => readonly any[];
+export type FindHandler = (room: Room) => readonly unknown[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
 
 // Convert a FIND_ constant to result type
 export type FindType<Find extends FindConstants> = ReturnType<KeyFor<FindHandlers, Find>>[number];
 
-export type RoomFindOptions<Type = any> = {
+export interface RoomFindOptions<Type = unknown> {
 	filter?: string | object | ((object: Type) => LooseBoolean);
-};
+}
 
 // Base FIND_EXIT_ handler (i.e. doesn't include FIND_EXIT)
 const exits = [ C.FIND_EXIT_TOP, C.FIND_EXIT_RIGHT, C.FIND_EXIT_BOTTOM, C.FIND_EXIT_LEFT ];

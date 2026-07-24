@@ -160,7 +160,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					const objects: Record<string, unknown> = {};
 					for (const object of room['#objects']) {
 						asUnion(object);
-						const value = object[Render]?.(previousTime === -1 ? undefined : previousTime);
+						const value = object[Render](previousTime === -1 ? undefined : previousTime);
 						if (value) {
 							if (value._id) {
 								objects[value._id] = value;

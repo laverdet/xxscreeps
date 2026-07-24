@@ -23,7 +23,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `ConstructionSite`
-export type ConstructionLook = typeof look;
+export type ConstructionLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
 

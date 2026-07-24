@@ -57,8 +57,7 @@ export class StructureLink extends withOverlay(OwnedStructure, linkShape) {
 	 */
 	transferEnergy(target: StructureLink, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
+			(amount ?? 0) || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
 		return chainIntentChecks(
 			() => checkAmount(amount),
 			() => checkTransferEnergy(this, target, intentAmount),

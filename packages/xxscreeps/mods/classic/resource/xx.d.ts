@@ -1,13 +1,10 @@
 declare module 'xxscreeps:mods/game' {
-	import type { EnergyLook, ResourceFind, ResourceLook, ResourceRoomSchemas } from 'xxscreeps/mods/classic/resource/game.js';
+	import type { ResourceFind, ResourceLook, ResourceRoomSchemas } from 'xxscreeps/mods/classic/resource/game.js';
 
 	enum ResourceSchema {
 		RESOURCE_ENERGY = 'energy',
 	}
 	interface Find { resource: ResourceFind }
-	interface Look {
-		resource: ResourceLook;
-		energy: EnergyLook;
-	}
+	interface Look { resource: ResourceLook }
 	interface RoomSchema { resource: ResourceRoomSchemas }
 }

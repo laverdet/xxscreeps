@@ -24,7 +24,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Source`
-export type SourceLook = typeof look;
+export type SourceLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Source>()(C.LOOK_SOURCES);
 

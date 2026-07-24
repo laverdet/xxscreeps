@@ -10,7 +10,7 @@ import './position.js';
 import './room.js';
 
 // Add `constructionSites` to global `game` object
-hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null));
+hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null) as Record<string, ConstructionSite>);
 
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite);

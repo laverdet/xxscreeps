@@ -26,7 +26,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Mineral`
-export type MineralLook = typeof look;
+export type MineralLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Mineral>()(C.LOOK_MINERALS);
 

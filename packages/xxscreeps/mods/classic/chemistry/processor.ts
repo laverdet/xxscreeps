@@ -32,9 +32,9 @@ const intents = [
 		context.didUpdate();
 	}),
 
-	registerIntentProcessor(StructureLab, 'boostCreep', {}, (lab, context, creepId: string, bodyPartsCount: number) => {
+	registerIntentProcessor(StructureLab, 'boostCreep', {}, (lab, context, creepId: string, bodyPartsCount: number | null) => {
 		const creep = Game.getObjectById<Creep>(creepId)!;
-		if (checkBoostCreep(lab, creep, bodyPartsCount || undefined) !== C.OK) {
+		if (checkBoostCreep(lab, creep, bodyPartsCount) !== C.OK) {
 			return;
 		}
 		const mineralType = lab.mineralType!;
@@ -48,7 +48,7 @@ const intents = [
 			nonBoostedParts.reverse();
 		}
 
-		if (bodyPartsCount) {
+		if (bodyPartsCount !== null) {
 			nonBoostedParts = nonBoostedParts.slice(0, bodyPartsCount);
 		}
 
