@@ -3,6 +3,7 @@ import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
+import type { ActionLogSchema } from 'xxscreeps:mods/game';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
@@ -224,10 +225,10 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 export type ActionLog = TypeOf<typeof actionLogFormat>;
-export type ActionLogType = ActionLog[number]['type'];
+export type ActionLogType = `${ActionLogSchema}`;
 type WithActionLog = Record<'#actionLog', ActionLog>;
 
-export function saveAction(object: WithActionLog, type: ActionLog[number]['type'], pos: RoomPosition) {
+export function saveAction(object: WithActionLog, type: ActionLogType, pos: RoomPosition) {
 	const actionLog = object['#actionLog'];
 	for (const action of actionLog) {
 		if (action.type === type) {

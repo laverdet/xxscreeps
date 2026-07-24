@@ -40,7 +40,7 @@ export const roomObjectShape = declare('RoomObject', struct({
 	'#posId': union({ pos: 'int32' }),
 }));
 
-export const actionLogFormat = declare('ActionLog', () => vector(struct({
+export const actionLogFormat = () => declare('ActionLog', vector(struct({
 	type: enumerated(...enumeratedForPath<ActionLogSchema>()('ActionLog.action')),
 	x: 'int8',
 	y: 'int8',
