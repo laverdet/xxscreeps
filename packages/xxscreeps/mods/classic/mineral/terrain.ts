@@ -1,7 +1,8 @@
+import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { iterateInRangeTo } from 'xxscreeps/game/position.js';
+import { iterateArea, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from './constants.js';
 import { create as createExtractor } from './extractor.js';
@@ -26,6 +27,10 @@ function pickMineralDensity(): number {
 		probability => probability !== undefined && random <= probability);
 }
 
+// Rooms whose sources were spread (three or more) spread their mineral the same way, like a
+// fourth source; the keeper lairs guarding them then land apart as well.
+const kSpreadSourceThreshold = 3;
+
 hooks.register('roomGenerator', {
 	order: 2,
 	generate(context) {
@@ -34,11 +39,17 @@ hooks.register('roomGenerator', {
 		if (mineralType === false) {
 			return true;
 		}
-		const position = context.findRandomPosition(4, 42, candidate =>
+		const accept = (candidate: RoomPosition) =>
 			context.isPlaceable(candidate) && !Fn.some(iterateInRangeTo(candidate, 4), near => {
 				const tags = context.tagsAt(near);
 				return tags.has('source') || tags.has('controller');
-			}));
+			});
+		const sources = [ ...Fn.filter(
+			iterateArea(context.room.name, 0, 0, 49, 49),
+			candidate => context.tagsAt(candidate).has('source')) ];
+		const position = sources.length >= kSpreadSourceThreshold
+			? context.findSpreadPosition(4, 42, accept, sources)
+			: context.findRandomPosition(4, 42, accept);
 		if (position === undefined) {
 			return false;
 		}
