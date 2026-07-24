@@ -4,6 +4,10 @@ declare module 'xxscreeps:mods/game' {
 	enum ActionLogSchema {
 		transferEnergy = 'transferEnergy',
 	}
+	interface ConstructionCost {
+		link: 5000;
+		storage: 30000;
+	}
 	interface RoomSchema { logistics: LogisticsRoomSchemas }
 }
 

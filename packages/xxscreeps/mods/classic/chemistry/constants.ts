@@ -1,3 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.lab = 50000;
+
 export const STRUCTURE_LAB = 'lab' as const;
 
 export const LAB_HITS = 500;

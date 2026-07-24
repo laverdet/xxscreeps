@@ -1,4 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
 import * as C from 'xxscreeps:mods/constants';
+
+CONSTRUCTION_COST.factory = 100000;
 
 // Structure traits
 export const FACTORY_HITS = 1000;

@@ -47,6 +47,7 @@ declare module 'xxscreeps:mods/game' {
 		RESOURCE_CATALYZED_GHODIUM_ALKALIDE = 'XGHO2',
 	}
 
+	interface ConstructionCost { lab: 50000 }
 	interface RoomSchema { chemistry: [ ChemistryRoomSchema ] }
 }
 

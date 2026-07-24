@@ -11,6 +11,7 @@ declare module 'xxscreeps:mods/game' {
 		RESOURCE_CATALYST = 'X',
 		RESOURCE_GHODIUM = 'G',
 	}
+	interface ConstructionCost { extractor: 5000 }
 	interface Find { mineral: MineralFind }
 	interface Look { mineral: MineralLook }
 	interface RoomSchema { mineral: MineralRoomSchemas }

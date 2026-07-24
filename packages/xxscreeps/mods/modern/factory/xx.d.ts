@@ -64,6 +64,7 @@ declare module 'xxscreeps:mods/game' {
 		RESOURCE_ESSENCE = 'essence',
 	}
 
+	interface ConstructionCost { factory: 100000 }
 	interface RoomSchema { factory: [ FactoryRoomSchema ] }
 }
 

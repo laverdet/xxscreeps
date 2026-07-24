@@ -1,3 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.extractor = 5000;
+
 export const FIND_MINERALS = 116 as const;
 export const LOOK_MINERALS = 'mineral' as const;
 

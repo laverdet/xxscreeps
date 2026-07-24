@@ -4,6 +4,7 @@ declare module 'xxscreeps:mods/game' {
 	enum ResourceSchema {
 		RESOURCE_ENERGY = 'energy',
 	}
+	interface ConstructionCost { container: 5000 }
 	interface Find { resource: ResourceFind }
 	interface Look { resource: ResourceLook }
 	interface RoomSchema { resource: ResourceRoomSchemas }

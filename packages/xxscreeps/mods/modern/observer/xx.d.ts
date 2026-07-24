@@ -1,6 +1,7 @@
 declare module 'xxscreeps:mods/game' {
 	import type { ObserverRoomSchemas } from 'xxscreeps/mods/modern/observer/game.js';
 
+	interface ConstructionCost { observer: 8000 }
 	interface RoomSchema { observer: ObserverRoomSchemas }
 }
 

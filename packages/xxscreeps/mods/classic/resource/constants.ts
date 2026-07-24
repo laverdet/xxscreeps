@@ -1,13 +1,7 @@
 import type { ResourceType } from './resource.js';
-import * as Construction from 'xxscreeps/mods/classic/construction/constants.js';
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
 
-// Add `Container` construction cost constant
-Construction.CONSTRUCTION_COST.container = 5000;
-declare module 'xxscreeps/mods/classic/construction/constants.js' {
-	interface ConstructionCost {
-		container: 5000;
-	}
-}
+CONSTRUCTION_COST.container = 5000;
 
 export const CONTAINER_HITS = 250000;
 export const CONTAINER_CAPACITY = 2000;

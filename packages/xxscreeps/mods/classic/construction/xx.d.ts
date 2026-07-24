@@ -3,6 +3,9 @@ declare module 'xxscreeps:mods/game' {
 	import type { ConstructionFind, ConstructionLook } from 'xxscreeps/mods/classic/construction/room.js';
 	import type { ConstructionEventRoomSchemas } from 'xxscreeps/mods/classic/construction/schema.js';
 
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	interface ConstructionCost {}
+
 	enum ActionLogSchema {
 		build = 'build',
 		repair = 'repair',
