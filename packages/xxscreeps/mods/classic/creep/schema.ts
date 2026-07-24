@@ -1,3 +1,4 @@
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
@@ -104,27 +105,31 @@ export const tombstoneShape = declare('Tombstone', struct(roomObjectShape, {
 }));
 
 // Schema types
-export type CreepEventRoomSchemas = [ typeof transferEventSchema, typeof exitEventSchema ];
+export type CreepEventRoomSchemas = [ typeof transferEventVariantSchema, typeof exitEventVariantSchema ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const transferEventSchema = registerVariant('Room.eventLog', declare('TransferEvent', struct({
+export type TransferEventType = TypeOf<typeof transferEventSchema>;
+const transferEventSchema = declare('TransferEvent', struct({
 	...variant(C.EVENT_TRANSFER),
 	event: constant(C.EVENT_TRANSFER),
 	objectId: Id.format,
 	targetId: Id.format,
 	resourceType: resourceEnumFormat,
 	amount: 'int32',
-})));
-
+}));
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const exitEventSchema = registerVariant('Room.eventLog', declare('ExitEvent', struct({
+const transferEventVariantSchema = registerVariant('Room.eventLog', transferEventSchema);
+
+export type ExitEventType = TypeOf<typeof exitEventSchema>;
+const exitEventSchema = declare('ExitEvent', struct({
 	...variant(C.EVENT_EXIT),
 	event: constant(C.EVENT_EXIT),
 	objectId: Id.format,
 	room: 'string',
 	x: 'int8',
 	y: 'int8',
-})));
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const exitEventVariantSchema = registerVariant('Room.eventLog', exitEventSchema);
 
 // ---
 

@@ -1,9 +1,9 @@
 declare module 'xxscreeps:mods/game' {
 	import type { RoomPosition } from 'xxscreeps/game/position.js';
-	import type { ConstructibleStructureType } from 'xxscreeps/mods/classic/construction/construction-site.js';
+	import type { ConstructibleStructureType, ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 	import type { ConstructionRoomSchema } from 'xxscreeps/mods/classic/construction/game.js';
 	import type { ConstructionFind, ConstructionLook } from 'xxscreeps/mods/classic/construction/room.js';
-	import type { ConstructionEventRoomSchemas } from 'xxscreeps/mods/classic/construction/schema.js';
+	import type { BuildEventType, ConstructionEventRoomSchemas, RepairEventType } from 'xxscreeps/mods/classic/construction/schema.js';
 
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 	interface ConstructionCost {}
@@ -12,8 +12,13 @@ declare module 'xxscreeps:mods/game' {
 		build = 'build',
 		repair = 'repair',
 	}
+	interface EventLog {
+		build: BuildEventType;
+		repair: RepairEventType;
+	}
 	interface Find { construction: ConstructionFind }
 	interface Look { construction: ConstructionLook }
+	interface RoomObjects { constructionSite: ConstructionSite }
 	interface RoomSchema { construction: [ ConstructionRoomSchema, ...ConstructionEventRoomSchemas ] }
 
 	interface Room {

@@ -10,7 +10,7 @@ import { create as createPowerSpawn } from 'xxscreeps/mods/modern/powerspawn/pow
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
-import { createPowerCreep, createSpawnedPowerCreep, read, write } from './powercreep.js';
+import { PowerCreep, createPowerCreep, createSpawnedPowerCreep, read, write } from './powercreep.js';
 
 const owner = '100';
 const hostile = '101';
@@ -55,7 +55,7 @@ describe('mods/mmo/powercreep', () => {
 		// reaching rank 2 of a power needs a total level >= 2 already allocated.
 		await setPower(shard.db, 9000);
 		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
-		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
+		const creep: PowerCreep = (await Model.loadRoster(shard.db, owner))[0]!;
 		assert.strictEqual(await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 2 }), C.ERR_FULL);
 	}));
 

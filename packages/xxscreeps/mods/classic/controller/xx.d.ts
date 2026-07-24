@@ -1,12 +1,18 @@
 declare module 'xxscreeps:mods/game' {
 	import type { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 	import type { ControllerRoomSchemas } from 'xxscreeps/mods/classic/controller/game.js';
-	import type { ControllerEventRoomSchemas } from 'xxscreeps/mods/classic/controller/schema.js';
+	import type { AttackControllerEventType, ControllerEventRoomSchemas, ReserveControllerEventType, UpgradeControllerEventType } from 'xxscreeps/mods/classic/controller/schema.js';
 
 	enum ActionLogSchema {
 		reserveController = 'reserveController',
 		upgradeController = 'upgradeController',
 	}
+	interface EventLog {
+		attackController: AttackControllerEventType;
+		reserveController: ReserveControllerEventType;
+		upgradeController: UpgradeControllerEventType;
+	}
+	interface RoomObjects { controller: StructureController }
 	interface RoomSchema { controller: [ ...ControllerRoomSchemas, ...ControllerEventRoomSchemas ] }
 
 	interface Room {

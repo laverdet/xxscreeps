@@ -1,4 +1,5 @@
 declare module 'xxscreeps:mods/game' {
+	import type { StructureFactory } from 'xxscreeps/mods/modern/factory/factory.js';
 	import type { FactoryRoomSchema } from 'xxscreeps/mods/modern/factory/game.js';
 
 	enum ActionLogSchema {
@@ -65,6 +66,7 @@ declare module 'xxscreeps:mods/game' {
 	}
 
 	interface ConstructionCost { factory: 100000 }
+	interface RoomObjects { factory: StructureFactory }
 	interface RoomSchema { factory: [ FactoryRoomSchema ] }
 }
 

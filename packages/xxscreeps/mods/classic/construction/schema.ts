@@ -1,4 +1,5 @@
 import type { ConstructibleStructureType } from './construction-site.js';
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
@@ -38,10 +39,10 @@ export const constructionSiteShape = () => declare('ConstructionSite', struct(ro
 // Schema types
 registerEnumerated('ActionLog.action', 'build', 'repair');
 
-export type ConstructionEventRoomSchemas = [ typeof buildEventSchema, typeof repairEventSchema ];
+export type ConstructionEventRoomSchemas = [ typeof buildEventVariantSchema, typeof repairEventVariantSchema ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const buildEventSchema = registerVariant('Room.eventLog', declare('BuildEvent', struct({
+export type BuildEventType = TypeOf<typeof buildEventSchema>;
+const buildEventSchema = declare('BuildEvent', struct({
 	...variant(C.EVENT_BUILD),
 	event: constant(C.EVENT_BUILD),
 	objectId: Id.format,
@@ -52,14 +53,18 @@ const buildEventSchema = registerVariant('Room.eventLog', declare('BuildEvent', 
 	x: 'int8',
 	y: 'int8',
 	incomplete: 'bool',
-})));
-
+}));
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const repairEventSchema = registerVariant('Room.eventLog', declare('RepairEvent', struct({
+const buildEventVariantSchema = registerVariant('Room.eventLog', buildEventSchema);
+
+export type RepairEventType = TypeOf<typeof repairEventSchema>;
+const repairEventSchema = declare('RepairEvent', struct({
 	...variant(C.EVENT_REPAIR),
 	event: constant(C.EVENT_REPAIR),
 	objectId: Id.format,
 	targetId: Id.format,
 	amount: 'int32',
 	energySpent: 'int32',
-})));
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const repairEventVariantSchema = registerVariant('Room.eventLog', repairEventSchema);

@@ -1,5 +1,6 @@
 declare module 'xxscreeps:mods/game' {
 	import type { LogisticsRoomSchemas } from 'xxscreeps/mods/classic/logistics/game.js';
+	import type { StructureLink } from 'xxscreeps/mods/classic/logistics/link.js';
 	import type { StructureStorage } from 'xxscreeps/mods/classic/logistics/storage.js';
 
 	enum ActionLogSchema {
@@ -8,6 +9,10 @@ declare module 'xxscreeps:mods/game' {
 	interface ConstructionCost {
 		link: 5000;
 		storage: 30000;
+	}
+	interface RoomObjects {
+		link: StructureLink;
+		storage: StructureStorage;
 	}
 	interface RoomSchema { logistics: LogisticsRoomSchemas }
 

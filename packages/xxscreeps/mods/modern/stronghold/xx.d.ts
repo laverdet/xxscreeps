@@ -1,6 +1,8 @@
 declare module 'xxscreeps:mods/game' {
 	import type { StrongholdRoomSchema } from 'xxscreeps/mods/modern/stronghold/game.js';
+	import type { StructureInvaderCore } from 'xxscreeps/mods/modern/stronghold/invader-core.js';
 
+	interface RoomObjects { invaderCore: StructureInvaderCore }
 	interface RoomSchema { stronghold: [ StrongholdRoomSchema ] }
 }
 

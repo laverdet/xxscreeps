@@ -1,4 +1,6 @@
 declare module 'xxscreeps:mods/game' {
+	import type { RoomObject } from 'xxscreeps/game/object.js';
+	import type { RoomPosition } from 'xxscreeps/game/position.js';
 	import type { Color, checkCreateFlag } from 'xxscreeps/mods/meta/flag/flag.js';
 	import type { FlagFind, FlagLook } from 'xxscreeps/mods/meta/flag/game.js';
 

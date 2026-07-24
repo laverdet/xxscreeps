@@ -3,6 +3,7 @@ declare module 'xxscreeps:mods/game' {
 	import type { StructureTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 
 	interface ConstructionCost { terminal: 100000 }
+	interface RoomObjects { terminal: StructureTerminal }
 	interface RoomSchema { terminal: TerminalRoomSchema }
 
 	interface Room {

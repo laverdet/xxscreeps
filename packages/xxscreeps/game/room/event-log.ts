@@ -1,10 +1,11 @@
+import type { EventLog } from 'xxscreeps:mods/game';
 import { Variant } from 'xxscreeps/schema/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 
 // Union type of all events
 type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;
-export type AnyEventLog = RemoveVariant<Room['#eventLog'][number]>;
+type AnyEventLog = RemoveVariant<EventLog[keyof EventLog]>;
 
 export interface GameEvent {
 	[key: string]: unknown;
