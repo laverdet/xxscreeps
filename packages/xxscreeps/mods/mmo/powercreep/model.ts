@@ -92,7 +92,7 @@ export function upgrade(db: Database, userId: string, id: string, powers: Record
 			creep['#powers'] = Fn.pipe(
 				Object.entries(powers),
 				$$ => Fn.filter($$, ([ , level ]) => level !== 0),
-				$$ => Fn.map($$, ([ power, level ]) => ({ power: Number(power), level })),
+				$$ => Fn.map($$, ([ power, level ]) => ({ cooldownTime: 0, level, power: Number(power) })),
 				$$ => [ ...$$ ]);
 		}
 		return code;

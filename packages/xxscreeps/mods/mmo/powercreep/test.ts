@@ -1,4 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
@@ -9,7 +10,7 @@ import { create as createPowerSpawn } from 'xxscreeps/mods/modern/powerspawn/pow
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
-import { createPowerCreep, read, write } from './powercreep.js';
+import { createPowerCreep, createSpawnedPowerCreep, read, write } from './powercreep.js';
 
 const owner = '100';
 const hostile = '101';
@@ -106,10 +107,10 @@ describe('mods/mmo/powercreep', () => {
 
 	test('the stored object round-trips its powers through the blob', () => {
 		const creep = createPowerCreep('a', 'Alice', C.POWER_CLASS.OPERATOR, owner);
-		creep['#powers'] = [ { power: C.PWR_GENERATE_OPS, level: 2 } ];
+		creep['#powers'] = [ { cooldownTime: 0, level: 2, power: C.PWR_GENERATE_OPS } ];
 		const [ view ] = read(write([ creep ]));
 		assert.strictEqual(view!.level, 2);
-		assert.deepStrictEqual(view!.powers, { [C.PWR_GENERATE_OPS]: { level: 2 } });
+		assert.deepStrictEqual(view!.powers, { [C.PWR_GENERATE_OPS]: { cooldown: 0, level: 2 } });
 	});
 
 	test('concurrent mutations both survive through blob compare-and-swap', () => sim(async ({ shard }) => {
@@ -154,7 +155,7 @@ describe('PowerCreep spawned', () => {
 		await player(owner, Game => {
 			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
 			const forged = createPowerCreep(id, 'Forged', C.POWER_CLASS.OPERATOR, owner);
-			forged['#powers'] = [ { power: C.PWR_GENERATE_OPS, level: 5 } ];
+			forged['#powers'] = [ { cooldownTime: 0, level: 5, power: C.PWR_GENERATE_OPS } ];
 			assert.strictEqual(forged.spawn(powerSpawn), C.OK);
 		});
 		await tick();
@@ -419,4 +420,166 @@ describe('PowerCreep spawned', () => {
 			assert.strictEqual(createPowerCreep(Id.generateId(), 'Wrong', C.POWER_CLASS.OPERATOR, hostile).spawn(powerSpawn), C.ERR_NOT_OWNER);
 		});
 	}));
+});
+
+describe('PowerCreep powers', () => {
+	// Roster prep: create Alice, learn the requested powers, and return her roster id.
+	const createAliceWith = async (db: Database, powers: Record<string, number>) => {
+		await setPower(db, 16000);
+		await Model.create(db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
+		const [ created ] = await Model.loadRoster(db, owner);
+		if (Object.keys(powers).length > 0) {
+			assert.strictEqual(await Model.upgrade(db, owner, created!.id, powers), C.OK);
+		}
+		return created!.id;
+	};
+
+	const spawnAlice = (Game: GameConstructor, id: string) => {
+		const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+		assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+	};
+
+	describe('usePower', () => {
+		const spawnPos = new RoomPosition(25, 25, 'W1N1');
+		// The room controller sits at (42, 22), far outside enable/use range of the power spawn.
+		const sim = simulate({
+			W1N1: room => {
+				room['#insertObject'](createPowerSpawn(spawnPos, owner));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = owner;
+				room.controller!.isPowerEnabled = true;
+			},
+		});
+
+		test('an unlearned power is rejected', () => sim(async ({ player, tick, shard }) => {
+			const id = await createAliceWith(shard.db, {});
+			await player(owner, Game => spawnAlice(Game, id));
+			await tick();
+			await player(owner, Game => {
+				assert.strictEqual(Game.powerCreeps.Alice?.usePower(C.PWR_GENERATE_OPS), C.ERR_NO_BODYPART);
+			});
+		}));
+
+		test('GENERATE_OPS credits ops and starts the cooldown', () => sim(async ({ player, peekRoom, tick, shard }) => {
+			const id = await createAliceWith(shard.db, { [C.PWR_GENERATE_OPS]: 1 });
+			await player(owner, Game => spawnAlice(Game, id));
+			await tick();
+			await player(owner, Game => {
+				assert.strictEqual(Game.powerCreeps.Alice?.usePower(C.PWR_GENERATE_OPS), C.OK);
+			});
+			await tick();
+			await player(owner, Game => {
+				const alice = Game.powerCreeps.Alice;
+				assert.strictEqual(alice?.store[C.RESOURCE_OPS], 1);
+				assert.deepStrictEqual(alice.powers, {
+					[C.PWR_GENERATE_OPS]: { cooldown: C.POWER_INFO[C.PWR_GENERATE_OPS]!.cooldown, level: 1 },
+				});
+				assert.strictEqual(alice.usePower(C.PWR_GENERATE_OPS), C.ERR_TIRED);
+			});
+			await peekRoom('W1N1', room => {
+				const event = room.getEventLog().find(event => event.event === C.EVENT_POWER);
+				assert.strictEqual(event?.objectId, id);
+				assert.strictEqual(event.data?.power, C.PWR_GENERATE_OPS);
+			});
+		}));
+
+		test('GENERATE_OPS drops overflow ops on the ground', () => sim(async ({ player, poke, peekRoom, tick, shard }) => {
+			// Rank 2 generates 2 ops per use; a single spilled op would fully decay the tick it dropped.
+			const id = await createAliceWith(shard.db, { [C.PWR_GENERATE_OPS]: 2, [C.PWR_OPERATE_SPAWN]: 1 });
+			await player(owner, Game => spawnAlice(Game, id));
+			await tick();
+			await poke('W1N1', owner, (Game, room) => {
+				const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!;
+				alice.store['#add'](C.RESOURCE_ENERGY, alice.store.getFreeCapacity());
+			});
+			await tick();
+			await player(owner, Game => {
+				assert.strictEqual(Game.powerCreeps.Alice?.usePower(C.PWR_GENERATE_OPS), C.OK);
+			});
+			await tick();
+			await peekRoom('W1N1', room => {
+				const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!;
+				assert.strictEqual(alice.store[C.RESOURCE_OPS], 0);
+				// Both generated ops spill, minus the decay step of the tick they dropped in.
+				const dropped = room['#lookFor'](C.LOOK_RESOURCES).find(resource => resource.resourceType === C.RESOURCE_OPS);
+				assert.strictEqual(dropped?.amount, 1);
+			});
+		}));
+
+		test('a costed power checks ops before target and range', () => sim(async ({ player, poke, tick, shard }) => {
+			const id = await createAliceWith(shard.db, { [C.PWR_OPERATE_SPAWN]: 1 });
+			await player(owner, Game => spawnAlice(Game, id));
+			await tick();
+			await player(owner, Game => {
+				const alice = Game.powerCreeps.Alice!;
+				assert.strictEqual(alice.usePower(C.PWR_OPERATE_SPAWN), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+			await poke('W1N1', owner, (Game, room) => {
+				room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!.store['#add'](C.RESOURCE_OPS, 100);
+			});
+			await tick();
+			await player(owner, Game => {
+				const alice = Game.powerCreeps.Alice!;
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(alice.usePower(C.PWR_OPERATE_SPAWN), C.ERR_INVALID_TARGET);
+				assert.strictEqual(alice.usePower(C.PWR_OPERATE_SPAWN, controller), C.ERR_NOT_IN_RANGE);
+				assert.strictEqual(alice.enableRoom(controller), C.ERR_NOT_IN_RANGE);
+			});
+		}));
+	});
+
+	describe('enableRoom', () => {
+		// The power spawn sits on the open tile adjacent to the controller at (42, 22).
+		const sim = simulate({
+			W1N1: room => {
+				room['#insertObject'](createPowerSpawn(new RoomPosition(43, 22, 'W1N1'), owner));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = owner;
+			},
+		});
+
+		test('enableRoom flips the controller from an adjacent tile', () => sim(async ({ player, tick, shard }) => {
+			const id = await createAliceWith(shard.db, { [C.PWR_GENERATE_OPS]: 1 });
+			await player(owner, Game => spawnAlice(Game, id));
+			await tick();
+			await player(owner, Game => {
+				const alice = Game.powerCreeps.Alice!;
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(controller.isPowerEnabled, false);
+				assert.strictEqual(alice.usePower(C.PWR_GENERATE_OPS), C.ERR_INVALID_ARGS);
+				assert.strictEqual(alice.enableRoom(controller), C.OK);
+			});
+			await tick();
+			await player(owner, Game => {
+				assert.strictEqual(Game.rooms.W1N1!.controller?.isPowerEnabled, true);
+				assert.strictEqual(Game.powerCreeps.Alice?.usePower(C.PWR_GENERATE_OPS), C.OK);
+			});
+		}));
+	});
+
+	describe('hostile safe mode', () => {
+		// An owner power creep standing next to a hostile controller whose room is under safe mode.
+		const sim = simulate({
+			W2N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = hostile;
+				room['#safeModeUntil'] = 1000;
+				room.controller!.isPowerEnabled = true;
+				const sentinel = createSpawnedPowerCreep(
+					new RoomPosition(8, 10, 'W2N1'),
+					createPowerCreep('pc1', 'Sentinel', C.POWER_CLASS.OPERATOR, owner));
+				sentinel['#ageTime'] = 1000;
+				room['#insertObject'](sentinel);
+			},
+		});
+
+		test('a hostile safe mode blocks powers and enableRoom', () => sim(async ({ player }) => {
+			await player(owner, Game => {
+				const sentinel = Game.powerCreeps.Sentinel!;
+				const controller = Game.rooms.W2N1!.controller!;
+				assert.strictEqual(sentinel.usePower(C.PWR_GENERATE_OPS), C.ERR_INVALID_ARGS);
+				assert.strictEqual(sentinel.enableRoom(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
 });
