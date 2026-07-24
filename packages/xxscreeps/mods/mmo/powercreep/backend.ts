@@ -32,7 +32,8 @@ bindRenderer(PowerCreep, (creep, next, previousTime) => {
 		hitsMax: creep.hitsMax,
 		level: creep.level,
 		name: creep.name,
-		powers: creep.powers,
+		powers: Object.fromEntries(creep['#powers'].map(({ cooldownTime, level, power }) =>
+			[ power, { cooldownTime, level } ] as const)),
 		user: creep['#user'],
 	};
 });

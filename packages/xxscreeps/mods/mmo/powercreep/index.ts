@@ -3,7 +3,10 @@ import * as types from 'xxscreeps/tsroot.js';
 
 export const manifest: Manifest = {
 	dependencies: [
+		'xxscreeps/mods/classic/combat',
+		'xxscreeps/mods/classic/controller',
 		'xxscreeps/mods/classic/creep',
+		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/modern/powerbank',
 		'xxscreeps/mods/modern/powerspawn',
 	],

@@ -25,9 +25,6 @@ export interface RoomObjectEffect {
 	 */
 	effect?: number;
 
-	/** @public */
-	power?: number;
-
 	/**
 	 * Power level of the applied effect. Absent if the effect is not a Power effect.
 	 * @public
