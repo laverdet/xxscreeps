@@ -4,6 +4,7 @@
 		"paths": {
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},
+		"skipLibCheck": false,
 	},
 	"include": [ "mods/mmo", "game/**/xx.d.ts", "mods/classic/**/xx.d.ts", "mods/modern/**/xx.d.ts" ],
 	"references": [
