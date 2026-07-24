@@ -10,7 +10,7 @@ import { withStatics } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
-import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import { iteratee } from 'xxscreeps/utility/lodash.js';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
 import { shape } from './schema.js';
 import { findHandlers, lookConstants } from './symbols.js';
@@ -58,7 +58,7 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 		const results = getOrSet(this.#findCache, type, () => findHandlers.get(type)?.(this) ?? []);
 
 		// Copy or filter result
-		return Boolean(options.filter) ? results.filter(iteratee(options.filter!)) : results.slice();
+		return Boolean(options.filter) ? results.filter(iteratee(options.filter)) : results.slice();
 	}
 
 	/**

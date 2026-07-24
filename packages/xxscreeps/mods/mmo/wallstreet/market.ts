@@ -1,9 +1,10 @@
 import type { Order, OrderType } from './order.js';
 import type { StructureTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
+import type { Iteratee } from 'xxscreeps/utility/lodash.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Market } from 'xxscreeps/mods/classic/brokerage/market.js';
-import { filter } from 'xxscreeps/utility/iteratee.js';
+import { filter } from 'xxscreeps/utility/lodash.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Orders } from './order.js';
@@ -114,7 +115,7 @@ declare module 'xxscreeps/mods/classic/brokerage/market.js' {
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.market.getAllOrders
 		 */
-		getAllOrders: (predicate?: unknown) => Order[];
+		getAllOrders: (predicate?: Iteratee<Order> | null) => Order[];
 
 		/**
 		 * Get daily price history of the specified resource on the market for the last 14 days.
@@ -166,8 +167,8 @@ extend(Market, {
 		return result;
 	},
 
-	getAllOrders(predicate?: unknown) {
-		return filter(this['#orders'].active, predicate as never);
+	getAllOrders(predicate) {
+		return filter(this['#orders'].active, predicate);
 	},
 
 	getOrderById(id) {
