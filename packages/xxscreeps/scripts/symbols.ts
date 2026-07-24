@@ -7,8 +7,17 @@ import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 type ExitSide = 'top' | 'right' | 'bottom' | 'left';
 export type ExitMap = Record<ExitSide, number[]>;
 
+export type HighwayOrientation = 'vertical' | 'horizontal' | 'crossing';
+
 export interface GenerateRoomOptions {
 	exits?: Partial<ExitMap>;
+	/**
+	 * Generates highway terrain -- an open travel lane flanked by wall masses on the sector-facing
+	 * borders -- instead of cellular-automaton terrain. The orientation names the lane axis:
+	 * `vertical` masses the left+right borders, `horizontal` the top+bottom, and `crossing` only
+	 * the four corners.
+	 */
+	highway?: HighwayOrientation;
 	/** Wall layout 1-28; omit for a random layout. */
 	terrainType?: number;
 	/** Swamp layout 1-14, or 0 for no swamp; omit for a random layout. */
@@ -27,6 +36,16 @@ export interface RoomGeneratorContext {
 	 */
 	findRandomPosition: (min: number, span: number, accept: (position: RoomPosition) => boolean) =>
 		RoomPosition | undefined;
+	/**
+	 * A position within [min, min + span) on both axes satisfying `accept` that stays far
+	 * (Chebyshev) from every anchor -- chosen with jitter for natural variance, and undefined when
+	 * no candidate keeps the minimum spacing.
+	 */
+	findSpreadPosition: (
+		min: number, span: number,
+		accept: (position: RoomPosition) => boolean,
+		anchors: readonly RoomPosition[],
+	) => RoomPosition | undefined;
 	/** Whether `position` is an untagged wall tile with at least one passable neighbor. */
 	isPlaceable: (position: RoomPosition) => boolean;
 	/** Inserts `object` into the room and tags its position. */
