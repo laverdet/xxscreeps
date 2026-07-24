@@ -67,21 +67,3 @@ declare module 'xxscreeps/game/runtime.js' {
 		Spawn: typeof StructureSpawn;
 	}
 }
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * Total amount of energy available in all spawns and extensions in the room.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.energyAvailable
-		 */
-		energyAvailable: number;
-
-		/**
-		 * Total amount of `energyCapacity` of all spawns and extensions in the room.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.energyCapacityAvailable
-		 */
-		energyCapacityAvailable: number;
-	}
-}

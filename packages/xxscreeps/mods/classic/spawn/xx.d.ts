@@ -7,6 +7,22 @@ declare module 'xxscreeps:mods/game' {
 	}
 	interface Find { spawn: SpawnFind }
 	interface RoomSchema { spawn: SpawnRoomSchemas }
+
+	interface Room {
+		/**
+		 * Total amount of energy available in all spawns and extensions in the room.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.energyAvailable
+		 */
+		energyAvailable: number;
+
+		/**
+		 * Total amount of `energyCapacity` of all spawns and extensions in the room.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.energyCapacityAvailable
+		 */
+		energyCapacityAvailable: number;
+	}
 }
 
 declare module 'xxscreeps:mods/processor' {

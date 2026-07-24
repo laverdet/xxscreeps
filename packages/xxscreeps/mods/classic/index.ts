@@ -6,6 +6,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/classic/brokerage',
 		'xxscreeps/mods/classic/chemistry',
 		'xxscreeps/mods/classic/defense',
+		'xxscreeps/mods/classic/invader',
 		'xxscreeps/mods/classic/logistics',
 		'xxscreeps/mods/classic/road',
 		'xxscreeps/mods/classic/source',
@@ -23,12 +24,12 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/observer',
 		'xxscreeps/mods/modern/powerbank',
 		'xxscreeps/mods/modern/powerspawn',
+		'xxscreeps/mods/modern/stronghold',
 
 		'xxscreeps/mods/mmo/powercreep',
 		'xxscreeps/mods/mmo/wallstreet',
 
 		'xxscreeps/mods/portal',
-		'xxscreeps/mods/invader',
 		'xxscreeps/mods/intershardResource',
 	],
 	provides: null,

@@ -7,6 +7,7 @@ declare module 'xxscreeps:mods/constants' {
 	export * from 'xxscreeps/mods/classic/creep/constants.js';
 	export * from 'xxscreeps/mods/classic/defense/constants.js';
 	export * from 'xxscreeps/mods/classic/harvestable/constants.js';
+	export * from 'xxscreeps/mods/classic/invader/constants.js';
 	export * from 'xxscreeps/mods/classic/logistics/constants.js';
 	export * from 'xxscreeps/mods/classic/mineral/constants.js';
 	export * from 'xxscreeps/mods/classic/resource/constants.js';

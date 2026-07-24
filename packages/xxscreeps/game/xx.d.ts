@@ -1,3 +1,6 @@
+declare module 'xxscreeps:mods/main';
+declare module 'xxscreeps:mods/schema';
+
 declare module 'xxscreeps:backend' {
 	interface Context {
 		authenticateForProvider: (provider: string, providerId: string) => Promise<string>;
@@ -15,7 +18,6 @@ declare module 'xxscreeps:backend' {
 declare module 'xxscreeps:mods/constants' {
 	export * from 'xxscreeps/game/constants/index.js';
 
-	export * from 'xxscreeps/mods/invader/constants.js';
 	export * from 'xxscreeps/mods/meta/flag/constants.js';
 	export * from 'xxscreeps/mods/portal/constants.js';
 }

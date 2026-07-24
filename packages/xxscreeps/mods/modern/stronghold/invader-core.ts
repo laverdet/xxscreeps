@@ -7,11 +7,11 @@ import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscre
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
+import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
-import { kInvaderUserId } from './game.js';
 import { invaderCoreShape } from './schema.js';
 
 /**

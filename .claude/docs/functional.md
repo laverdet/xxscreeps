@@ -137,7 +137,7 @@ better:
 // schema/layout.ts
 $$ => Fn.minimum($$, mappedNumericComparator(([ , padding ]) => padding)),
 
-// mods/invader/loop/shoot-at-will.ts — inline is fine for trivial cases
+// mods/classic/invader/loop/shoot-at-will.ts — inline is fine for trivial cases
 const target = Fn.minimum(targets, (left, right) => left.hits! - right.hits!)!;
 ```
 

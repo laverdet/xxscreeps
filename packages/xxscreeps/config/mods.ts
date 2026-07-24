@@ -2,6 +2,7 @@ import type { Provide } from './loader.js';
 import type { LoaderConfig } from './nodejs.js';
 import * as fs from 'node:fs/promises';
 import { register } from 'node:module';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolve } from '@loaderkit/resolve/esm';
@@ -39,6 +40,27 @@ const from = await async function() {
 	}
 }();
 
+// Semi-temporary, diagnostic
+export const asyncLoaderFileSystem = function() {
+	const normalizeWindowsLink = function(): (path: string) => string {
+		if (os.platform() === 'win32') {
+			return path => path.replaceAll('\\', '/');
+		} else {
+			return path => path;
+		}
+	}();
+	return {
+		...defaultAsyncFileSystem,
+		readLink: async (path: URL) => {
+			try {
+				return normalizeWindowsLink(await fs.readlink(path));
+			} catch {
+				return undefined;
+			}
+		},
+	};
+}();
+
 // Load mods from `.screepsrc.yaml`
 /** @internal */
 export const mods = await async function() {
@@ -54,11 +76,11 @@ export const mods = await async function() {
 				const { url } = await async function() {
 					try {
 						// First, import bare module specifier [@xxscreeps/redis]
-						return await resolve(defaultAsyncFileSystem, specifier, from);
+						return await resolve(asyncLoaderFileSystem, specifier, from);
 					} catch (suppressed) {
 						try {
 							// Second, try unnamed module exports [xxscreeps/mods/classic/chemistry]
-							return await resolve(defaultAsyncFileSystem, `${specifier}/index.js`, from);
+							return await resolve(asyncLoaderFileSystem, `${specifier}/index.js`, from);
 						} catch (error) {
 							throw new SuppressedError(error, suppressed, `Failed to resolve mod '${specifier}'`);
 						}

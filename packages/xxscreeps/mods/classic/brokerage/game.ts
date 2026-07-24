@@ -36,14 +36,3 @@ declare module 'xxscreeps/game/game.js' {
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureTerminal: typeof StructureTerminal }
 }
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * The Terminal structure of this room, if present, otherwise undefined.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.terminal
-		 */
-		terminal?: StructureTerminal | undefined;
-	}
-}

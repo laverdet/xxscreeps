@@ -201,17 +201,6 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 	}
 }
 
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * The Controller structure of this room, if present, otherwise undefined.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.controller
-		 */
-		controller?: StructureController | undefined;
-	}
-}
-
 let lastActivateSafeModeId: string | undefined;
 hooks.register('gameInitializer', () => {
 	lastActivateSafeModeId = undefined;

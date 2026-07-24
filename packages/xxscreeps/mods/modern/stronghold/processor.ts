@@ -1,14 +1,13 @@
-import type { StrongholdStructure, StrongholdTemplate } from './strongholds.js';
+import type { StrongholdStructure, StrongholdTemplate } from './templates.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
-import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
+import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { Room } from 'xxscreeps/game/room/index.js';
 import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { release, reserve } from 'xxscreeps/mods/classic/controller/processor.js';
@@ -16,96 +15,58 @@ import * as Creep from 'xxscreeps/mods/classic/creep/creep.js';
 import { buryCreep, flushActionLog } from 'xxscreeps/mods/classic/creep/processor.js';
 import { create as createRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
+import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
+import { loop as raidLoop } from 'xxscreeps/mods/classic/invader/loop/index.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { birthSpawnCreep } from 'xxscreeps/mods/classic/spawn/processor.js';
 import { Spawning } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
-import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
-import { kInvaderUserId } from './game.js';
+import { strongholdBehavior } from './behavior.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
-import { loop } from './loop/index.js';
-import { calcReward, templates } from './strongholds.js';
+import { calcReward, templates } from './templates.js';
 
-// Register invader NPC
-registerNPC(kInvaderUserId, loop);
-
-// Register invader generator
-registerRoomTickProcessor((room, context) => {
-	const target = room['#invaderEnergyTarget'] || C.INVADERS_ENERGY_GOAL;
-	const totalEnergy = room['#cumulativeEnergyHarvested'];
-	const energy = totalEnergy - room['#invaderEnergyTarget'];
-	if (energy > target) {
-		// Reset energy goal for next invasion
-		let invaderGoal = Math.floor(C.INVADERS_ENERGY_GOAL * (Math.random() * 0.6 + 0.7));
-		if (Math.random() < 0.1) {
-			invaderGoal *= Math.floor(Math.random() > 0.5 ? 2 : 0.5);
-		}
-		// Check neighbor rooms to filter exits leading to owned/reserved rooms
-		const exitDirections = Game.map.describeExits(room.name);
-		if (!exitDirections) {
-			return;
-		}
-		const entries = Object.entries(exitDirections);
-		// Load neighbor rooms; #user: string = owned/reserved, null = unowned, undefined = no controller
-		context.task(async function() {
-			const results = await Promise.all(
-				Fn.map(entries, async ([ dir, neighborName ]) => {
-					const neighbor = await context.shard.loadRoom(neighborName, undefined, true).catch(() => null);
-					const user = neighbor?.['#user'];
-					return user === null || user === undefined ? Number(dir) : undefined;
-				}));
-			return new Set(Fn.filter(results, (dir): dir is number => dir !== undefined));
-		}(), (allowedDirs: Set<number>) => {
-			// Filter exit positions to allowed directions only
-			const validExits = [ ...Fn.filter(room.find(C.FIND_EXIT), pos => {
-				if (pos.x === 0) return allowedDirs.has(C.LEFT);
-				if (pos.x === 49) return allowedDirs.has(C.RIGHT);
-				if (pos.y === 0) return allowedDirs.has(C.TOP);
-				if (pos.y === 49) return allowedDirs.has(C.BOTTOM);
-				return false;
-			}) ];
-			if (validExits.length === 0) {
-				return;
-			}
-
-			// Only consume the energy budget when invaders actually spawn
-			room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
-
-			// Find raid origin from valid exits
-			const origin = validExits[Math.floor(validExits.length * Math.random())]!;
-			validExits.sort(mappedNumericComparator(pos => origin.getRangeTo(pos)));
-
-			// Send the boys
-			activateNPC(room, kInvaderUserId);
-			for (let ii = 0; ii < 3; ++ii) {
-				const role = ([ 'melee', 'healer', 'ranged' ] as const)[ii % 3]!;
-				const exit = validExits[ii];
-				if (exit) {
-					room['#insertObject'](create(exit, role, 'small', Game.time + C.CREEP_LIFE_TIME));
-				} else {
-					break;
-				}
-			}
-		});
+// A room with an invader core is a stronghold; its creeps are defenders driven by the core's
+// behavior rather than the raid logic. This registration replaces the raid loop registered by
+// `classic/invader`, which is guaranteed to load first as a dependency of this mod.
+registerNPC(kInvaderUserId, Game => {
+	const room = Object.values(Game.rooms)[0];
+	if (!room) {
+		return false;
 	}
+
+	const structures = Object.values(Game.structures);
+	const cores = structures.filter(
+		(structure): structure is StructureInvaderCore =>
+			structure.structureType === C.STRUCTURE_INVADER_CORE);
+	if (cores.length === 0) {
+		return raidLoop(Game);
+	}
+
+	const creeps = Object.values(Game.creeps);
+	const context = {
+		defenders: creeps.filter(creep => !creep.spawning),
+		hostiles: room.find(C.FIND_HOSTILE_CREEPS).filter(creep => creep['#user'] !== kSourceKeeperUserId),
+		towers: structures.filter(
+			(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER),
+		ramparts: structures.filter(
+			(structure): structure is StructureRampart => structure.structureType === C.STRUCTURE_RAMPART),
+	};
+	for (const core of cores) {
+		strongholdBehavior(core)({ core, ...context });
+	}
+	return true;
 });
 
-export type InvaderIntents = typeof intents;
-// Intent processors. Includes the backend-only `requestInvader` (Room) and the four
-// invader-core actions driven by the NPC loop.
+export type StrongholdIntents = typeof intents;
+// The five invader-core actions driven by the NPC loop.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
-	registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
-		const pos = new RoomPosition(xx, yy, room.name);
-		room['#insertObject'](create(pos, role, strength, Game.time + 200));
-		activateNPC(room, kInvaderUserId);
-		context.setActive();
-	}),
-
 	registerIntentProcessor(StructureInvaderCore, 'reserveController', {}, (core, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (checkReserveController(core, controller) === C.OK) {
@@ -347,40 +308,4 @@ function deployStronghold(core: StructureInvaderCore, context: ProcessorContext)
 	}
 	context.wakeAt(collapseTime);
 	context.didUpdate();
-}
-
-// Creep factory for invaders
-type Strength = 'big' | 'small';
-type Role = 'healer' | 'melee' | 'ranged';
-
-const bodies = {
-	bighealer: () => createBody({ [C.HEAL]: 25 }),
-	bigranged: () => createBody({ [C.TOUGH]: 6, [C.RANGED_ATTACK]: 18, [C.WORK]: 1 }),
-	bigmelee: () => createBody({ [C.TOUGH]: 16, [C.RANGED_ATTACK]: 3, [C.WORK]: 4, [C.ATTACK]: 2 }),
-	smallhealer: () => createBody({ [C.HEAL]: 5 }),
-	smallranged: () => createBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 3 }),
-	smallmelee: () => createBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 1, [C.WORK]: 1, [C.ATTACK]: 1 }),
-};
-
-export function create(pos: RoomPosition, role: Role, strength: Strength, ageTime: number) {
-	const body = bodies[`${strength}${role}` as const]();
-	const creep = Creep.create(pos, body, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, kInvaderUserId);
-	creep['#ageTime'] = ageTime;
-	return creep;
-}
-
-function createBody(parts: Partial<Record<Creep.PartType, number>>) {
-	const size = Fn.accumulate(Object.values(parts));
-	return [
-		...Fn.map(Fn.range(parts[C.TOUGH] ?? 0), () => C.TOUGH),
-		...Fn.map(Fn.range(size - 1), () => C.MOVE),
-		...Fn.transform(Object.entries(parts), ([ type, count ]) => {
-			if (type === C.TOUGH) {
-				return [];
-			} else {
-				return Fn.map(Fn.range(count), () => type as Creep.PartType);
-			}
-		}),
-		C.MOVE,
-	];
 }

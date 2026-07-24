@@ -1,5 +1,6 @@
 import type { Room } from './index.js';
-import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
+import type { Iteratee } from 'xxscreeps/utility/lodash.js';
+import type { KeyFor, KeysOf } from 'xxscreeps/utility/types.js';
 import type { Find } from 'xxscreeps:mods/game';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -15,7 +16,7 @@ export type FindConstants = KeysOf<FindHandlers>;
 export type FindType<Find extends FindConstants> = ReturnType<KeyFor<FindHandlers, Find>>[number];
 
 export interface RoomFindOptions<Type = unknown> {
-	filter?: string | object | ((object: Type) => LooseBoolean);
+	filter?: Iteratee<Type> | null | undefined;
 }
 
 // Base FIND_EXIT_ handler (i.e. doesn't include FIND_EXIT)

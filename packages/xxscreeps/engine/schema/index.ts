@@ -123,3 +123,7 @@ export function makeReaderAndWriter<Type extends Format>(format: Type, options?:
 		upgrade: makeUpgrader(info, write),
 	};
 }
+
+export function withStatics<Statics extends object>() {
+	return <Base extends object>(base: Base) => base as Base & Statics;
+}

@@ -5,7 +5,7 @@
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},
 	},
-	"include": [ ".", "../xxscreeps/config/**/xx.d.ts" ],
+	"include": [ ".", "../xxscreeps/game/xx.d.ts" ],
 	"references": [
 		{ "path": "../xxscreeps" },
 	],

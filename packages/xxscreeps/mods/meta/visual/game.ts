@@ -22,18 +22,6 @@ hooks.register('runtimeConnector', {
 });
 
 // Add `Room#visual` getter
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * A [RoomVisual](https://docs.screeps.com/api/#RoomVisual) object for this room. You can use
-		 * this object to draw simple shapes (lines, circles, text labels) in the room.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Room.visual
-		 */
-		readonly visual: RoomVisual;
-	}
-}
-
 extend(Room, {
 	visual: {
 		get() {

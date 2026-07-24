@@ -6,7 +6,7 @@ import type { FindPathOptions, RoomPath } from './room/path.js';
 import type { InspectOptionsStylized } from 'node:util';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
-import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import { iteratee } from 'xxscreeps/utility/lodash.js';
 import { getDirection, getOffsetsFromDirection, makeAbstractIterateWithRangeTo, makeLocalIterateArea, makeLocalIterateInRangeTo } from './direction.js';
 import { kMaxWorldSize, makeRoomNameFromId, parseRoomName } from './room/name.js';
 import { Game, registerGlobal } from './index.js';

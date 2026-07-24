@@ -1,8 +1,8 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
-import { kInvaderUserId } from 'xxscreeps/mods/invader/game.js';
 import * as C from 'xxscreeps:mods/constants';
 import { checkCreepNotifyWhenAttacked, checkStructureNotifyWhenAttacked } from './game.js';
 import { sendNotification } from './model.js';
