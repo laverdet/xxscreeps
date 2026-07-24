@@ -8,7 +8,7 @@ import { getConversation, getConversationIndex, getUnreadCount, markRead, sendMe
 const alice = '100';
 const bob = '101';
 
-describe('mod/meta/messages', () => {
+describe('mods/meta/messages', () => {
 	describe('model', () => {
 		test('send stores one shared message, viewed as out/in by each party', async () => {
 			await using testShard = await instantiateTestShard();

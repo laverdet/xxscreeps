@@ -1,9 +1,9 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import type { BufferView } from 'xxscreeps/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { optionalResourceEnumFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { Store } from 'xxscreeps/mods/classic/resource/store.js';
 import { compose, struct, withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 const shape = struct({
 	'#energy': 'int32',
@@ -29,7 +29,7 @@ export class LabStore extends withOverlay(Store, shape) {
 	}
 
 	'#storeCapacityResource'() {
-		const result: Record<string, number> = Object.create(null);
+		const result = Object.create(null) as Record<string, number>;
 		result[C.RESOURCE_ENERGY] = C.LAB_ENERGY_CAPACITY;
 		const mineralType = this['#mineralType'];
 		if (mineralType) {

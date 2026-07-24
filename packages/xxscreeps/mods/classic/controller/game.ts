@@ -1,8 +1,8 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureController } from './controller.js';
 import { controllerShape, roomSchema } from './schema.js';
 import './creep.js';
@@ -25,6 +25,7 @@ hooks.register('gameInitializer', (Game, payload) => {
 // Export `StructureController` to runtime globals
 registerGlobal(StructureController);
 
+export type ControllerRoomSchemas = [ typeof roomSchema, typeof controllerSchema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const controllerSchema = registerVariant('Room.objects', compose(controllerShape, StructureController));
 
@@ -70,13 +71,4 @@ declare module 'xxscreeps/game/object.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureController: typeof StructureController }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema {
-		controller: [
-			typeof roomSchema,
-			typeof controllerSchema,
-		];
-	}
 }

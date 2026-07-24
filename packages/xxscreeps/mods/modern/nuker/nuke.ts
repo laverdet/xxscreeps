@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject, createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { nukeShape } from './schema.js';
 
 /**

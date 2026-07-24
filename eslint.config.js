@@ -295,11 +295,18 @@ const typeScriptRules = acceptTypeScriptRules({
 	'@typescript-eslint/no-unsafe-unary-minus': 'warn',
 	'@typescript-eslint/no-useless-constructor': 'warn',
 	'@typescript-eslint/no-useless-empty-export': 'warn',
+	'@typescript-eslint/only-throw-error': [ 'warn', {
+		allowRethrowing: true,
+		allowThrowingUnknown: true,
+	} ],
 	'@typescript-eslint/parameter-properties': 'warn',
 	'@typescript-eslint/prefer-enum-initializers': 'warn',
 	'@typescript-eslint/prefer-for-of': 'warn',
 	'@typescript-eslint/prefer-function-type': 'warn',
 	'@typescript-eslint/prefer-literal-enum-member': 'warn',
+	'@typescript-eslint/prefer-promise-reject-errors': [ 'warn', {
+		allowThrowingUnknown: true,
+	} ],
 	// I would love to use this but boy is it lousy
 	'@typescript-eslint/prefer-readonly-parameter-types': 'off',
 	'@typescript-eslint/prefer-ts-expect-error': 'warn',
@@ -314,6 +321,8 @@ const typedTypeScriptRules = acceptTypeScriptRules({
 	'no-extra-boolean-cast': 'off',
 	// Re-enabled for non-d.ts files
 	'no-unused-private-class-members': 'warn',
+	// We make heavy use of this, for better or worse
+	'@typescript-eslint/no-unsafe-declaration-merging': 'off',
 
 	'@typescript-eslint/consistent-type-exports': 'warn',
 	'@typescript-eslint/dot-notation': 'warn',

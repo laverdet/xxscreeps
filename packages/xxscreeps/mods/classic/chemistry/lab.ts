@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -9,6 +9,7 @@ import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkHasResource } from '../resource/store.js';
 import { labShape } from './schema.js';
 import { LabStore } from './store.js';
@@ -110,9 +111,11 @@ export class StructureLab extends withOverlay(OwnedStructure, labShape) {
 	 * @see https://docs.screeps.com/api/#StructureLab.boostCreep
 	 */
 	boostCreep(creep: Creep, bodyPartsCount?: number) {
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
+		const count = bodyPartsCount || null;
 		return chainIntentChecks(
-			() => checkBoostCreep(this, creep, bodyPartsCount),
-			() => intents.save(this, 'boostCreep', creep.id, bodyPartsCount ?? 0));
+			() => checkBoostCreep(this, creep, count),
+			() => intents.save(this, 'boostCreep', creep.id, count));
 	}
 
 	/**
@@ -182,7 +185,7 @@ export function getReactionProduct(mineral1: string, mineral2: string): Resource
 	return reactions[mineral1]?.[mineral2];
 }
 
-export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount?: number) {
+export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount: number | null) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
 		() => checkIsActive(lab),
@@ -204,9 +207,11 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 			return chainIntentChecks(
 				() => {
 					const boosts: BoostsLookup = C.BOOSTS;
-					const nonBoostedCount = creep!.body.filter(
-						part => !part.boost && boosts[part.type]?.[mineralType]).length;
-					if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
+					const nonBoostedCount = Fn.pipe(
+						creep!.body,
+						$$ => Fn.filter($$, part => part.boost === undefined && boosts[part.type]?.[mineralType]),
+						$$ => Fn.accumulate($$, () => 1));
+					if (nonBoostedCount === 0 || (bodyPartsCount !== null && bodyPartsCount > nonBoostedCount)) {
 						return C.ERR_NOT_FOUND;
 					}
 				});
@@ -252,9 +257,19 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => {
 			const mineralType = lab.mineralType!;
 			const variants = getReactionVariants(mineralType);
-			const variant = variants.find(v =>
-				(!lab1!.mineralType || lab1!.mineralType === v[0]) &&
-				(!lab2!.mineralType || lab2!.mineralType === v[1]));
+			const predicateFor = (lab: StructureLab): (resource: ResourceType) => boolean => {
+				const { mineralType } = lab;
+				if (mineralType === undefined) {
+					return () => true;
+				} else {
+					return resource => mineralType === resource;
+				}
+			};
+			const variant = variants.find(function() {
+				const left = predicateFor(lab1!);
+				const right = predicateFor(lab2!);
+				return ([ one, two ]) => left(one) && right(two);
+			}());
 			if (!variant) {
 				return C.ERR_INVALID_ARGS;
 			}
@@ -286,7 +301,7 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 			}
 		},
 		() => {
-			if (!creep!.body.some(p => !!p.boost)) {
+			if (creep?.body.every(part => part.boost === undefined)) {
 				return C.ERR_NOT_FOUND;
 			}
 		},
@@ -303,8 +318,7 @@ export function calcTotalReactionsTime(mineral: string): number {
 	}
 	const calcStep = (mineral: string): number => {
 		const time = reactionTime[mineral];
-		if (!time) return 0;
-		return time + calcStep(reagents[mineral]![0]) + calcStep(reagents[mineral]![1]);
+		return time === undefined ? 0 : time + calcStep(reagents[mineral]![0]) + calcStep(reagents[mineral]![1]);
 	};
 	return calcStep(mineral);
 }

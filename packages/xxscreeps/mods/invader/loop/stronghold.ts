@@ -5,8 +5,8 @@ import type { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js
 import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Stronghold defense behaviors ported from @screeps/engine (invader-core/stronghold/stronghold.js
 // and creeps.js). Behaviors are keyed by the core's template name; vanilla stores the same value

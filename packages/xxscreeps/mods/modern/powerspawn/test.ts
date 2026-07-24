@@ -1,15 +1,15 @@
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createPowerSpawn } from './powerspawn.js';
 
 const owner = '100';
 const hostile = '101';
 
-describe('mod/modern/powerspawn', () => {
+describe('mods/modern/powerspawn', () => {
 	const sim = simulate({
 		W1N1: room => {
 			const powerSpawn = createPowerSpawn(new RoomPosition(25, 25, 'W1N1'), owner);

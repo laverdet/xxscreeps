@@ -1,12 +1,13 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureInvaderCore } from './invader-core.js';
 import { invaderCoreShape } from './schema.js';
 
+export type InvaderRoomSchema = typeof invaderCoreSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const invaderCoreSchema = registerVariant('Room.objects', compose(invaderCoreShape, StructureInvaderCore));
 
@@ -22,9 +23,3 @@ extend(Structure, {
 		},
 	},
 });
-
-// ---
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { invader: [ typeof invaderCoreSchema ] }
-}

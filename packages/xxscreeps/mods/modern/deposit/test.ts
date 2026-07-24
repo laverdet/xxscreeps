@@ -4,7 +4,6 @@ import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -13,6 +12,7 @@ import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.j
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './main.js';
 import { scheduleSector } from './model.js';
@@ -58,7 +58,7 @@ function depositSim(options: DepositSimOptions = {}) {
 	});
 }
 
-describe('mod/modern/deposit', () => {
+describe('mods/modern/deposit', () => {
 	describe('harvest & decay', () => {
 		test('harvest stores resources and updates cooldown curve', () => depositSim({
 			body: [ C.WORK, C.WORK, C.WORK, C.CARRY, C.MOVE ],

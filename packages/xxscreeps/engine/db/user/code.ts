@@ -1,7 +1,7 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
-import { bifurcate } from 'xxscreeps/utility/utility.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Schema from './code-schema.js';
 import * as User from './index.js';
 
@@ -40,7 +40,7 @@ export async function loadBlobs(db: Database, userId: string, branchName: string
 		),
 	]);
 	if (buffers || strings) {
-		return { buffers,	strings };
+		return { buffers, strings };
 	}
 }
 
@@ -58,10 +58,14 @@ export async function loadContent(db: Database, userId: string, branchName: stri
  * Update the user's code content and publish the change to runners
  */
 export async function saveContent(db: Database, userId: string, branchName: string, content: CodePayload) {
-	const [ strings, buffers ] = bifurcate(content,
-		(entry): entry is [ string, string ] => typeof entry[1] === 'string');
-	const bufferBlob = buffers.length === 0 ? undefined : Schema.writeBuffers(new Map(buffers as [ string, Uint8Array ][]));
-	const stringBlob = strings.length === 0 ? undefined : Schema.writeStrings(new Map(strings));
+	const entries = [ ...content ];
+	const buffersLength = Fn.partition(entries, entry => typeof entry[1] === 'string');
+	const bufferBlob = buffersLength === entries.length
+		? undefined
+		: Schema.writeBuffers(new Map(Fn.slice(entries, buffersLength) as Iterable<[ string, Uint8Array ]>));
+	const stringBlob = buffersLength === 0
+		? undefined
+		: Schema.writeStrings(new Map(Fn.slice(entries, 0, buffersLength) as Iterable<[ string, string ]>));
 	const [ didSwitch ] = await Promise.all([
 		db.data.hSet(User.infoKey(userId), 'branch', branchName, { if: 'NX' }),
 		db.data.sAdd(branchManifestKey(userId), [ branchName ]),

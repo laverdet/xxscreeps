@@ -1,14 +1,14 @@
 import { LOOK_TERRAIN } from 'xxscreeps/game/constants/find.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { LOOK_STRUCTURES } from 'xxscreeps/mods/classic/structure/constants.js';
 import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create } from './road.js';
 
-describe('mod/classic/road', () => {
+describe('mods/classic/road', () => {
 	describe('roads', () => {
 		test('under obstacle', () => simulate({
 			W0N0: room => {

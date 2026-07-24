@@ -1,8 +1,8 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Creep } from './creep.js';
 import { tombstoneShape } from './schema.js';
 

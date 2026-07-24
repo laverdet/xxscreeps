@@ -1,22 +1,16 @@
 import type { Store } from './store.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { LabStore } from 'xxscreeps/mods/classic/chemistry/store.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, reconstructor, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { renderStore } from './backend.js';
 import { create as createContainer } from './container.js';
 import { Resource, create as createResource } from './resource.js';
 import { makeSingleStoreFormat, openStoreFormat, restrictedStoreFormat } from './schema.js';
 import { OpenStore, RestrictedStore, SingleStore } from './store.js';
 
-const keys = (object: {}) => [ ...function*() {
-	for (const key in object) {
-		yield key;
-	}
-}() ];
-
-describe('mod/classic/resource', () => {
+describe('mods/classic/resource', () => {
 	describe('store', () => {
 		const types: [ string, any, () => Store][] = [
 			[ 'Open store', openStoreFormat, () => OpenStore['#create'](100) ],
@@ -34,17 +28,17 @@ describe('mod/classic/resource', () => {
 
 				test('empty resources are non-enumerable', () => {
 					const store = create();
-					assert.deepStrictEqual(keys(store), []);
+					assert.deepStrictEqual(Object.keys(store), []);
 				});
 
 				test('enumerable resources', () => {
 					const store = create();
 					store['#add'](C.RESOURCE_ENERGY, 10);
-					assert.deepStrictEqual(keys(store), [ C.RESOURCE_ENERGY ]);
-					assert.deepStrictEqual(keys(reconstruct(store)), [ C.RESOURCE_ENERGY ]);
+					assert.deepStrictEqual(Object.keys(store), [ C.RESOURCE_ENERGY ]);
+					assert.deepStrictEqual(Object.keys(reconstruct(store)), [ C.RESOURCE_ENERGY ]);
 					store['#subtract'](C.RESOURCE_ENERGY, 10);
-					assert.deepStrictEqual(keys(store), []);
-					assert.deepStrictEqual(keys(reconstruct(store)), []);
+					assert.deepStrictEqual(Object.keys(store), []);
+					assert.deepStrictEqual(Object.keys(reconstruct(store)), []);
 				});
 
 				test('used capacity', () => {

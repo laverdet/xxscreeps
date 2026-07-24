@@ -6,6 +6,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RawMemory } from 'xxscreeps/mods/meta/memory/memory.js';
 import * as assert from 'node:assert';
 import { config } from 'xxscreeps/config/index.js';
+import { kFdStdError } from 'xxscreeps/driver/runtime/print.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -23,12 +24,12 @@ import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { stdoutTransport } from 'xxscreeps/mods/meta/notifications/transport-stdout.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { asyncDisposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
+import { logSandbox } from './context.js';
 
 // Simulate runs both main and worker logic in one process; load every slot either service would.
 import 'xxscreeps:mods/game';
 import 'xxscreeps:mods/main';
 import 'xxscreeps:mods/processor';
-import { logSandbox } from './context.js';
 
 initializeGameEnvironment();
 initializeIntentConstraints();
@@ -291,7 +292,7 @@ async function assertPlayerWithoutErrors(instance: PlayerInstance) {
 			if (logSandbox) {
 				console.log(data);
 			}
-			if (fd === 2 && data !== 'Script was disposed') {
+			if (fd === kFdStdError && data !== 'Script was disposed') {
 				errors.push(data as string);
 			}
 		}

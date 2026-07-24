@@ -1,8 +1,8 @@
 import { registerEnumerated } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { labStoreFormat } from './store.js';
 
 /** @internal */
@@ -42,20 +42,9 @@ const resources = [
 	C.RESOURCE_CATALYZED_ZYNTHIUM_ACID, C.RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE, C.RESOURCE_CATALYZED_GHODIUM_ACID,
 	C.RESOURCE_CATALYZED_GHODIUM_ALKALIDE,
 ];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const resourceSchema = registerEnumerated('ResourceType', ...resources);
+
+registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 
 // Action log types
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2', 'reverseReaction1', 'reverseReaction2');
-
-// ---
-
-declare module 'xxscreeps/mods/classic/resource/schema.js' {
-	interface ResourceSchema { chemistry: typeof resourceSchema }
-}
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { chemistry: typeof actionSchema }
-}
+registerEnumerated('ActionLog.action', 'reaction1', 'reaction2', 'reverseReaction1', 'reverseReaction2');

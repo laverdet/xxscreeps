@@ -8,6 +8,7 @@ import { StructureTerminal } from './terminal.js';
 // Export `StructureTerminal` to runtime globals
 registerGlobal(StructureTerminal);
 
+export type TerminalRoomSchema = [ typeof terminalSchema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const terminalSchema = registerVariant('Room.objects', compose(terminalShape, StructureTerminal));
 
@@ -45,6 +46,4 @@ declare module 'xxscreeps/game/room/index.js' {
 		 */
 		terminal?: StructureTerminal | undefined;
 	}
-
-	interface RoomSchema { terminal: typeof terminalSchema }
 }

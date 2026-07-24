@@ -1,7 +1,7 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructurePowerSpawn } from './powerspawn.js';
 import { powerSpawnShape } from './schema.js';
 
@@ -19,6 +19,7 @@ hooks.register('gameInitializer', (Game, payload) => {
 
 registerGlobal(StructurePowerSpawn);
 
+export type PowerspawnRoomSchema = typeof powerSpawnSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const powerSpawnSchema = registerVariant('Room.objects', compose(powerSpawnShape, StructurePowerSpawn));
 
@@ -52,8 +53,4 @@ declare module 'xxscreeps/game/game.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructurePowerSpawn: typeof StructurePowerSpawn }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { powerspawn: [ typeof powerSpawnSchema ] }
 }

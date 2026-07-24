@@ -1,9 +1,9 @@
 import type { QueuedNotification } from './notifications.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, intents } from 'xxscreeps/game/index.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import * as C from 'xxscreeps:mods/constants';
 import { flush, notify } from './notifications.js';
 import './schema.js';
 

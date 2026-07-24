@@ -1,7 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { dispatchQueuedNotifications } from './driver.js';
 import { getAllRowsForTesting, upsertNotification } from './model.js';
 import { flush } from './notifications.js';
@@ -15,7 +15,7 @@ const empty = simulate({
 	W0N0: () => {},
 });
 
-describe('mod/meta/notifications', () => {
+describe('mods/meta/notifications', () => {
 
 	// The notify queue is module-level state that persists between tests (the test framework runs
 	// sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain

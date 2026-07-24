@@ -1,4 +1,3 @@
-import { exchange } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';
 
 // Used on newly-constructed to provide defaults on uninitialized fields
@@ -17,7 +16,7 @@ export class BufferObject {
 		this.#offset = offset;
 	}
 
-	static check(that: BufferObject) {
+	static check(this: void, that: BufferObject) {
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 			that.#buffer.int32;
@@ -27,20 +26,22 @@ export class BufferObject {
 		}
 	}
 
-	static detach(that: BufferObject, error: () => Error) {
+	static detach(this: void, that: BufferObject, error: () => Error) {
 		that.#buffer.detach(error);
 	}
 
-	static getBuffer(that: BufferObject) {
+	static getBuffer(this: void, that: BufferObject) {
 		return that.#buffer;
 	}
 
-	static getOffset(that: BufferObject) {
+	static getOffset(this: void, that: BufferObject) {
 		return that.#offset;
 	}
 }
 
-export const check = exchange(BufferObject, 'check', (): never => { throw new Error(); });
-export const detach = exchange(BufferObject, 'detach', (): never => { throw new Error(); });
-export const getBuffer = exchange(BufferObject, 'getBuffer', (): never => { throw new Error(); });
-export const getOffset = exchange(BufferObject, 'getOffset', (): never => { throw new Error(); });
+export const { check, detach, getBuffer, getOffset } = BufferObject;
+
+BufferObject.check =
+	BufferObject.detach =
+		BufferObject.getBuffer =
+			BufferObject.getOffset = (): never => { throw new Error(); };

@@ -1,4 +1,4 @@
-import type { Layout, StructLayout } from './layout.js';
+import type { ComposedLayout, Layout, StructLayout, Subject } from './layout.js';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -6,7 +6,7 @@ import { unpackWrappedStruct } from './layout.js';
 
 class ModuleArchiver {
 	private readonly dependencies = new Map<string, Set<string>>();
-	private readonly layoutToIdentifier = new Map<any, string>();
+	private readonly layoutToIdentifier = new Map<Layout, string>();
 	private readonly rendered = new Map<string, string>();
 	private current = '';
 
@@ -84,10 +84,10 @@ class ModuleArchiver {
 					})),
 				};
 			} else {
-				const nested = [ 'array', 'list', 'optional', 'pointer', 'vector' ].find(key => key in layout);
+				const nested = ([ 'array', 'list', 'optional', 'pointer', 'vector' ] as const).find(key => key in layout);
 				if (nested !== undefined && nested in layout) {
 					// @ts-expect-error
-					const nestedLayout = layout[nested];
+					const nestedLayout = layout[nested] as Layout;
 					return {
 						...layout,
 						[nested]: this.archive(nestedLayout),
@@ -99,12 +99,14 @@ class ModuleArchiver {
 	}
 }
 
-function render(value: any, indent = 1): string {
+function render(value: unknown, indent = 1): string {
 	if (
-		typeof value === 'boolean' || typeof value === 'number' ||
-		value === undefined || value === null ||
+		typeof value === 'boolean' ||
+		typeof value === 'number' ||
+		value == null ||
 		value instanceof String
 	) {
+		// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
 		return `${value}`;
 	} else if (typeof value === 'string') {
 		return JSON.stringify(value);
@@ -123,9 +125,9 @@ function render(value: any, indent = 1): string {
 		} else {
 			return `[ ${rendered.map(value => value.replace(/^\t/gm, '')).join(', ')} ]`;
 		}
-	} else if (value) {
+	} else {
 		const entries = Fn.pipe(
-			ownEntriesIncludingPrivate(value),
+			ownEntriesIncludingPrivate(value satisfies object as Subject),
 			$$ => Fn.reject($$, ([ ,value ]) => value === undefined),
 			$$ => [ ...$$ ]);
 		const preRendered = entries.map(([ key, value ]) => [ key, render(value, indent + 1) ] as const);
@@ -144,7 +146,6 @@ function render(value: any, indent = 1): string {
 			return `{ ${rendered.join(', ')} }`;
 		}
 	}
-	throw new Error('Unknown value');
 }
 
 export function archiveLayout(layout: Layout): string {
@@ -154,7 +155,7 @@ export function archiveLayout(layout: Layout): string {
 export function restoreLayout(archive: string, layoutTemplate: Layout) {
 
 	// Crawl layout template for compositions and named layouts
-	const compositions = new Map<string, Extract<Layout, { composed: any }>>();
+	const compositions = new Map<string, ComposedLayout>();
 	mapLayout(layoutTemplate, (layout, path) => {
 		if (typeof layout === 'object') {
 			if ('composed' in layout) {

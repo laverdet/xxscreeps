@@ -3,8 +3,8 @@ import type { GenerateRoomOptions } from 'xxscreeps/scripts/room-gen.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
+import * as C from 'xxscreeps:mods/constants';
 
 function isMineralType(value: string): value is ResourceType {
 	return value in C.MINERAL_MIN_AMOUNT;

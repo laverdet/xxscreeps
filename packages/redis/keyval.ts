@@ -238,6 +238,10 @@ export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValP
 		return [ Number(value), Number(applied) ];
 	}
 
+	hKeys(key: string) {
+		return this.keyval.hKeys(key);
+	}
+
 	hmGet(key: string, fields: string[], options: Pr.AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;
 	hmGet(key: string, fields: string[], options?: Pr.AsString): Promise<Record<string, string | null>>;
 	async hmGet(key: string, fields: string[], options?: Pr.Get): Promise<Record<string, unknown>> {

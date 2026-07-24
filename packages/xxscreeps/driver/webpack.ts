@@ -16,7 +16,7 @@ Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
 type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
 type ExternalsPromise = Extract<ExternalsFunctionElement, (...args: any) => Promise<any>>;
 type ExternalsCallback = (...args: Parameters<ExternalsPromise>) =>
-	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | void | Promise<Result | void> : never;
+	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | undefined | Promise<Result | undefined> : never;
 export type Transform = {
 	alias?: Record<string, false | string>;
 	babel?: PluginItem[];
@@ -121,7 +121,7 @@ export async function compile(moduleName: string, transform: Transform) {
 			} else {
 				const info = stats!.toJson();
 				if (stats!.hasErrors()) {
-					reject((info.errors![0] as any).message);
+					reject(new Error(info.errors![0]?.message));
 				} else {
 					if (stats!.hasWarnings()) {
 						console.log(info.warnings);

@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { RunnerPlayerEvalPayload, RunnerPlayerIntent } from 'xxscreeps/engine/runner/index.js';
+import type { RunnerPlayerEvalPayload, RunnerPlayerIntent, TickUsageResult } from 'xxscreeps/engine/runner/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
@@ -11,7 +11,7 @@ export function getConsoleChannel(shard: Shard, user: string) {
 export function getAckChannel(shard: Shard, user: string) {
 	type Message = {
 		id: string;
-		result: { error: boolean; value: string };
+		result: { error: boolean; value: string | undefined };
 	};
 	return new Channel<Message>(shard.pubsub, `user/${user}/ack`);
 }
@@ -27,14 +27,14 @@ export function getRunnerChannel(shard: Shard) {
 /** @internal */
 export type RunnerUserChannel = Channel<
 	{ type: 'eval'; payload: RunnerPlayerEvalPayload } |
-	{	type: 'intent'; intent: RunnerPlayerIntent }
+	{ type: 'intent'; intent: RunnerPlayerIntent }
 >;
 
 export const runnerUserChannel =
 	(shard: Shard, user: string): RunnerUserChannel => new Channel(shard.pubsub, `runner/${user}`);
 
 export const runnerUsageChannel =
-	(shard: Shard, user: string) => new Channel<any>(shard.pubsub, `runner/${user}/usage`);
+	(shard: Shard, user: string) => new Channel<TickUsageResult>(shard.pubsub, `runner/${user}/usage`);
 
 /**
  * Sends an eval expression to the user's runner instance and waits for a reply.

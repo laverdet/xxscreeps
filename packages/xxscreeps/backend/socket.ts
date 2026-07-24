@@ -1,15 +1,16 @@
 import type { BackendContext } from './context.js';
-import type { Context, State } from './index.js';
 import type Koa from 'koa';
 import type { Server } from 'node:http';
 import type { Duplex } from 'node:stream';
+import type { Connection } from 'sockjs';
 import type { Effect } from 'xxscreeps/utility/types.js';
+import type { Context, State } from 'xxscreeps:backend';
 import { EventEmitter } from 'node:events';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import sockjs from 'sockjs';
 import { config } from 'xxscreeps/config/index.js';
-import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { checkToken, makeToken } from './auth/token.js';
 import { CodeSubscriptions } from './sockets/code.js';
 import { ConsoleSubscriptions } from './sockets/console.js';
@@ -19,7 +20,7 @@ import { hooks } from './symbols.js';
 
 const { allowGuestAccess } = config.backend;
 
-declare module './index.js' {
+declare module 'xxscreeps:backend' {
 	interface Context {
 		upgrade?: (fn: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>) => Promise<void>;
 	}
@@ -35,14 +36,27 @@ export type SubscriptionEndpoint = {
 	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
 };
 
+// Undocumented SockJS internals
+interface ConnectionWithSession extends Connection {
+	_session: {
+		recv?: {
+			ws?: {
+				_driver: { _request: IncomingMessage };
+			};
+			request?: IncomingMessage;
+		};
+	};
+}
+
 // Used to mark HTTP upgrade requests
 class FakeResponse extends ServerResponse {
-	readonly upgradeSocket;
 	readonly head;
+	override readonly socket: Socket;
 
 	constructor(upgradeSocket: Duplex, head: Buffer) {
 		super(new IncomingMessage(new Socket()));
-		this.upgradeSocket = upgradeSocket;
+		// @ts-expect-error
+		this.socket = upgradeSocket;
 		this.head = head;
 	}
 }
@@ -57,10 +71,11 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 	// Install HTTP upgrade handler to forward fake requests to Koa
 	const callback = koa.callback();
 	httpServer.on('upgrade', (request, socket, head) => {
-		const fakeResponse: any = new FakeResponse(socket, head);
-		fakeResponse.head = head;
-		fakeResponse.socket = socket;
-		mustNotReject(callback(request, fakeResponse));
+		const fakeResponse = new FakeResponse(socket, head);
+		callback(request, fakeResponse).catch(error => {
+			console.error(error);
+			socket.destroy();
+		});
 	});
 
 	koa.use(async (context, next) => {
@@ -69,7 +84,7 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 		if (res instanceof FakeResponse) {
 			context.upgrade = fn => {
 				context.respond = false;
-				return Promise.resolve(fn(context.req, res.upgradeSocket, res.head));
+				return Promise.resolve(fn(context.req, res.socket, res.head));
 			};
 		}
 		// Invoke remaining middleware
@@ -78,7 +93,7 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 		if (res instanceof FakeResponse) {
 			if (context.respond !== false) {
 				context.respond = false;
-				res.upgradeSocket.end('HTTP/1.1 404 Not Found\r\n\r\n');
+				res.socket.end('HTTP/1.1 404 Not Found\r\n\r\n');
 			}
 		}
 	});
@@ -114,7 +129,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 
 	// The rest is regular WebSocket code, no more dragons
 	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...hooks.map('subscription') ];
-	socketServer.on('connection', connection => {
+	socketServer.on('connection', (connection: ConnectionWithSession | null) => {
 
 		if (!connection) {
 			// Sometimes Sockjs gives us dead connections on restart..
@@ -122,7 +137,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		}
 
 		// Fish `request` object out of internal structure
-		const session = (connection as any)._session;
+		const session = connection._session;
 		const request: IncomingMessage | undefined =
 			// WebSocket
 			session.recv?.ws?._driver._request ??
@@ -132,15 +147,27 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
 		const subscriptions = new Map<string, Promise<Effect>>();
-		function close() {
-			for (const [ name, unlistener ] of subscriptions) {
-				subscriptions.delete(name);
-				const teardown = unlistener.then(unlistener => unlistener(), () => {});
-				pendingTeardowns.add(teardown);
-				void teardown.finally(() => pendingTeardowns.delete(teardown));
-			}
+		const close = () => {
+			void async function() {
+				await Fn.mapAwait(subscriptions, async ([ name, subscription ]) => {
+					subscriptions.delete(name);
+					const teardown = async function() {
+						try {
+							const effect = await subscription;
+							effect();
+						} catch (error) {
+							console.error(error);
+						} finally {
+							// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+							pendingTeardowns.delete(teardown!);
+						}
+					}();
+					pendingTeardowns.add(teardown);
+					await teardown;
+				});
+			}();
 			connection.close();
-		}
+		};
 
 		connection.write(`time ${Date.now()}`);
 		connection.write('protocol 14');
@@ -152,7 +179,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 					// If this socket has an X-Token header it will take priority over the auth message. This
 					// header is never sent by the client but the authentication middleware can stick it on
 					// the request object.
-					const token = `${request?.headers['x-token'] ?? authMessage.groups!.token}`;
+					const token = String(request?.headers['x-token'] ?? authMessage.groups!.token);
 					if (token === 'guest') {
 						if (allowGuestAccess) {
 							connection.write('auth ok guest');

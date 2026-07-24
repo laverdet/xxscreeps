@@ -1,3 +1,4 @@
+import * as util from 'node:util';
 import { parentPort } from 'node:worker_threads';
 import { listen } from 'xxscreeps/utility/async.js';
 
@@ -18,12 +19,12 @@ Object.assign(SuppressedError.prototype, {
 });
 
 process.on('uncaughtException', error => {
-	console.error(error);
+	console.error(util.inspect(error, { depth: null }));
 	process.exit(1);
 });
 
 process.on('unhandledRejection', error => {
-	console.error(error);
+	console.error(util.inspect(error, { depth: null }));
 	process.exit(1);
 });
 

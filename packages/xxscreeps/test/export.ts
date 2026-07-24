@@ -1,8 +1,8 @@
 import * as fs from 'node:fs/promises';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { parseRoomName } from 'xxscreeps/game/room/name.js';
+import * as C from 'xxscreeps:mods/constants';
 import 'xxscreeps:mods/game';
 
 export type Payload = typeof payload;
@@ -29,6 +29,7 @@ const payload = Fn.fromEntries(await Fn.pipe(
 			room['#objects'],
 			$$ => Fn.map($$, object => {
 				const info = function() {
+					// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 					switch (object['#lookType']) {
 						case 'structure':
 							return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;

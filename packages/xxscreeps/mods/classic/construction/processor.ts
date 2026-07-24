@@ -1,7 +1,6 @@
 import type { ConstructibleStructureType } from './construction-site.js';
 import type { DestructibleStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -10,15 +9,13 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/classic/combat/processor.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
 import { checkBuild, checkDismantle, checkRepair } from './creep.js';
 import { checkCreateConstructionSite } from './room.js';
 import { structureFactories } from './symbols.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { construction: typeof intents }
-}
-
+export type ConstructionIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite', {},

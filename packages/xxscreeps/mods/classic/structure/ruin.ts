@@ -1,9 +1,9 @@
 import type { Store } from 'xxscreeps/mods/classic/resource/store.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';
 
@@ -33,10 +33,6 @@ export class Ruin extends withOverlay(RoomObject, ruinShape) {
 		return user === null ? [] : [ user ];
 	}
 
-	override '#applyNukeImpact'() {
-		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-	}
-
 	/**
 	 * An object containing basic data of the destroyed structure.
 	 * @public
@@ -62,6 +58,10 @@ export class Ruin extends withOverlay(RoomObject, ruinShape) {
 		});
 		Object.defineProperty(this, 'structure', { value: structure });
 		return structure;
+	}
+
+	override '#applyNukeImpact'() {
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 	}
 }
 

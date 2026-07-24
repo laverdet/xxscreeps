@@ -1,14 +1,14 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { loadTransactionBlob, loadTransactionEntries, recordTransaction } from './model.js';
 import { create as createTerminal } from './terminal.js';
 import { Transaction, read } from './transaction.js';
 
-describe('mod/classic/brokerage', () => {
+describe('mods/classic/brokerage', () => {
 
 	// Storage only — `recordTransaction` doesn't touch rooms, and users '100'/'101' exist by default.
 	const storageSim = simulate({});

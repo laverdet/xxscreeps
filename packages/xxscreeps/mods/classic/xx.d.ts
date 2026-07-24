@@ -14,15 +14,4 @@ declare module 'xxscreeps:mods/constants' {
 	export * from 'xxscreeps/mods/classic/source/constants.js';
 	export * from 'xxscreeps/mods/classic/spawn/constants.js';
 	export * from 'xxscreeps/mods/classic/structure/constants.js';
-	export * from 'xxscreeps/mods/invader/constants.js';
-	export * from 'xxscreeps/mods/meta/flag/constants.js';
-	export * from 'xxscreeps/mods/mmo/wallstreet/constants.js';
-	export * from 'xxscreeps/mods/modern/deposit/constants.js';
-	export * from 'xxscreeps/mods/modern/factory/constants.js';
-	export * from 'xxscreeps/mods/modern/nuker/constants.js';
-	export * from 'xxscreeps/mods/modern/observer/constants.js';
-	export * from 'xxscreeps/mods/modern/powerbank/constants.js';
-	export * from 'xxscreeps/mods/modern/powerspawn/constants.js';
-	export * from 'xxscreeps/mods/portal/constants.js';
-	export * from 'xxscreeps/mods/powercreep/constants.js';
 }

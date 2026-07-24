@@ -4,7 +4,6 @@ import badge from './badge.js';
 import './auth.js';
 import './code.js';
 import './profile.js';
-import './stats.js';
 import './world.js';
 
 // Private messaging endpoints (incl. `/api/user/messages/unread-count`) live in the `messages` mod.

@@ -2,11 +2,11 @@ import type { FlagIntent } from './model.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { flagShape } from './schema.js';
 
 export let intents: FlagIntent[] = [];
@@ -89,7 +89,7 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	setPosition(x: number, y: number): C.ErrorCode;
 	setPosition(target: RoomObject | RoomPosition): C.ErrorCode;
 	setPosition(...args: [ number, number ] | [ RoomObject | RoomPosition]) {
-		const { pos } = fetchPositionArgument(this.pos.roomName, ...args);
+		const { pos } = fetchPositionArgument(this.pos.roomName, args);
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
 			(): undefined => {
@@ -101,7 +101,9 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 		);
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const { stylize } = options;
 		try {
 			// The `RoomObject` printer can fail here because these are instantiated and added to game
 			// state without reading a `BufferObject`

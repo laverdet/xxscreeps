@@ -297,6 +297,11 @@ export class PlayerInstance {
 						fd: 2,
 						data: `Script timed out${result.stack == null ? '' : `; ${result.stack}`}`,
 					} ])));
+
+				} else if (result.console != null) {
+					// Surface console output captured while the tick failed (e.g. an error thrown during
+					// module evaluation) so the player sees their crash instead of it being dropped here.
+					tasks.push(this.consoleChannel.publish(result.console));
 				}
 			}
 			// Publish empty results to move processing along

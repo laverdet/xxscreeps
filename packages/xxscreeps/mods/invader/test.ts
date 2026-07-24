@@ -4,7 +4,6 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -14,6 +13,7 @@ import { create as createContainer } from 'xxscreeps/mods/classic/resource/conta
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { lookForStructureAt, lookForStructures } from '../classic/structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
 
@@ -21,7 +21,7 @@ import { create as createInvaderCore } from './invader-core.js';
 //   TOP -> W7N8 (y=0 edge), RIGHT -> W6N7 (x=49 edge),
 //   BOTTOM -> W7N6 (y=49 edge), LEFT -> W8N7 (x=0 edge)
 
-describe('mod/invader', () => {
+describe('mods/invader', () => {
 	describe('exit filtering', () => {
 		const dummyPos = new RoomPosition(25, 25, 'W7N7');
 

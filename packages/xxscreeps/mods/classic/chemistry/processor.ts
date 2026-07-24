@@ -1,18 +1,16 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/classic/creep/creep.js';
 import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getReactionProduct, getReactionVariants } from './lab.js';
 
 type BoostEffects = Partial<Record<string, number>>;
 type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 type ReactionTimeLookup = Partial<Record<string, number>>;
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { chemistry: typeof intents }
-}
+export type ChemistryIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureLab, 'runReaction', {}, (lab, context, id1: string, id2: string) => {
@@ -34,9 +32,9 @@ const intents = [
 		context.didUpdate();
 	}),
 
-	registerIntentProcessor(StructureLab, 'boostCreep', {}, (lab, context, creepId: string, bodyPartsCount: number) => {
+	registerIntentProcessor(StructureLab, 'boostCreep', {}, (lab, context, creepId: string, bodyPartsCount: number | null) => {
 		const creep = Game.getObjectById<Creep>(creepId)!;
-		if (checkBoostCreep(lab, creep, bodyPartsCount || undefined) !== C.OK) {
+		if (checkBoostCreep(lab, creep, bodyPartsCount) !== C.OK) {
 			return;
 		}
 		const mineralType = lab.mineralType!;
@@ -50,7 +48,7 @@ const intents = [
 			nonBoostedParts.reverse();
 		}
 
-		if (bodyPartsCount) {
+		if (bodyPartsCount !== null) {
 			nonBoostedParts = nonBoostedParts.slice(0, bodyPartsCount);
 		}
 

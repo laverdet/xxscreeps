@@ -1,8 +1,7 @@
 import type { Compiler } from 'xxscreeps/driver/runtime/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { CPU } from 'xxscreeps/game/game.js';
-import * as Runtime from 'xxscreeps/driver/runtime/index.js';
-import { tick } from 'xxscreeps/driver/runtime/index.js';
+import { initialize as runtimeInitialize, tick } from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 
 export { tick } from 'xxscreeps/driver/runtime/index.js';
@@ -32,12 +31,13 @@ hooks.register('gameInitializer', (game, data) => {
 });
 
 export function initialize(data: InitializationPayload) {
-	const compiler: Compiler<unknown> = {
+	const compiler: Compiler<object> = {
 		// `vm` module only support async operation
 		compile() { throw new Error('Modules are not supported within `sandbox: unsafe`'); },
 		evaluate() { throw new Error(); },
 	};
-	Runtime.initialize(compiler, eval, data);
+	// eslint-disable-next-line no-eval
+	runtimeInitialize(compiler, eval, data);
 }
 
 // @ts-expect-error

@@ -10,7 +10,6 @@ import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registe
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -23,6 +22,7 @@ import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Creep, calculateCarry } from './creep.js';
 import * as CreepLib from './creep.js';
 import { Tombstone } from './tombstone.js';
@@ -257,9 +257,7 @@ export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearo
 	return baseFatigue;
 }
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { creep: typeof intents }
-}
+export type CreepIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, processDrop),
@@ -448,7 +446,7 @@ interface Teleportable extends RoomObject {
 // Move a creep to another room. Used by border crossing and by structures that transport creeps
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
-export function teleportCreep(creep: AnyRoomObject & Teleportable, next: RoomPosition, context: ProcessorContext) {
+export function teleportCreep(creep: Teleportable, next: RoomPosition, context: ProcessorContext) {
 	if (creep.room === undefined as never) {
 		return;
 	}
@@ -471,7 +469,7 @@ export function teleportCreep(creep: AnyRoomObject & Teleportable, next: RoomPos
 	}
 	// Reset actionLog since the actions were in the previous room
 	creep['#actionLog'] = [];
-	const importPayload = writeRoomObject(creep);
+	const importPayload = writeRoomObject(creep as AnyRoomObject);
 	creep.pos = oldPos;
 	context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
 	context.didUpdate();

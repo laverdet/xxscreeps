@@ -3,7 +3,6 @@ import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -11,6 +10,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';
 import { StructurePowerBank, create as createPowerBank } from './powerbank.js';
 
@@ -36,7 +36,7 @@ function powerBankSim(options: PowerBankSimOptions = {}) {
 	});
 }
 
-describe('mod/modern/powerbank', () => {
+describe('mods/modern/powerbank', () => {
 	describe('combat & decay', () => {
 		test('surface is hostile and rejects transfer & withdraw', () => powerBankSim()(async ({ player }) => {
 			await player('100', Game => {

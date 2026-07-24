@@ -1,19 +1,16 @@
 import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Nuke, create as createNuke } from './nuke.js';
 import { StructureNuker, checkLaunchNuke } from './nuker.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { nuker: typeof intents }
-}
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
@@ -31,6 +28,7 @@ interface NukeImpactState {
 const nukeImpactState = new Map<Room, NukeImpactState>();
 hooks.register('flushContext', () => nukeImpactState.clear());
 
+export type NukerIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureNuker, 'launchNuke', {}, (nuker, context, targetPosId: number) => {

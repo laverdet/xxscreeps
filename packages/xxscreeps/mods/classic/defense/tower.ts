@@ -1,6 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { checkDestructible } from 'xxscreeps/mods/classic/combat/creep.js';
@@ -10,6 +9,7 @@ import { SingleStore, checkHasResource } from 'xxscreeps/mods/classic/resource/s
 import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { towerShape } from './schema.js';
 
 /**

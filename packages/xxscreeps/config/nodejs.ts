@@ -39,7 +39,12 @@ export const resolve: ResolveHook = (specifier, context, nextResolve) => {
 					shortCircuit: true,
 				};
 			} else {
-				return nextResolve(specifier, context);
+				return nextResolve(specifier, {
+					...context,
+					...context.parentURL?.startsWith('xxscreeps:') && {
+						parentURL: import.meta.url,
+					},
+				});
 			}
 	}
 };

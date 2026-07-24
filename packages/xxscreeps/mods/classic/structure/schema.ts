@@ -1,9 +1,9 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 export const structureShape =
 	declare('Structure', () => struct(...structForPath<StructureSchema>()('Structure', roomObjectShape, {
@@ -43,6 +43,7 @@ export const ruinShape = declare('Ruin', struct(roomObjectShape, {
 	}),
 }));
 
+export type StructureSchemaRoomSchema = typeof destroyedEventSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const destroyedEventSchema = registerVariant('Room.eventLog', declare('DestroyedEvent', struct({
 	...variant(C.EVENT_OBJECT_DESTROYED),
@@ -58,9 +59,3 @@ export interface StructureSchema {}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OwnedStructureSchema {}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema {
-		structureSchema: [ typeof destroyedEventSchema ];
-	}
-}

@@ -89,6 +89,7 @@ export interface KeyValProvider {
 	hGetAll(key: string): Promise<Record<string, string>>;
 	hincrBy(key: string, field: string, value: number): Promise<number>;
 	hIncrByEx(key: string, field: string, delta: number, options: DeltaEx): Promise<readonly [ value: number, delta: number ]>;
+	hKeys(key: string): Promise<string[]>;
 
 	hmGet(key: string, fields: string[], options: AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;
 	hmGet(key: string, fields: string[], options?: AsString): Promise<Record<string, string | null>>;

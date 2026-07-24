@@ -1,12 +1,12 @@
 import type { Builder } from './index.js';
-import type { Layout, StructLayout } from './layout.js';
+import type { Layout, StructLayout, Subject } from './layout.js';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 import { alignTo, kPointerSize, unpackWrappedStruct } from './layout.js';
 
-export type Scanner<Type = any> = (value: Type, heap: number) => number;
+export type Scanner<Type = unknown> = (value: Type, heap: number) => number;
 
 const empty: Scanner = (value, heap) => heap;
 
@@ -21,7 +21,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 			}
 
 			// Make scanner for single field
-			const next = function(): Scanner | undefined {
+			const next = function(): Scanner<any> | undefined {
 				const { member: layout } = member;
 				const scan = makeTypeScanner(layout, builder);
 				if (scan) {
@@ -29,7 +29,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 						value: `${typeof key === 'symbol' ? key.description : key}`,
 					});
 				}
-				return scan ? (value, heap) => scan(value[key], heap) : undefined;
+				return scan ? (value: Subject, heap) => scan(value[key], heap) : undefined;
 			}();
 
 			// Combine member writers
@@ -59,10 +59,11 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 }
 
 export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | undefined {
-	return getOrSet(builder.scanner, layout, () => {
+	return getOrSet(builder.scanner, layout, (): Scanner<any> | undefined => {
 
 		if (typeof layout === 'string') {
 			// Basic types
+			// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 			switch (layout) {
 				default: return;
 
@@ -87,7 +88,7 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 			const { composed, interceptor } = layout;
 			const scan = makeTypeScanner(composed, builder);
 			if (scan && 'decompose' in interceptor) {
-				return (value, heap) => scan(interceptor.decompose(value), heap);
+				return (value: unknown, heap) => scan(interceptor.decompose(value), heap);
 			} else {
 				return scan;
 			}
@@ -97,7 +98,7 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 			const { size, list: elementLayout } = layout;
 			const align = Math.max(kPointerSize, layout.align);
 			const scan = makeTypeScanner(elementLayout, builder)!;
-			return (value, heap) => Fn.reduce(value, heap, (heap, element) =>
+			return (value: unknown[], heap) => Fn.reduce(value, heap, (heap, element) =>
 				scan(element, alignTo(heap + kPointerSize, align) + size));
 
 		} else if ('named' in layout) {
@@ -109,14 +110,14 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 			const { optional: elementLayout, uninitialized } = layout;
 			const scan = makeTypeScanner(elementLayout, builder);
 			if (scan) {
-				return (value, heap) => value === uninitialized ? heap : scan(value, heap);
+				return (value: unknown, heap) => value === uninitialized ? heap : scan(value, heap);
 			}
 
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
 			const { align, size, pointer: elementLayout, uninitialized } = layout;
 			const scan = makeTypeScanner(elementLayout, builder) ?? empty;
-			return (value, heap) => {
+			return (value: unknown, heap) => {
 				if (value === uninitialized) {
 					return heap;
 				} else {
@@ -131,7 +132,7 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 
 		} else if ('variant' in layout) {
 			// Variant types
-			const variantMap = new Map(layout.variant.map((element): [ string | number, Scanner ] => {
+			const variantMap = new Map(layout.variant.map((element): [ unknown, Scanner ] => {
 				const { align, size } = element;
 				const layout = unpackWrappedStruct(element.layout);
 				const scan = makeTypeScanner(layout, builder) ?? empty;
@@ -140,13 +141,13 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 					(value, heap) => scan(value, alignTo(heap, align) + size),
 				];
 			}));
-			return (value, heap) => variantMap.get(value[Variant])!(value, heap);
+			return (value: Subject, heap) => variantMap.get(value[Variant])!(value, heap);
 
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
 			const { align, size, stride } = layout;
 			const tailPadding = stride - size;
-			return (value, heap) => {
+			return (value: unknown[], heap) => {
 				const { length } = value;
 				if (length === 0) {
 					return heap;

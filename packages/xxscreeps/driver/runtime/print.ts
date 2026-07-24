@@ -4,14 +4,16 @@ const kHalfMax = 50;
 export const resultPrefix = '\x1b[1m>\x1b[22m ';
 
 // An option fd for unsafe logs like html tags
-export const unescapedFd = 3;
+export const kFdStdOut = 1;
+export const kFdStdError = 2;
+export const kFdUnescaped = 3;
 
-type Log = { fd: number; data: string };
-let head: Log[] = [];
-let tail: Log[] = [];
+export interface PlayerLog { fd: number; data: string }
+let head: PlayerLog[] = [];
+let tail: PlayerLog[] = [];
 let omitted = 0;
 
-const previousFd = 1;
+const previousFd = kFdStdOut;
 let logRepeat = 0;
 let previousLog: string | undefined;
 

@@ -1,3 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.nuker = 100000;
+
 export const FIND_NUKES = 117 as const;
 export const LOOK_NUKES = 'nuke' as const;
 

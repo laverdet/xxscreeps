@@ -24,19 +24,19 @@ import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, GameState, runAsUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
 import * as ControllerProc from 'xxscreeps/mods/classic/controller/processor.js';
-import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 // Side-effect import: registers the `User.remove` hook that tears down the user's private messages.
 import 'xxscreeps/mods/meta/messages/model.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
+import * as C from 'xxscreeps:mods/constants';
 
 import 'xxscreeps:mods/game';
 

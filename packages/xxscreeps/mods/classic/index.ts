@@ -24,9 +24,9 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/powerbank',
 		'xxscreeps/mods/modern/powerspawn',
 
+		'xxscreeps/mods/mmo/powercreep',
 		'xxscreeps/mods/mmo/wallstreet',
 
-		'xxscreeps/mods/powercreep',
 		'xxscreeps/mods/portal',
 		'xxscreeps/mods/invader',
 		'xxscreeps/mods/intershardResource',

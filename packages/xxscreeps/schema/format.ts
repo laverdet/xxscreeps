@@ -89,18 +89,22 @@ WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 }
 
 // Composed interceptor types
-export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | OverlayInterceptor;
-export type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
-type CompositionInterceptor<Type = any, Result = any> = {
+export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | AbstractOverlayInterceptor;
+export type AbstractOverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
+export interface ConcreteOverlayInterceptor<Type = unknown> {
+	prototype: Record<keyof any, unknown>;
+	new(view: BufferView, offset: number): Type;
+}
+type CompositionInterceptor<Type = unknown, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
-	kaitai?: any[];
+	kaitai?: unknown[];
 };
 
-type RawCompositionInterceptor<Type = any> = {
+type RawCompositionInterceptor<Type = unknown> = {
 	composeFromBuffer: (view: BufferView, offset: number) => Type;
 	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => void;
-	kaitai?: any[];
+	kaitai?: unknown[];
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
@@ -111,7 +115,7 @@ export function compose<Type extends Format, Result>(
 	format: Type, interceptor: RawCompositionInterceptor<Result>,
 ): WithShapeAndType<Result>;
 
-export function compose<Type extends Format, Overlay>(format: Type, interceptor: OverlayInterceptor<Overlay>):
+export function compose<Type extends Format, Overlay>(format: Type, interceptor: AbstractOverlayInterceptor<Overlay>):
 WithShapeAndType<ShapeOf<Type>, Overlay>;
 
 export function compose(format: Format, interceptor: Interceptor) {
@@ -128,7 +132,7 @@ export function composeBind<Type extends Format>(format: Type) {
 			composed: format,
 			interceptor: undefined as never,
 		};
-		const bind = (interceptor: OverlayInterceptor<Overlay>) => {
+		const bind = (interceptor: AbstractOverlayInterceptor<Overlay>) => {
 			composedFormat.interceptor = interceptor;
 		};
 		return [
@@ -178,19 +182,29 @@ export function optional(element: unknown, uninitialized?: null) {
 // Structure / object type
 export type StructDeclaration = WithVariant | Record<string, Format | UnionDeclaration>;
 
+type StructMemberFormat<Member> =
+	Member extends UnionDeclaration<any, infer Format> ? Format : Member;
+
+type StructMemberIsOptional<Member> =
+	undefined extends ShapeOf<StructMemberFormat<Member>> ? true : false;
+
+type StructVariantMember<Struct> = Struct extends WithVariant<infer V> ? WithVariant<V> : unknown;
+
 type StructDeclarationShape<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
-> = {
-	[Key in Keys]: ShapeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+> = StructVariantMember<Type> & {
+	[Key in Keys as StructMemberIsOptional<Type[Key]> extends true ? never : Key]: ShapeOf<StructMemberFormat<Type[Key]>>;
+} & {
+	[Key in Keys as StructMemberIsOptional<Type[Key]> extends true ? Key : never]?: ShapeOf<StructMemberFormat<Type[Key]>>;
+};
 
 type StructDeclarationType<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
-> = {
-	[Key in Keys]: TypeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+> = StructVariantMember<Type> & {
+	[Key in Keys]: TypeOf<StructMemberFormat<Type[Key]>>;
+};
 
 export function struct<Type extends StructDeclaration>(format: Type):
 	WithShapeAndType<StructDeclarationShape<Type>, StructDeclarationType<Type>>;

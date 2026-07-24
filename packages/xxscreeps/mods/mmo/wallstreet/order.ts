@@ -1,8 +1,8 @@
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { BufferObject, compose, declare, withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { orderShape } from './schema.js';
 
 export type OrderType = typeof C.ORDER_BUY | typeof C.ORDER_SELL;

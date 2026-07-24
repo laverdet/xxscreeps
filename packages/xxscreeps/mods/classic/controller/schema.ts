@@ -1,8 +1,8 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 /** @internal */
 export const controllerShape = declare('Controller', struct(ownedStructureShape, {
@@ -45,8 +45,13 @@ export const roomSchema = registerStruct('Room', {
 	'#user': optional(Id.optionalFormat),
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
+registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
+
+export type ControllerEventRoomSchemas = [
+	typeof attackControllerEventSchema,
+	typeof reserveControllerEventSchema,
+	typeof upgradeControllerEventSchema,
+];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const attackControllerEventSchema = registerVariant('Room.eventLog', declare('AttackControllerEvent', struct({
@@ -74,23 +79,9 @@ const upgradeControllerEventSchema = registerVariant('Room.eventLog', declare('U
 
 // ---
 
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema {
-		controllerSchema: [
-			typeof attackControllerEventSchema,
-			typeof reserveControllerEventSchema,
-			typeof upgradeControllerEventSchema,
-		];
-	}
-}
-
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
-}
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { controller: typeof actionSchema }
 }

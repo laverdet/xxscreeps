@@ -1,16 +1,17 @@
 import type { ConstructibleStructureType } from './construction-site.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { asUnion, extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 
 // Register FIND_ types for `ConstructionSite`
+export type ConstructionFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_CONSTRUCTION_SITES]: room =>
@@ -22,12 +23,9 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `ConstructionSite`
+export type ConstructionLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { construction: typeof find }
-	interface Look { construction: typeof look }
-}
 
 // Extend `Room`
 declare module 'xxscreeps/game/room/index.js' {
@@ -75,10 +73,12 @@ hooks.register('gameInitializer', () => {
 });
 
 extend(Room, {
-	createConstructionSite(this: Room, ...args: any[]) {
+	createConstructionSite(this: Room, ...args: unknown[]) {
 
 		// Extract overloaded parameters
-		const { xx, yy, rest } = fetchArguments(...args);
+		type Rest = [ structureType: ConstructibleStructureType, name?: string | undefined ];
+		type Signature = [ xx: number, yy: number, ...Rest ] | [ pos: RoomPosition, ...Rest ];
+		const { xx, yy, rest } = fetchArguments(args as Signature);
 		if (args[0] instanceof RoomPosition && args[0].roomName !== this.name) {
 			return C.ERR_INVALID_ARGS;
 		}

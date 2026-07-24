@@ -7,6 +7,8 @@ import { observerShape, observerSpyShape } from './schema.js';
 
 registerGlobal(Observer.StructureObserver);
 
+export type ObserverRoomSchemas = [ typeof observerSchema, typeof observerSpySchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const observerSchema = registerVariant('Room.objects', compose(observerShape, Observer.StructureObserver));
 
@@ -19,8 +21,4 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		StructureObserver: typeof Observer.StructureObserver;
 	}
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { observer: [ typeof observerSchema, typeof observerSpySchema ] }
 }

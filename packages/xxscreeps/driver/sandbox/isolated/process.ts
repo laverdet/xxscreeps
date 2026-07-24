@@ -3,7 +3,11 @@ import { isolate } from './runtime.js';
 
 declare const processInfo: typeof import('node:process');
 
-const { lib } = ivm as any;
+const { lib } = ivm as unknown as {
+	lib: {
+		hrtime: () => [ number, number ];
+	};
+};
 export const { arch, platform, version } = processInfo;
 export const cwd = () => '.';
 export const cpuUsage = () => ({ user: isolate.cpuTime, system: 0 });

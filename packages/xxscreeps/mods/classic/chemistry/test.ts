@@ -1,10 +1,10 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { calculatePower, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createLab } from './lab.js';
 
 // Helper to create a lab with resources pre-loaded
@@ -19,7 +19,7 @@ export function createLabWithResources(pos: RoomPosition, owner: string, mineral
 	return lab;
 }
 
-describe('mod/classic/chemistry', () => {
+describe('mods/classic/chemistry', () => {
 
 	// =========================================================================
 	// runReaction

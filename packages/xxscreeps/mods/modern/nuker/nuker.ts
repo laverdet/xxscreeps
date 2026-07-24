@@ -1,5 +1,4 @@
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -7,6 +6,7 @@ import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { nukerShape } from './schema.js';
 import { NukerStore } from './store.js';
 
@@ -41,7 +41,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
 	 * @deprecated
 	 * @see https://docs.screeps.com/api/#StructureNuker.energyCapacity
 	 */
-	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) ?? 0; }
+	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 
 	/**
 	 * An alias for `.store[RESOURCE_GHODIUM]`.
@@ -57,7 +57,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
 	 * @deprecated
 	 * @see https://docs.screeps.com/api/#StructureNuker.ghodiumCapacity
 	 */
-	@enumerable get ghodiumCapacity() { return this.store.getCapacity(C.RESOURCE_GHODIUM) ?? 0; }
+	@enumerable get ghodiumCapacity() { return this.store.getCapacity(C.RESOURCE_GHODIUM); }
 
 	/**
 	 * The total amount of hit points of the structure.

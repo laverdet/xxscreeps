@@ -1,11 +1,11 @@
 import type { Color } from './flag.js';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Flag, checkCreateFlag } from './flag.js';
 
-describe('mod/meta/flag', () => {
+describe('mods/meta/flag', () => {
 	describe('checkCreateFlag precedence', () => {
 		const pos = new RoomPosition(25, 25, 'W1N1');
 		const validColor = C.COLOR_RED;

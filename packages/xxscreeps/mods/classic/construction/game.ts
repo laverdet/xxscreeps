@@ -10,11 +10,12 @@ import './position.js';
 import './room.js';
 
 // Add `constructionSites` to global `game` object
-hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null));
+hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null) as Record<string, ConstructionSite>);
 
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite);
 
+export type ConstructionRoomSchema = typeof siteSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const siteSchema = registerVariant('Room.objects', compose(constructionSiteShape, ConstructionSite));
 
@@ -38,8 +39,4 @@ declare module 'xxscreeps/game/game.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { ConstructionSite: typeof ConstructionSite }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { construction: [ typeof siteSchema ] }
 }

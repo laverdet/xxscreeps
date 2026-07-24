@@ -1,9 +1,9 @@
 import { registerEnumerated } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 /** @internal */
 export const extractorShape = declare('Extractor', struct(ownedStructureShape, {
@@ -52,12 +52,5 @@ const resources = [
 	C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
 	C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
 ];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const resourceSchema = registerEnumerated('ResourceType', ...resources);
+registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
-
-// ---
-
-declare module 'xxscreeps/mods/classic/resource/schema.js' {
-	interface ResourceSchema { mineral: typeof resourceSchema }
-}

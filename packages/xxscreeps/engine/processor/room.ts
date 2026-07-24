@@ -18,16 +18,21 @@ export function registerRoomTickProcessor(tick: RoomTickProcessor) {
 }
 
 export type ObjectReceivers = Extract<IntentReceivers, RoomObject>;
-type ObjectIntent = Partial<Record<IntentsForReceiver<ObjectReceivers>, any>>;
-export type RoomIntentPayload = {
-	local: Partial<Record<IntentsForReceiver<Room>, any[]>>;
+type ObjectIntent = Partial<Record<IntentsForReceiver<ObjectReceivers>, unknown[]>>;
+export interface RoomIntentPayload {
+	local: Partial<Record<IntentsForReceiver<Room>, unknown[][]>>;
 	object: Partial<Record<string, ObjectIntent>>;
 	internal?: true;
-};
-export type SingleIntent = {
+}
+export interface SingleIntent {
 	intent: string;
-	args: any[];
-};
+	args: unknown[];
+}
+interface ProcessorTask {
+	promise: Promise<unknown>;
+	userId: string;
+	finalize: ((result: unknown) => void) | undefined;
+}
 
 const flushContext = hooks.makeIterated('flushContext');
 
@@ -80,11 +85,7 @@ export class RoomProcessor implements ProcessorContext {
 	readonly nextTime;
 	receivedUpdate = false;
 
-	private tasks: {
-		promise: Promise<any>;
-		userId: string;
-		finalize: ((result: any) => void) | undefined;
-	}[] = [];
+	private tasks: ProcessorTask[] = [];
 
 	private readonly intents = new Map<string, RoomIntentPayload>();
 	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
@@ -281,7 +282,7 @@ export class RoomProcessor implements ProcessorContext {
 		this.wakeAt(this.nextTime);
 	}
 
-	task(promise: Promise<any>, finalize?: (result: any) => void) {
+	task<Type>(promise: Promise<Type>, finalize?: (result: any) => void) {
 		this.tasks.push({ promise, finalize, userId: me });
 	}
 
@@ -307,16 +308,16 @@ export class RoomProcessor implements ProcessorContext {
 		}
 	}
 
-	private finalizeTaskBatch(tasks: any[], results: any[]) {
+	private finalizeTaskBatch(tasks: ProcessorTask[], results: unknown[]) {
 		if (tasks.length !== results.length) {
 			throw new Error('Tasks queued out of processor context');
 		}
-		const tasksByUser = Fn.groupBy(Fn.range(tasks.length), ii => [ tasks[ii].userId, ii ]);
+		const tasksByUser = Fn.groupBy(tasks.entries(), ([ ii, task ]) => [ task.userId, ii ]);
 		for (const [ userId, indices ] of tasksByUser) {
-			if (indices.some(ii => tasks[ii].finalize)) {
+			if (indices.some(ii => tasks[ii]?.finalize)) {
 				runAsUser(userId, () => {
 					for (const ii of indices) {
-						tasks[ii].finalize?.(results[ii]);
+						tasks[ii]?.finalize?.(results[ii]);
 					}
 				});
 			}

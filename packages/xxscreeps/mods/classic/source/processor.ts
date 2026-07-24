@@ -3,7 +3,6 @@ import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { mappedInvertedNumericComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
 import * as Creep from 'xxscreeps/mods/classic/creep/creep.js';
@@ -12,6 +11,7 @@ import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/pro
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 

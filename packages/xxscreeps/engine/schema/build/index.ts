@@ -22,10 +22,7 @@ const schemaKeyFor = (name: string, version: number) => `schema/${name}/${versio
  */
 export function build<Type extends Format>(format: Type, cache = new Map<Format, LayoutAndTraits>()) {
 	const result = buildSchema(format, cache);
-	packages.set(result.name, {
-		...result,
-		archive: '?',
-	});
+	packages.set(result.name, result);
 	return result;
 }
 
@@ -35,26 +32,30 @@ export function build<Type extends Format>(format: Type, cache = new Map<Format,
 export function saveSchemaArchives(database: Database) {
 	return Fn.mapAwait(packages, async ([ name, info ]) => {
 		const key = schemaKeyFor(name, info.version);
-		await Promise.all([
-			database.data.hSet(key, 'archive', info.archive),
-			database.data.hSet(key, 'created', Date.now(), { if: 'NX' }),
-			database.data.hSet(key, 'seen', Date.now()),
-			async function() {
-				const { schemaArchive } = config;
-				if (schemaArchive !== undefined) {
-					const archivePath = new URL(`${schemaArchive}/`, configPath);
-					const js = new URL(`${name.toLowerCase()}-${versionId(info.version)}.js`, archivePath);
-					const ksy = new URL(`${name.toLowerCase()}-${versionId(info.version)}.ksy`, archivePath);
-					await fs.mkdir(archivePath, { recursive: true });
-					try {
-						await fs.stat(js);
-					} catch {
-						await fs.writeFile(js, info.archive);
-						await fs.writeFile(ksy, archiveStruct(info.layout, info.version));
+		if (info.archive !== '?') {
+			await Promise.all([
+				database.data.hSet(key, 'archive', info.archive),
+				database.data.hSet(key, 'created', Date.now(), { if: 'NX' }),
+				database.data.hSet(key, 'seen', Date.now()),
+				async function() {
+					const { schemaArchive } = config;
+					if (schemaArchive !== undefined) {
+						const archivePath = new URL(`${schemaArchive}/`, configPath);
+						const js = new URL(`${name.toLowerCase()}-${versionId(info.version)}.js`, archivePath);
+						const ksy = new URL(`${name.toLowerCase()}-${versionId(info.version)}.ksy`, archivePath);
+						await fs.mkdir(archivePath, { recursive: true });
+						try {
+							await fs.stat(js);
+						} catch {
+							await fs.writeFile(js, info.archive);
+							await fs.writeFile(ksy, archiveStruct(info.layout, info.version));
+						}
 					}
-				}
-			}(),
-		]);
+				}(),
+			]);
+			// Hacky: free up memory blob
+			info.archive = '?';
+		}
 	});
 }
 

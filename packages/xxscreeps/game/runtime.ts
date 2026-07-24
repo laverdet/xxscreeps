@@ -1,5 +1,5 @@
 import lodash from '@xxscreeps/lodash3';
-import * as C from './constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { hooks, registerGlobal } from './symbols.js';
 
 const { apply } = Reflect;
@@ -31,8 +31,6 @@ globalThis.cached = (target: object, key: string, descriptor: PropertyDescriptor
 globalThis.enumerable = (target: object, key: string, descriptor: PropertyDescriptor) => ({ ...descriptor, enumerable: true });
 
 registerGlobal('_', lodash);
-
-registerGlobal(function Deposit() {});
 
 hooks.register('runtimeConnector', {
 	initialize() {

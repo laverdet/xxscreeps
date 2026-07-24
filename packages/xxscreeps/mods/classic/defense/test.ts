@@ -1,13 +1,13 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createRampart } from './rampart.js';
 import { create as createTower } from './tower.js';
 
-describe('mod/classic/defense', () => {
+describe('mods/classic/defense', () => {
 	describe('ramparts', () => {
 		const roomWithUnbuiltRamparts = simulate({
 			W0N0: room => {

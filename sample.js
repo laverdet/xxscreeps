@@ -1,7 +1,7 @@
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');

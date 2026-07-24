@@ -4,7 +4,6 @@ import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -25,6 +24,7 @@ import { Spawning } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
 import { calcReward, templates } from './strongholds.js';
@@ -93,11 +93,9 @@ registerRoomTickProcessor((room, context) => {
 	}
 });
 
+export type InvaderIntents = typeof intents;
 // Intent processors. Includes the backend-only `requestInvader` (Room) and the four
 // invader-core actions driven by the NPC loop.
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { invader: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {

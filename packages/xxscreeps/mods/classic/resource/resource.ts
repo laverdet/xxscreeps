@@ -1,17 +1,14 @@
-import type { ResourceSchema } from './schema.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import type { ResourceSchema } from 'xxscreeps:mods/game';
 import { RoomObject, createRoomObject } from 'xxscreeps/game/object.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { resourceEnumFormat } from './schema.js';
 
 // Enum schema for resource types
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const extraResourceTypes = enumeratedForPath<ResourceSchema>()('ResourceType');
-export type ResourceType = typeof C.RESOURCE_ENERGY | typeof C.RESOURCE_POWER | typeof extraResourceTypes[number];
+export type ResourceType = `${ResourceSchema}`;
 
 /** @internal */
 export const resourceShape = declare('Resource', struct(roomObjectShape, {

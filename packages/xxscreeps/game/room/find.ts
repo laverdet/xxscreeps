@@ -1,23 +1,22 @@
 import type { Room } from './index.js';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
+import type { Find } from 'xxscreeps:mods/game';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface Find {}
-export type FindHandler = (room: Room) => readonly any[];
+export type FindHandler = (room: Room) => readonly unknown[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
 
 // Convert a FIND_ constant to result type
 export type FindType<Find extends FindConstants> = ReturnType<KeyFor<FindHandlers, Find>>[number];
 
-export type RoomFindOptions<Type = any> = {
+export interface RoomFindOptions<Type = unknown> {
 	filter?: string | object | ((object: Type) => LooseBoolean);
-};
+}
 
 // Base FIND_EXIT_ handler (i.e. doesn't include FIND_EXIT)
 const exits = [ C.FIND_EXIT_TOP, C.FIND_EXIT_RIGHT, C.FIND_EXIT_BOTTOM, C.FIND_EXIT_LEFT ];
@@ -44,8 +43,9 @@ function makeFindExit(exit: ExitType) {
 }
 
 // All FIND_EXIT_ handlers
+export type ExitFind = typeof exitFind;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const find = registerFindHandlers({
+const exitFind = registerFindHandlers({
 	...Fn.fromEntries(exits.map(exit => [ exit, makeFindExit(exit) ])),
 	[C.FIND_EXIT]: (room: Room): RoomPosition[] => [
 		...room.find(C.FIND_EXIT_TOP),
@@ -54,6 +54,3 @@ const find = registerFindHandlers({
 		...room.find(C.FIND_EXIT_LEFT),
 	],
 });
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { exit: typeof find }
-}

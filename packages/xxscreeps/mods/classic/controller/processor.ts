@@ -2,13 +2,13 @@ import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/classic/creep/creep.js';
 import { checkActiveStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
 import { controlledRoomsKey, incrementGlobalControlLevel, insertControlledRoom, insertReservedRoom, removeControlledRoom, removeReservedRoom } from './model.js';
@@ -68,10 +68,8 @@ function updateRoomStatus(room: Room, level: number, userId: string | null | und
 	checkActiveStructures(room);
 }
 
+export type ControllerIntents = typeof intents;
 // Register intent processors
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { controller: typeof intents }
-}
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attackController', {
@@ -168,9 +166,9 @@ const intents = [
 	registerIntentProcessor(Creep, 'signController', {}, (creep, context, id: string, message: string | null) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkSignController(creep, controller, message) === C.OK) {
-			controller.room['#sign'] = message ? {
+			controller.room['#sign'] = Boolean(message) ? {
 				datetime: Date.now(),
-				text: message.substr(0, 100),
+				text: message!.slice(0, 100),
 				time: Game.time,
 				userId: creep['#user'],
 			} : undefined;

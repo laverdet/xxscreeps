@@ -19,7 +19,6 @@ import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
@@ -41,6 +40,7 @@ import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
+import * as C from 'xxscreeps:mods/constants';
 
 const argv = checkArguments({
 	argv: true,

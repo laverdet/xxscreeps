@@ -11,7 +11,7 @@ import { makeTypeReader } from './read.js';
 const { defineProperty } = Object;
 const { apply } = Reflect;
 
-type GetterReader = (this: BufferObject) => any;
+type GetterReader = (this: BufferObject) => unknown;
 
 const injected = new WeakSet();
 export function injectGetters(layout: StructLayout, prototype: object, builder: Builder) {
@@ -86,15 +86,18 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 }
 
 // Helper types for `withOverlay`
-type AbstractBufferObjectSubclass<Instance extends BufferObject = any> =
+type AbstractBufferObjectSubclass<Instance extends BufferObject = BufferObject> =
 	abstract new(view?: BufferView, offset?: number) => Instance;
 type BufferObjectSubclass<Instance extends BufferObject> =
 	new(view?: BufferView, offset?: number) => Instance;
 type BufferObjectConstructor<
 	Base extends AbstractBufferObjectSubclass,
 	Instance extends BufferObject,
-> = Omit<Base, 'prototype'> & (Base extends BufferObjectSubclass<any>
-	? BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>);
+> =
+	Omit<Base, 'prototype'> &
+	(Base extends BufferObjectSubclass<any>
+		? BufferObjectSubclass<Instance>
+		: AbstractBufferObjectSubclass<Instance>);
 
 /**
  * Injects types inherited from format into class prototype. Just passes the base class back

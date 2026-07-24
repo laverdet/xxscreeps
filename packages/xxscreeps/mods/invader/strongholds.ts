@@ -1,10 +1,12 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import {
 	RESOURCE_BATTERY, RESOURCE_COMPOSITE, RESOURCE_CRYSTAL, RESOURCE_GHODIUM_MELT,
 	RESOURCE_KEANIUM_BAR, RESOURCE_LEMERGIUM_BAR, RESOURCE_LIQUID, RESOURCE_OXIDANT,
 	RESOURCE_PURIFIER, RESOURCE_REDUCTANT, RESOURCE_UTRIUM_BAR, RESOURCE_ZYNTHIUM_BAR,
 } from 'xxscreeps/mods/modern/factory/constants.js';
+import { shuffle } from 'xxscreeps/utility/random.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // Stronghold layout templates and loot tables ported from @screeps/common (lib/strongholds.js).
 // Each template's `rewardLevel` matches its bunker number. The core's own template entry is omitted
@@ -107,13 +109,7 @@ const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
  */
 export function *calcReward(rewardLevel: number): Iterable<[ ResourceType, number ]> {
 	const targetDensity = containerAmounts[rewardLevel]!;
-	const picks = Object.entries(containerRewards);
-	// TODO: abstract out fisher-yates shuffle
-	for (let ii = picks.length - 1; ii > 0; --ii) {
-		const jj = Math.floor(Math.random() * (ii + 1));
-		[ picks[ii], picks[jj] ] = [ picks[jj]!, picks[ii]! ];
-	}
-	picks.length = 3;
+	const picks = [ ...Fn.take(shuffle(Object.entries(containerRewards)), 3) ];
 	let currentDensity = 0;
 	for (const [ ii, [ resource, density ] ] of picks.entries()) {
 		const remaining = targetDensity - currentDensity;

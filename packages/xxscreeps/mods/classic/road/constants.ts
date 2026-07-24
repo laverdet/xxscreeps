@@ -1,3 +1,7 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.road = 300;
+
 export const STRUCTURE_ROAD = 'road' as const;
 
 export const ROAD_HITS = 5000;

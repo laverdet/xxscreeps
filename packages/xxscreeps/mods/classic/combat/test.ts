@@ -1,5 +1,4 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createLab } from 'xxscreeps/mods/classic/chemistry/lab.js';
 import { createLabWithResources } from 'xxscreeps/mods/classic/chemistry/test.js';
@@ -9,8 +8,9 @@ import { create as createContainer } from 'xxscreeps/mods/classic/resource/conta
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { getAllRowsForTesting } from 'xxscreeps/mods/meta/notifications/model.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
-describe('mod/classic/combat', () => {
+describe('mods/classic/combat', () => {
 	describe('death', () => {
 		// 17 ATTACK (510 dmg), 1 RANGED_ATTACK (10 dmg)
 		// attack intent (type 'primary') runs before rangedAttack (type 'laser').

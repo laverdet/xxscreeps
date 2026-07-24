@@ -13,12 +13,16 @@ interface CoordinatesObject {
 type RenderedActionLog = Partial<Record<ActionLogType, CoordinatesObject>>;
 
 // Base object renderer
-bindRenderer(RoomObject, object => ({
-	_id: object.id,
-	type: object[Variant as never],
-	x: object.pos.x,
-	y: object.pos.y,
-}));
+bindRenderer(RoomObject, object => {
+	if (object['#lookType'] !== null) {
+		return {
+			_id: object.id,
+			type: object[Variant as never],
+			x: object.pos.x,
+			y: object.pos.y,
+		};
+	}
+});
 
 export function renderActionLog(actionLog: ActionLog, previousTime: number | undefined): RenderedActionLog {
 	return Fn.pipe(

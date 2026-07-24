@@ -7,8 +7,6 @@ export const LOOK_POWER_CREEPS = 'powerCreep' as const;
 
 export const EVENT_POWER = 11;
 
-export const POWER_LEVEL_MULTIPLY = 1000;
-export const POWER_LEVEL_POW = 2;
 export const POWER_CREEP_SPAWN_COOLDOWN = 8 * 3600 * 1000;
 export const POWER_CREEP_DELETE_COOLDOWN = 24 * 3600 * 1000;
 export const POWER_CREEP_MAX_LEVEL = 25;
@@ -37,9 +35,6 @@ export const PWR_OPERATE_POWER = pwr(16);
 export const PWR_FORTIFY = pwr(17);
 export const PWR_OPERATE_CONTROLLER = pwr(18);
 export const PWR_OPERATE_FACTORY = pwr(19);
-
-export const EFFECT_INVULNERABILITY = 1001;
-export const EFFECT_COLLAPSE_TIMER = 1002;
 
 export const POWER_INFO = {
 	[PWR_GENERATE_OPS]: {

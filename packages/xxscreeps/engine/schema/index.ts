@@ -1,7 +1,7 @@
-import type { StructDeclaration, StructFormat, variant } from 'xxscreeps/schema/format.js';
+import type { StructDeclaration, StructFormat, TypeOf, UnionDeclaration, variant } from 'xxscreeps/schema/format.js';
 import type { BuilderOptions, Format } from 'xxscreeps/schema/index.js';
 import type { ReadOptions } from 'xxscreeps/schema/read.js';
-import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { UnionToIntersection } from 'xxscreeps/utility/types.js';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { build, makeUpgrader } from 'xxscreeps/engine/schema/build/index.js';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
@@ -10,9 +10,24 @@ import { getOrSet } from 'xxscreeps/utility/utility.js';
 // Use full path here so we can rewrite it in webpack
 export { build, makeUpgrader };
 
+// Expand merged mod interface arrays into a union of types
+/** @internal */
+export type ExpandModInterface<Type, Values = Type[keyof Type]> =
+	Exclude<Values extends (infer Element)[] ? Element : never, null>;
+
 // Resolve mod formats from `declare module` interfaces
 type FormatsForPath<Schema, Path extends string> =
-	Extract<UnwrapArray<Schema[keyof Schema]>, { path: Path }> extends { format: infer Type } ? Type : never;
+	Extract<ExpandModInterface<Schema>, { path: Path }> extends { format: infer Type } ? Type : never;
+
+/**
+ * Composable overlay extension for types like `Creep` and `StructureTerminal` which have multiple
+ * schema hooks.
+ */
+export type WithOverlay<Schema> = StructDeclarationMembers<UnionToIntersection<FormatsForPath<Schema, string>>>;
+
+type StructDeclarationMembers<Type> = {
+	[Key in keyof Type]: TypeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
+};
 
 // Schema which can be extend by mods using the given path
 export interface SchemaByPath<Path extends string, Format> {
@@ -47,9 +62,8 @@ export const registerVariant:
 	(path: Path, format: Type) => { path: Path; format: Type } = registerSchema;
 
 // Returns augmented formats as array that can be spread into enumerated declarations
-type EnumeratedSchema<Type> = Type extends any[] ? Type[number] : never;
-export function enumeratedForPath<Schema>() {
-	return <Path extends string>(path: Path): EnumeratedSchema<FormatsForPath<Schema, Path>>[] => {
+export function enumeratedForPath<Schema extends string>() {
+	return <Path extends string>(path: Path): `${Schema}`[] => {
 		closedSchemaByPath.add(path);
 		return (schemaByPath.get(path) ?? []) as never;
 	};

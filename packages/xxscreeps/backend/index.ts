@@ -5,20 +5,22 @@ import type { RouterContext } from 'koa-router';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
+import type { Context, State } from 'xxscreeps:backend';
 import { Ajv } from 'ajv';
 import { MapRender, Render, TerrainRender } from './symbols.js';
 
 export { hooks } from './symbols.js';
 
 // Koa middleware & generic backend route types
-export interface Context {
-	backend: BackendContext;
-	db: Database;
-	shard: Shard;
-	request: RequestType;
+declare module 'xxscreeps:backend' {
+	interface Context {
+		backend: BackendContext;
+		db: Database;
+		shard: Shard;
+		request: RequestType;
+	}
 }
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface State {}
+
 export type Method = 'delete' | 'get' | 'post' | 'put';
 export type Middleware = Koa.Middleware<State, Context>;
 
@@ -52,12 +54,12 @@ export interface Endpoint {
 }
 
 // `RoomObject` render symbols
-type RenderedRoomObject = {
+interface RenderedRoomObject {
 	_id: string;
 	type: string;
 	x: number;
 	y: number;
-};
+}
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		[Render]: (previousTime?: number) => RenderedRoomObject | undefined;
@@ -73,15 +75,30 @@ const ajv = new Ajv();
 // fields as strings). `coerceTypes` is an Ajv constructor option, so it can't be set per-schema.
 const coercingAjv = new Ajv({ coerceTypes: true });
 
+// `JSONSchemaType` has no way to express a property which accepts any value, but it does allow
+// plain `$ref` entries in `properties`, so an unconstrained schema is registered as an escape
+// hatch. https://github.com/ajv-validator/ajv/issues/1375
+export const anySchema = { $ref: 'any' };
+for (const instance of [ ajv, coercingAjv ]) {
+	instance.addSchema({}, 'any');
+}
+
 // Backend render hooks
 export function bindRenderer<Type extends RoomObject>(
 	object: Implementation<Type>,
-	render: (object: Type, next: () => RenderedRoomObject, ...rest: Parameters<RoomObject[typeof Render]>) => RenderedRoomObject | undefined,
+	render: (
+		object: Type,
+		next: () => RenderedRoomObject,
+		...rest: Parameters<NonNullable<RoomObject[typeof Render]>>
+	) => RenderedRoomObject | undefined,
 ) {
 	const { prototype } = object;
-	const parent = Object.getPrototypeOf(prototype);
+	const parent = Object.getPrototypeOf(prototype) as RoomObject;
 	prototype[Render] = function(...rest) {
-		return render(this, () => parent[Render].call(this, ...rest), ...rest);
+		const renderParent = () => parent[Render].call(this, ...rest) ?? function() {
+			throw new Error('Render fell through to empty prototype');
+		}();
+		return render(this, renderParent, ...rest);
 	};
 }
 

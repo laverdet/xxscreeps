@@ -1,13 +1,14 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { clamp, instantiate } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { recordTransaction } from './model.js';
 import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
 import { Transaction } from './transaction.js';
 
+export type BrokerageIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTerminal, 'send', {}, (
@@ -66,9 +67,3 @@ const intents = [
 		context.didUpdate();
 	}),
 ];
-
-// ---
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { brokerage: typeof intents }
-}

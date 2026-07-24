@@ -3,7 +3,6 @@ import type { DestructibleStructure } from 'xxscreeps/mods/classic/structure/str
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, saveAction } from 'xxscreeps/game/object.js';
 import { iterateInRangeTo } from 'xxscreeps/game/position.js';
@@ -11,11 +10,8 @@ import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { combat: typeof intents }
-}
 
 const kRangedMassAttackPower = [ 1, 1, 0.4, 0.1 ];
 
@@ -51,6 +47,7 @@ export function captureDamageWithNotify(
 		object => notifyAttackDamage(object, context, source));
 }
 
+export type CombatIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attack', {

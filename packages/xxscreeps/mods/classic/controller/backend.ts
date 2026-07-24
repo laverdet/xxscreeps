@@ -2,6 +2,9 @@ import type { JSONSchemaType } from 'ajv';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { isStatInterval, readRoomPunchcard, readUserTotals } from 'xxscreeps/mods/meta/stats/model.js';
+import { isStatName } from 'xxscreeps/mods/meta/stats/schema.js';
 import { StructureController } from './controller.js';
 import { controlledRoomsKey, reservedRoomsKey } from './model.js';
 
@@ -101,15 +104,35 @@ hooks.register('route', {
 	async execute(context) {
 		const { userId } = context.state;
 		const { shard } = context;
-		const rooms = userId == null ? [] : await shard.scratch.sMembers(controlledRoomsKey(userId));
+		if (userId == null) {
+			return { ok: 1, shards: { [shard.name]: { rooms: [], stats: {} } }, statsMax: 0, totals: {} };
+		}
+
+		const rawInterval = Number(context.request.query.interval);
+		const interval = isStatInterval(rawInterval) ? rawInterval : 8;
+		// TODO: Types on this query shape
+		const statNameRaw = String(context.request.query.statName);
+		const statName = isStatName(statNameRaw) ? statNameRaw : 'energyHarvested';
+		const [ rooms, totals ] = await Promise.all([
+			shard.scratch.sMembers(controlledRoomsKey(userId)),
+			readUserTotals(context.db, userId, interval),
+		]);
+		// Per-room punchcard of the user's own activity for the selected stat, plus the max across
+		// them. The client reads the punchcards from `shards[name].stats[room]` and `statsMax` off
+		// the top.
+		const series = await Fn.mapAwait(rooms, async room => {
+			const punchcard = await readRoomPunchcard(shard.data, room, userId, interval, statName);
+			return [ room, punchcard ] as const;
+		});
+		const stats = Object.fromEntries(series);
+		const statsMax = Math.max(0, ...Fn.transform(series, ([ ,points ]) => points));
 		return {
 			ok: 1,
 			shards: {
-				[shard.name]: { rooms },
+				[shard.name]: { rooms, stats },
 			},
-			stats: {},
-			statsMax: {},
-			totals: {},
+			statsMax,
+			totals,
 		};
 	},
 });

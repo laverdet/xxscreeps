@@ -176,9 +176,9 @@ export declare interface RoomObject {
 	 * @see https://docs.screeps.com/api/#RoomObject.effects
 	 */
 	get effects(): RoomObjectEffect[] | undefined;
-	set hits(hits: number);
 	get hitsMax(): number | undefined;
 	get my(): boolean | undefined;
+	set hits(hits: number);
 }
 
 export function createRoomObject<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {

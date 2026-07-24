@@ -1,4 +1,3 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
@@ -6,9 +5,10 @@ import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { createRuin } from './ruin.js';
 
-describe('mod/classic/structure', () => {
+describe('mods/classic/structure', () => {
 	describe('isActive', () => {
 		// Controller owner mismatch: structure owned by player A in room controlled by player B
 		const ownerMismatchSim = simulate({
@@ -178,8 +178,8 @@ describe('mod/classic/structure', () => {
 				const mine = Game.rooms.W7N1?.find(C.FIND_MY_STRUCTURES);
 				assert.ok(mine);
 				assert.strictEqual(mine.length, 2, 'should return only my owned structures, including controller');
-				assert.ok(mine.some(s => (s as { name?: string }).name === 'MySpawn'));
-				assert.ok(mine.every(s => s.my));
+				assert.ok(mine.some(structure => (structure as { name?: string }).name === 'MySpawn'));
+				assert.ok(mine.every(structure => structure.my));
 			});
 		}));
 
@@ -198,7 +198,7 @@ describe('mod/classic/structure', () => {
 				assert.ok(ruins);
 				assert.strictEqual(ruins.length, 1);
 				assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_SPAWN);
-				assert.ok(ruins[0]!.ticksToDecay! > 0, 'ruin should have ticksToDecay property');
+				assert.ok(ruins[0]!.ticksToDecay > 0, 'ruin should have ticksToDecay property');
 			});
 		}));
 

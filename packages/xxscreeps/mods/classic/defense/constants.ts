@@ -1,3 +1,9 @@
+import { CONSTRUCTION_COST } from 'xxscreeps/mods/classic/construction/constants.js';
+
+CONSTRUCTION_COST.constructedWall = 1;
+CONSTRUCTION_COST.rampart = 1;
+CONSTRUCTION_COST.tower = 5000;
+
 export const STRUCTURE_RAMPART = 'rampart' as const;
 export const STRUCTURE_TOWER = 'tower' as const;
 export const STRUCTURE_WALL = 'constructedWall' as const;

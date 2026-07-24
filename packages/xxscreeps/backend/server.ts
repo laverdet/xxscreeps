@@ -1,4 +1,4 @@
-import type { Context, State } from './index.js';
+import type { Context, State } from 'xxscreeps:backend';
 import * as http from 'node:http';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
@@ -42,7 +42,10 @@ if (proxy) {
 }
 
 // Set up endpoints
-const httpServer = http.createServer(koa.callback());
+const httpServer = http.createServer(function() {
+	const callback = koa.callback();
+	return (req, res) => void callback(req, res);
+}());
 const unlistenServer = setupGracefulShutdown(httpServer);
 installUpgradeHandlers(koa, httpServer);
 const socketHandler = installSocketHandlers(koa, backendContext);
@@ -72,16 +75,19 @@ koa.use(router.allowedMethods());
 installEndpointHandlers(koa, router);
 
 // Read configuration
-const addr: any[] = config.backend.bind.split(':');
-addr[1] = Number(addr[1] ?? 21025);
-if (addr[0] === '*') {
-	addr.shift();
-}
-addr.reverse();
+const addr = function(): [ number ] {
+	const [ addr, portString ] = config.backend.bind.split(':');
+	const port = Number(portString ?? 21025);
+	if (addr === '*') {
+		return [ port ];
+	} else {
+		return [ port, addr ] as unknown as [ number ];
+	}
+}();
 httpServer.listen(...addr, () => console.log('🌎 Listening'));
 
 // Interrupt handler
-const halt = Promise.withResolvers<void>();
+const halt: PromiseWithResolvers<void> = Promise.withResolvers();
 using _signal = handleInterruptSignal(halt.resolve);
 await halt.promise;
 

@@ -1,4 +1,4 @@
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import type { IncomingMessage, OutgoingHttpHeaders, Server, ServerResponse } from 'node:http';
 import type { Socket } from 'node:net';
 import type sockjs from 'sockjs';
 import type { Effect } from 'xxscreeps/utility/types.js';
@@ -35,10 +35,12 @@ export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Option
 			sockets.set(socket, false);
 			res.once('finish', () => markIdle(socket));
 			res.writeHead = function(writeHead) {
-				return function(this: any, ...args: any) {
+				return function(this: any, ...args) {
 					markIdle(socket);
-					return writeHead.apply(this, args);
+					type Signature = [ statusCode: number, headers?: OutgoingHttpHeaders ];
+					return writeHead.apply(this, args as Signature);
 				};
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			}(res.writeHead);
 		}
 	});

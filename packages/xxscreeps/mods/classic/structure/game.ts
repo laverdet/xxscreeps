@@ -1,9 +1,9 @@
 import type { AnyStructure } from './structure.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Ruin } from './ruin.js';
 import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';
@@ -14,6 +14,7 @@ registerGlobal(Ruin);
 registerGlobal(Structure);
 
 // Register FIND_ types for `Structure`
+export type StructureFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_STRUCTURES]: room => room['#lookFor'](C.LOOK_STRUCTURES),
@@ -25,6 +26,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Structure`
+export type StructureLook = typeof look;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [
 	registerLook<Ruin>()(C.LOOK_RUINS),
@@ -32,11 +34,12 @@ const look = [
 ];
 
 // Register schema type for `Ruin`
+export type StructureRoomSchema = typeof ruinSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ruinSchema = registerVariant('Room.objects', compose(ruinShape, Ruin));
 
 // Register `Game.structures`
-hooks.register('gameInitializer', Game => Game.structures = Object.create(null));
+hooks.register('gameInitializer', Game => Game.structures = Object.create(null) as Record<string, AnyStructure>);
 
 // ---
 
@@ -56,13 +59,5 @@ declare module 'xxscreeps/game/runtime.js' {
 		OwnedStructure: typeof OwnedStructure;
 		Ruin: typeof Ruin;
 		Structure: typeof Structure;
-	}
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { structure: typeof find }
-	interface Look { structure: typeof look }
-	interface RoomSchema {
-		structure: [ typeof ruinSchema ];
 	}
 }

@@ -7,7 +7,6 @@ import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userGame, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
@@ -21,6 +20,7 @@ import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js
 import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import { compose, declare, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { powerCreepShape } from './schema.js';
 
 /**

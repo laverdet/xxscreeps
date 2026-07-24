@@ -24,9 +24,11 @@ jobs:
           cache: true
 
       # Build & test
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - run: pnpm run test --private-transform=isolated-vm
+      - run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          npx eslint packages
+          pnpm run test --private-transform=isolated-vm
 
       # Publish to npm
       - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'

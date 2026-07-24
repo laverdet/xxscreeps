@@ -1,10 +1,10 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkString, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userGame } from 'xxscreeps/game/index.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/classic/creep/creep.js';
 import { checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureController } from './controller.js';
 
 // Creep extension declaration
@@ -126,9 +126,10 @@ extend(Creep, {
 	},
 
 	signController(target, message) {
+		const intentMessage = message || null;
 		return chainIntentChecks(
-			() => checkSignController(this, target, message),
-			() => intents.save(this, 'signController', target.id, message));
+			() => checkSignController(this, target, intentMessage),
+			() => intents.save(this, 'signController', target.id, intentMessage));
 	},
 
 	upgradeController(target) {
@@ -154,7 +155,7 @@ export function checkAttackController(creep: Creep, target: StructureController)
 			// Owned controllers use #user; reserved controllers only set room #user
 			if (target['#user'] === null && !target['#reservationEndTime']) {
 				return C.ERR_INVALID_TARGET;
-			} else if (target.upgradeBlocked) {
+			} else if (target.upgradeBlocked !== undefined) {
 				return C.ERR_TIRED;
 			}
 		});
@@ -177,7 +178,7 @@ export function checkClaimController(creep: Creep, target: StructureController) 
 				return C.ERR_INVALID_TARGET;
 			}
 			const roomOwner = target.room['#user'];
-			if (roomOwner && roomOwner !== creep['#user']) {
+			if (roomOwner !== null && roomOwner !== creep['#user']) {
 				// Someone else reserved the controller
 				return C.ERR_INVALID_TARGET;
 			}
@@ -208,13 +209,13 @@ export function checkReserveController(creep: Creep, target: StructureController
 		() => checkClaimPart(creep));
 }
 
-export function checkSignController(creep: Creep, target: StructureController, message: string | null | undefined) {
+export function checkSignController(creep: Creep, target: StructureController, message: string | null) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Structure),
 		() => checkRange(creep, target, 1),
 		() => target instanceof StructureController ? C.OK : C.ERR_INVALID_TARGET,
-		() => message ? checkString(message, 100) : C.OK);
+		() => message === null ? C.OK : checkString(message, 100));
 }
 
 export function checkUpgradeController(creep: Creep, target: StructureController) {
@@ -222,7 +223,7 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 		() => checkCommon(creep, C.WORK),
 		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, StructureController),
-		() => target.upgradeBlocked ? C.ERR_INVALID_TARGET : C.OK,
+		() => target.upgradeBlocked === undefined ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkRange(creep, target, 3),
 		() => target.my ? C.OK : C.ERR_NOT_OWNER);
 }

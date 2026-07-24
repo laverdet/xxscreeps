@@ -10,7 +10,6 @@ import type { PolyStyle } from 'xxscreeps/mods/meta/visual/visual.js';
 import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, createRoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
@@ -25,6 +24,7 @@ import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { creepShape } from './schema.js';
 import { Tombstone } from './tombstone.js';
 
@@ -338,9 +338,11 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	 */
 	moveTo(x: number, y: number, opts?: MoveToOptions): number;
 	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions): number;
-	moveTo(...args: [any]) {
+	moveTo(...args: unknown[]) {
 		// Parse target
-		const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
+		type Rest = [ opts?: MoveToOptions | undefined ];
+		type Signature = [ xx: number, yy: number, ...Rest ] | [ target: RoomObject | RoomPosition, ...Rest ];
+		const { pos, rest: [ options ] } = fetchPositionArgument(this.pos.roomName, args as Signature);
 		if (pos === undefined) {
 			return C.ERR_INVALID_TARGET;
 		} else if (pos.isEqualTo(this.pos)) {
@@ -349,8 +351,8 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 		const searchOrFetchPath = () => {
 			// Reuse saved path
-			const reusePath = extra?.reusePath ?? 5;
-			const serializeMemory = extra?.serializeMemory ?? true;
+			const reusePath = options?.reusePath ?? 5;
+			const serializeMemory = options?.serializeMemory ?? true;
 			if (reusePath > 0) {
 				const { _move } = this.memory as { _move?: SavedMove };
 				if (_move !== undefined) {
@@ -372,11 +374,11 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 			}
 
 			// Find a path
-			if (extra?.noPathFinding) {
+			if (options?.noPathFinding) {
 				return null;
 			}
-			const path = this.pos.findPathTo(pos, extra && {
-				...extra,
+			const path = this.pos.findPathTo(pos, options && {
+				...options,
 				serialize: false,
 			});
 
@@ -397,14 +399,14 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 		};
 
 		const visualize = (path: RoomPath) => {
-			if (path.length > 0 && extra?.visualizePathStyle) {
+			if (path.length > 0 && options?.visualizePathStyle) {
 				this.room.visual.poly(path, {
 					fill: 'transparent',
 					lineStyle: 'dashed',
 					opacity: 0.1,
 					stroke: '#fff',
 					strokeWidth: 0.15,
-					...extra.visualizePathStyle,
+					...options.visualizePathStyle,
 				});
 			}
 		};
@@ -518,8 +520,7 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 			return this.upgradeController(target);
 		}
 		const intentAmount = calculateChecked(this, target, () =>
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
+			(amount ?? 0) || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, intentAmount),
 			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount),

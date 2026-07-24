@@ -1,5 +1,6 @@
 import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
+import type { UnknownObject } from 'xxscreeps/utility/types.js';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
 import Webpack from 'webpack';
@@ -28,6 +29,7 @@ const getRuntimeSource = runOnce(() => {
 			process: 'xxscreeps/driver/sandbox/isolated/process.js',
 			'/xxscreeps:private-symbol': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 			'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
+			'xxscreeps/game/constants/index.js': import.meta.resolve('xxscreeps/game/constants/index.js'),
 		},
 		externals: ({ request }) => {
 			switch (request) {
@@ -136,21 +138,22 @@ export class IsolatedSandbox implements Sandbox {
 			} else {
 				return completion;
 			}
-		} catch (err: any) {
-			if (err.message === 'Script execution timed out.') {
-				return { result: 'timedOut', stack: err.stack };
+		} catch (cause: unknown) {
+			const error = cause as UnknownObject;
+			if (error.message === 'Script execution timed out.') {
+				return { result: 'timedOut', stack: String(error.stack) };
 			} else if (
-				err.message === 'Isolate is disposed' ||
-				err.message === 'Isolate was disposed during execution' ||
-				err.message === 'Isolate was disposed during execution due to memory limit' ||
+				error.message === 'Isolate is disposed' ||
+				error.message === 'Isolate was disposed during execution' ||
+				error.message === 'Isolate was disposed during execution due to memory limit' ||
 				// The memory-limit reaper can dispose the isolate while a tick payload is being
 				// deserialized on its thread, which surfaces as v8's generic clone error rather than
 				// one of the disposal messages above.
-				(err.message === 'Unable to deserialize cloned data.' && this.isolate.isDisposed)
+				(error.message === 'Unable to deserialize cloned data.' && this.isolate.isDisposed)
 			) {
 				return { result: 'disposed' };
 			}
-			throw err;
+			throw cause;
 		}
 	}
 }

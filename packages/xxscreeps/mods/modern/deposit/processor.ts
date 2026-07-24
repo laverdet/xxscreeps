@@ -2,7 +2,6 @@ import type { DepositResource } from './main.js';
 import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
@@ -11,37 +10,26 @@ import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/processor.js';
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
+import { shuffledSquare } from 'xxscreeps/utility/random.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
 
-const MAX_PLACEMENT_ATTEMPTS = 1000;
-
-// Picks a wall position in 5..44 with at least one non-wall neighbor (incl. diagonals), inside the
-// sector's 250-square radius, and 2 squares clear of any other room object.
+// The first wall position in 5..44, in random order, with at least one non-wall neighbor (incl.
+// diagonals), inside the sector's 250-square radius, and 2 squares clear of any other room object.
 function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass) {
 	const { terrain, sectors } = world.map['#getRoomTraits'](targetRoom.name);
 	const objects = targetRoom['#objects'];
 	const inSector = makeSectorRadiusPredicate(centralRoom, targetRoom.name, sectors);
-	for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; ++attempt) {
-		const xx = Math.floor(Math.random() * 40) + 5;
-		const yy = Math.floor(Math.random() * 40) + 5;
-		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) {
-			continue;
-		}
+	return Fn.pipe(
+		shuffledSquare(5, 40),
+		$$ => Fn.filter($$, ([ xx, yy ]) => terrain.get(xx, yy) === C.TERRAIN_MASK_WALL),
 		// Divergence from the official cron, which computes this check but never enforces it.
-		if (!inSector(xx, yy)) {
-			continue;
-		}
-		const from = new RoomPosition(xx, yy, targetRoom.name);
-		const hasExit = Fn.some(iterateNeighbors(from), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
-		if (!hasExit) {
-			continue;
-		}
-		if (Fn.some(objects, object => object.pos.getRangeTo(xx, yy) <= 2)) {
-			continue;
-		}
-		return { xx, yy } as const;
-	}
+		$$ => Fn.filter($$, ([ xx, yy ]) => inSector(xx, yy)),
+		$$ => Fn.map($$, ([ xx, yy ]) => new RoomPosition(xx, yy, targetRoom.name)),
+		$$ => Fn.filter($$, from => Fn.some(iterateNeighbors(from), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL)),
+		$$ => Fn.reject($$, from => Fn.some(objects, object => object.pos.getRangeTo(from) <= 2)),
+		$$ => Fn.first($$));
 }
 
 registerHarvestProcessor(Deposit, (creep, deposit) => {
@@ -81,6 +69,7 @@ registerObjectTickProcessor(Deposit, (deposit, context) => {
 	}
 });
 
+export type DepositIntents = [ typeof placeDepositIntent ];
 // Placement runs at the room intent stage so it can read terrain via the live `world.map`.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const placeDepositIntent = registerIntentProcessor(
@@ -90,13 +79,10 @@ const placeDepositIntent = registerIntentProcessor(
 		if (pos === undefined) {
 			return;
 		}
-		const deposit = createRoomObject(new Deposit(), new RoomPosition(pos.xx, pos.yy, room.name));
+		const deposit = createRoomObject(new Deposit(), pos);
 		deposit.depositType = depositType;
 		deposit['#nextDecayTime'] = Game.time + C.DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);
 		context.didUpdate();
 		context.wakeAt(deposit['#nextDecayTime']);
 	});
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { deposit: typeof placeDepositIntent }
-}

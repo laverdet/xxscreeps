@@ -1,6 +1,7 @@
 import type { AnyRoomObject } from './room.js';
+import type { ExpandModInterface } from 'xxscreeps/engine/schema/index.js';
 import type { PositionParameter } from 'xxscreeps/game/position.js';
-import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { Look } from 'xxscreeps:mods/game';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, fetchPositionArgument, iterateArea } from 'xxscreeps/game/position.js';
@@ -10,15 +11,13 @@ import { Room } from './room.js';
 import { lookConstants } from './symbols.js';
 
 // All LOOK_ constants
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface Look {}
 export type LookConstants = LookInfo['look'] | typeof C.LOOK_TERRAIN;
 
 // Converts a LOOK_ constant to result type
 export type TypeOfLook<Look extends LookConstants> = Extract<LookInfo, { look: Look }>['type'];
 
 // Union of LOOK_ constants with the result type included
-type LookInfo = Exclude<UnwrapArray<Look[keyof Look]>, void> | {
+type LookInfo = ExpandModInterface<Look> | {
 	look: 'terrain';
 	type: 'plain' | 'swamp' | 'wall';
 };
@@ -98,11 +97,8 @@ declare module './room.js' {
 		 * @public
 		 * @see https://docs.screeps.com/api/#Room.lookForAt
 		 */
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		lookForAt<Type extends LookConstants>(type: Type, ...rest: PositionParameter): TypeOfLook<Type>[];
-		// TypeScript can't figure out the rest parameter above which causes the `extend` below to fail.
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		lookForAt(type: LookConstants, x: number, y: number): never[];
+		// eslint-disable-next-line @typescript-eslint/member-ordering
+		lookForAt: <Type extends LookConstants>(type: Type, ...rest: PositionParameter) => TypeOfLook<Type>[];
 
 		/**
 		 * Get the list of objects with the given type at the specified room area.
@@ -128,7 +124,7 @@ declare module './room.js' {
 
 extend(Room, {
 	lookAt(...args: PositionParameter) {
-		const { pos } = fetchPositionArgument(this.name, ...args);
+		const { pos } = fetchPositionArgument(this.name, args);
 		if (pos?.roomName !== this.name) {
 			return [];
 		}
@@ -168,8 +164,8 @@ extend(Room, {
 			({ x: _x, y: _y, ...rest }) => rest) as never;
 	},
 
-	lookForAt(type: LookConstants, ...rest: PositionParameter) {
-		const { pos } = fetchPositionArgument(this.name, ...rest);
+	lookForAt(type: LookConstants, ...rest: PositionParameter): any[] {
+		const { pos } = fetchPositionArgument(this.name, rest);
 		if (pos?.roomName !== this.name) {
 			return [];
 		}
@@ -177,9 +173,7 @@ extend(Room, {
 			return [ terrainMaskToString[this.getTerrain().get(pos.x, pos.y)] ];
 		}
 		if (!lookConstants.has(type)) {
-			return [] as any;
-			// TODO: Set this back once all game objects have been implemented (?)
-			// return C.ERR_INVALID_ARGS as any;
+			return C.ERR_INVALID_ARGS as never;
 		}
 		return [ ...Fn.filter(this['#lookAt'](pos), object => lookMatches(type, object)) ];
 	},

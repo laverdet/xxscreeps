@@ -5,12 +5,14 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
 import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import { hooks } from './symbols.js';
 import 'xxscreeps:mods/terrain';
 
@@ -291,37 +293,25 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 	return grid;
 }
 
-function hasPassableNeighbor(grid: Grid, xx: number, yy: number): boolean {
-	return Fn.some(iterateGridInRange(xx, yy, 1), ([ nxx, nyy ]) => !grid[nyy]![nxx]!.wall);
-}
-
-// Rolls uniformly random tiles within [min, min + span) on both axes until one satisfies `accept`,
-// returning undefined after 1000 failed rolls to signal terrain that can't host the object.
-function findRandomTile(min: number, span: number, accept: (xx: number, yy: number) => boolean) {
-	for (let ii = 0; ii < 1000; ++ii) {
-		const xx = min + Math.floor(Math.random() * span);
-		const yy = min + Math.floor(Math.random() * span);
-		if (accept(xx, yy)) {
-			return [ xx, yy ] as const;
-		}
-	}
-}
-
 const kNoTags: ReadonlySet<string> = new Set();
 
-function makeGeneratorContext(room: Room, grid: Grid, options: GenerateRoomOptions): RoomGeneratorContext {
+function makeGeneratorContext(room: Room, terrain: Terrain, options: GenerateRoomOptions): RoomGeneratorContext {
 	const tags = new Map<number, Set<string>>();
-	const tagsAt = (xx: number, yy: number): ReadonlySet<string> => tags.get(yy * 50 + xx) ?? kNoTags;
-	const isWall = (xx: number, yy: number) => grid[yy]![xx]!.wall;
+	const tagsAt = (position: RoomPosition): ReadonlySet<string> => tags.get(position['#id']) ?? kNoTags;
+	const isWall = (position: RoomPosition) => terrain.get(position.x, position.y) === C.TERRAIN_MASK_WALL;
 	return {
 		options,
 		room,
-		findRandomTile,
-		isPlaceable: (xx, yy) => isWall(xx, yy) && tagsAt(xx, yy).size === 0 && hasPassableNeighbor(grid, xx, yy),
-		isWall,
+		terrain,
+		findRandomPosition: (min, span, accept) => Fn.pipe(
+			shuffledSquare(min, span),
+			$$ => Fn.map($$, ([ xx, yy ]) => new RoomPosition(xx, yy, room.name)),
+			$$ => Fn.find($$, accept)),
+		isPlaceable: position => isWall(position) && tagsAt(position).size === 0 &&
+			Fn.some(iterateNeighbors(position), neighbor => !isWall(neighbor)),
 		place(object, ...objectTags) {
 			room['#insertObject'](object);
-			const key = object.pos.y * 50 + object.pos.x;
+			const key = object.pos['#id'];
 			const tileTags = tags.get(key) ?? new Set();
 			for (const tag of objectTags) {
 				tileTags.add(tag);
@@ -342,12 +332,12 @@ function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions)
 	const swampType = options.swampType ?? Math.floor(Math.random() * 14);
 	for (let attempt = 0; attempt < kMaxGenerateAttempts; ++attempt) {
 		const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
-		const grid = buildBaseTerrain(exits, wallType, swampType);
+		const terrain = gridToTerrain(buildBaseTerrain(exits, wallType, swampType));
 		const room = new Room();
 		room.name = roomName;
-		const context = makeGeneratorContext(room, grid, options);
+		const context = makeGeneratorContext(room, terrain, options);
 		if (generators.every(generator => generator.generate(context))) {
-			return { room, terrain: gridToTerrain(grid) };
+			return { room, terrain };
 		}
 	}
 	throw new Error(`Failed to generate room terrain after ${kMaxGenerateAttempts} attempts`);

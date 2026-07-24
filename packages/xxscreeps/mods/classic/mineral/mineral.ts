@@ -1,7 +1,7 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { mineralShape } from './schema.js';
 
 // Game object declaration

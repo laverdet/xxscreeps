@@ -3,6 +3,7 @@ import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, struct, vector } from 'xxscreeps/schema/index.js';
 
+export type NpcRoomSchema = [ typeof schema ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerStruct('Room', {
 	'#npcData': struct({
@@ -19,7 +20,3 @@ const schema = registerStruct('Room', {
 		}),
 	}),
 });
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { npc: typeof schema }
-}

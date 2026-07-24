@@ -1,7 +1,7 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import * as C from 'xxscreeps:mods/constants';
 import { checkCreepNotifyWhenAttacked, checkStructureNotifyWhenAttacked } from './game.js';
 import { sendNotification } from './model.js';
 
@@ -36,6 +36,7 @@ Creep.prototype['#sendAttackNotify'] =
 			}
 		};
 
+export type NotificationsIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'notifyWhenAttacked', {}, (creep, context, enabled: boolean) => {
@@ -52,7 +53,3 @@ const intents = [
 		}
 	}),
 ];
-
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { notifications: typeof intents }
-}

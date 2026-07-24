@@ -4,11 +4,12 @@ import { constant, declare, struct, variant } from 'xxscreeps/schema/index.js';
 import * as C from './constants.js';
 
 // Schema types
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action',
+registerEnumerated('ActionLog.action',
 	'attack', 'attacked', 'heal', 'healed',
 	'rangedAttack', 'rangedHeal', 'rangedMassAttack',
 );
+
+export type CombatRoomSchemas = [ typeof attackEventSchema, typeof healEventSchema ];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const attackEventSchema = registerVariant('Room.eventLog', declare('AttackEvent', struct({
@@ -29,13 +30,3 @@ const healEventSchema = registerVariant('Room.eventLog', declare('HealEvent', st
 	healType: 'int32',
 	amount: 'int32',
 })));
-
-// ---
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { combat: typeof actionSchema }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { combat: [ typeof attackEventSchema, typeof healEventSchema ] }
-}

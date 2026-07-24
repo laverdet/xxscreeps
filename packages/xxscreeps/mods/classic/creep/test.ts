@@ -1,4 +1,3 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
@@ -9,9 +8,10 @@ import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extensio
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Creep, create } from './creep.js';
 
-describe('mod/classic/creep', () => {
+describe('mods/classic/creep', () => {
 	describe('death', () => {
 		const nearDeath = simulate({
 			W0N0: room => {

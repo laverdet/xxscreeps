@@ -14,7 +14,7 @@ import { Channel } from './channel.js';
 
 type ShardGameChannel = Channel<
 	NullMessage |
-	{	type: 'tick'; time: number }
+	{ type: 'tick'; time: number }
 >;
 
 const shardGameChannel =

@@ -145,7 +145,7 @@ export class Game extends GameBase {
 		initializeGame(this, data);
 		for (const room of Object.values(state.rooms)) {
 			for (const object of room['#objects']) {
-				if ((object as any).my) {
+				if (object.my) {
 					object['#addToMyGame'](this);
 				}
 			}

@@ -11,6 +11,8 @@ registerGlobal(StructureRampart);
 registerGlobal(StructureTower);
 registerGlobal(StructureWall);
 
+export type DefenseRoomSchemas = [ typeof rampartSchema, typeof towerSchema, typeof wallSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rampartSchema = registerVariant('Room.objects', compose(rampartShape, StructureRampart));
 
@@ -21,16 +23,6 @@ const towerSchema = registerVariant('Room.objects', compose(towerShape, Structur
 const wallSchema = registerVariant('Room.objects', compose(wallShape, StructureWall));
 
 // ---
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema {
-		defense: [
-			typeof rampartSchema,
-			 typeof towerSchema,
-			 typeof wallSchema,
-		];
-	}
-}
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global {

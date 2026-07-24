@@ -51,7 +51,8 @@ export class BufferView {
 	 */
 	nullify() {
 		for (const key of typedArrays) {
-			(this as any)[key] = zeroProxy;
+			// @ts-expect-error
+			this[key] = zeroProxy;
 		}
 	}
 }

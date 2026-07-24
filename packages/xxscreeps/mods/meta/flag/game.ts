@@ -3,12 +3,12 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose, declare, vector } from 'xxscreeps/schema/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Flag, acquireIntents, checkCreateFlag, intents } from './flag.js';
 import { flagShape } from './schema.js';
 import './room.js';
@@ -21,8 +21,10 @@ const schema = declare('Flags', compose(vector(compose(flagShape, Flag)), {
 export const { read, write, upgrade } = makeReaderAndWriter(schema, { materialize: true, release: true });
 
 // Register LOOK_ type for `Flag`
+export type FlagLook = [ typeof look ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Flag>()(C.LOOK_FLAGS);
+export type FlagFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_FLAGS]: room => room['#lookFor'](C.LOOK_FLAGS),
@@ -134,9 +136,4 @@ declare module 'xxscreeps/game/game.js' {
 
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Flag: typeof Flag }
-}
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { flag: typeof find }
-	interface Look { flag: typeof look }
 }

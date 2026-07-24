@@ -1,8 +1,8 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { createRoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { portalShape } from './schema.js';
 
 /**

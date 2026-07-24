@@ -1,8 +1,8 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 // One serialized format whether the creep is sitting in the account roster or spawned into a room.
 // Unspawned creeps live at `RoomPosition(0, 0, 'E0S0')` (the all-zero signed position); spawning

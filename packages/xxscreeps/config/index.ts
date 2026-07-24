@@ -15,7 +15,7 @@ export function makeInitializationDefaults(): Config {
 	const config = {};
 	merge(config, Base.initializationDefaults);
 	for (const from of initializationDefaults) {
-		merge(config, from);
+		merge(config, from satisfies object as object);
 	}
 	return config;
 }
@@ -26,7 +26,7 @@ export const config = {} as MergedConfig;
 merge(config, makeInitializationDefaults());
 merge(config, Base.defaults);
 for (const from of defaults) {
-	merge(config, from);
+	merge(config, from satisfies object as object);
 }
 merge(config, raw);
 

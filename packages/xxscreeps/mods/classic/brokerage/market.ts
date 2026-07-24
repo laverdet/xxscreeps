@@ -1,7 +1,5 @@
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
-import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 
 // Retain previous `Transactions` to reuse blobs from previous payload
@@ -63,20 +61,4 @@ export class Market {
 		const distance = this.#map.getRoomLinearDistance(roomName1, roomName2, true);
 		return Math.ceil(amount * (1 - Math.exp(-distance / 30)));
 	}
-}
-
-// Argument validation shared between the runtime method and the intent processor; `price` is in
-// millicredits on both sides.
-export function checkOrderParams(type: string, resourceType: ResourceType, price: number, totalAmount: number) {
-	if (
-		C.RESOURCES_ALL.includes(resourceType) &&
-		(type === C.ORDER_BUY || type === C.ORDER_SELL) &&
-		// Divergence from Screeps, which accepts a negative amount and silently never creates the
-		// order.
-		price > 0 && Number.isInteger(price) &&
-		totalAmount > 0 && Number.isInteger(totalAmount)
-	) {
-		return C.OK;
-	}
-	return C.ERR_INVALID_ARGS;
 }

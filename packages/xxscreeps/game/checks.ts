@@ -31,7 +31,7 @@ export function checkSameRoom(object1: RoomObject, object2: RoomObject) {
 }
 
 export function checkSafeMode<Error extends number>(room: Room, error: Error) {
-	if (room.controller?.safeMode && !room.controller.my) {
+	if (room.controller?.safeMode !== undefined && !room.controller.my) {
 		return error;
 	}
 	return C.OK;

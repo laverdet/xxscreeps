@@ -1,6 +1,5 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import type { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -43,21 +42,21 @@ export const MapStatsEndpoint: Endpoint = {
 		const payload = {
 			...statName != null && { statName },
 			rooms: rooms.map(room => ({ room, stats: { status: 'normal' } })),
+			response: {},
 			userIds: new Set<string>(),
 		};
+		// eslint-disable-next-line @typescript-eslint/await-thenable
 		await Promise.all(decorateMapStats(context, payload));
 		const stats = Fn.fromEntries(payload.rooms, ({ room, stats }) => [ room.name, stats ]);
 
 		// Read users
-		const userObjects = await Promise.all(Fn.map(payload.userIds, async id =>
-			({ id, info: await context.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]) })));
-		const users = Fn.fromEntries(userObjects, user => [
-			user.id, {
-				_id: user.id,
-				badge: user.info.badge == null ? null : (JSON.parse(user.info.badge) as UserBadge),
-				username: user.info.username!,
-			},
-		]);
+		const users = Object.fromEntries(await Fn.mapAwait(payload.userIds, async id => {
+			const info = {
+				_id: id,
+				...await User.loadBackendUserInfo(context.db, id),
+			};
+			return [ id, info ] as const;
+		}));
 
 		// Send it off
 		return {
@@ -65,6 +64,7 @@ export const MapStatsEndpoint: Endpoint = {
 			gameTime: context.backend.shard.time,
 			stats,
 			users,
+			...payload.response,
 		};
 	}),
 };

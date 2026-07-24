@@ -72,6 +72,6 @@ extend(GameMap, {
 
 // Delete cached RoomVisual instance each tick
 hooks.register('gameInitializer', Game => {
-	const map: any = Game.map;
-	delete map.visual;
+	// @ts-expect-error
+	delete Game.map.visual;
 });

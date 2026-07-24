@@ -1,12 +1,12 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { storageShape } from './schema.js';
 
 /**
@@ -16,9 +16,6 @@ import { storageShape } from './schema.js';
  * @see https://docs.screeps.com/api/#StructureStorage
  */
 export class StructureStorage extends withOverlay(OwnedStructure, storageShape) {
-	override get hitsMax() { return C.STORAGE_HITS; }
-	override get structureType() { return C.STRUCTURE_STORAGE; }
-
 	/**
 	 * An alias for [`.store.getCapacity()`](https://docs.screeps.com/api/#Store.getCapacity).
 	 * @public
@@ -26,6 +23,9 @@ export class StructureStorage extends withOverlay(OwnedStructure, storageShape) 
 	 * @see https://docs.screeps.com/api/#StructureStorage.storeCapacity
 	 */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
+
+	override get hitsMax() { return C.STORAGE_HITS; }
+	override get structureType() { return C.STRUCTURE_STORAGE; }
 
 	override '#afterRemove'() {
 		this.room.storage = undefined;

@@ -1,9 +1,9 @@
 import { registerEnumerated } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 
 /** @internal */
 export const factoryShape = declare('StructureFactory', struct(ownedStructureShape, {
@@ -61,20 +61,8 @@ const resources = [
 	C.RESOURCE_CONDENSATE, C.RESOURCE_CONCENTRATE, C.RESOURCE_EXTRACT, C.RESOURCE_SPIRIT,
 	C.RESOURCE_EMANATION, C.RESOURCE_ESSENCE,
 ];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const resourceSchema = registerEnumerated('ResourceType', ...resources);
+registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 
 // Action log types
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'produce');
-
-// ---
-
-declare module 'xxscreeps/game/schema.js' {
-	interface ActionLogSchema { factory: typeof actionSchema }
-}
-
-declare module 'xxscreeps/mods/classic/resource/schema.js' {
-	interface ResourceSchema { commodity: typeof resourceSchema }
-}
+registerEnumerated('ActionLog.action', 'produce');

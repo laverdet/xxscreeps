@@ -1,5 +1,7 @@
+import type { PlayerLog } from 'xxscreeps/driver/runtime/print.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
+import { kFdStdError } from 'xxscreeps/driver/runtime/print.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
@@ -36,8 +38,8 @@ if (argv['attach-console'] !== undefined) {
 		await getConsoleChannel(shard, id).subscribe(),
 		subscription => subscription.disconnect());
 	channel.listen(message => {
-		for (const line of JSON.parse(message)) {
-			if (line.fd === 2) {
+		for (const line of JSON.parse(message) as PlayerLog[]) {
+			if (line.fd === kFdStdError) {
 				console.error(line.data);
 			} else {
 				console.log(line.data);

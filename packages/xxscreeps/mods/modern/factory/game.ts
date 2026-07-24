@@ -3,11 +3,6 @@ import { compose } from 'xxscreeps/schema/index.js';
 import { StructureFactory } from './factory.js';
 import { factoryShape } from './schema.js';
 
+export type FactoryRoomSchema = typeof factorySchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const factorySchema = registerVariant('Room.objects', compose(factoryShape, StructureFactory));
-
-// ---
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { factory: [ typeof factorySchema ] }
-}

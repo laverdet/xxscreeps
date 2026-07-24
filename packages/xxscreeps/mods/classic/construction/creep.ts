@@ -1,10 +1,10 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/classic/creep/creep.js';
 import { checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps:mods/constants';
 import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 
@@ -78,7 +78,7 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 			// `build`
 			const { room } = target;
 			if (structureFactories.get(target.structureType)?.obstacle) {
-				const creepFilter = room.controller?.safeMode ? (creep: Creep) => creep.my : () => true;
+				const creepFilter = room.controller?.safeMode === undefined ? () => true : (creep: Creep) => creep.my;
 				for (const creep of room.lookForAt(C.LOOK_CREEPS, target.pos.x, target.pos.y)) {
 					if (creepFilter(creep)) {
 						return C.ERR_INVALID_TARGET;

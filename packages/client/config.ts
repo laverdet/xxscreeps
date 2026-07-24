@@ -14,6 +14,5 @@ export interface ClientConfig {
 }
 
 declare module 'xxscreeps/config/config.js' {
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 	interface Config extends ClientConfig {}
 }

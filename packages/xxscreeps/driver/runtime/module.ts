@@ -1,15 +1,15 @@
-import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
+import type { Compiler, Evaluate, RuntimeModuleNamespace } from 'xxscreeps/driver/runtime/index.js';
 import type { CodePayload } from 'xxscreeps/engine/db/user/code.js';
 import { loadSourceMap } from 'xxscreeps/driver/runtime/source-map.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { WASI } from './wasi/index.js';
 
-type Loader<Source> = {
+type Loader<Result> = {
 	resolve: (specifier: string, referrer?: string) => string;
-	compile: (url: string) => Source | undefined;
+	compile: (url: string) => Result | undefined;
 };
 
-export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compiler: Compiler) {
+export function makeEnvironment<Module extends object>(modules: CodePayload, evaluate: Evaluate, compiler: Compiler<Module>) {
 	const main = [ 'main.js', 'main.mjs', 'main.wasm', 'main' ].find(entry => modules.has(entry));
 	if (main === 'main' || main === 'main.js') {
 		// Use flat CommonJS loader
@@ -28,16 +28,18 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 		globalThis.require = require as never;
 		return () => require('main');
 
-	} else if (main) {
+	} else if (main === undefined) {
+		// No main defined
+		return () => { throw new Error('Cannot find module \'main\''); };
+
+	} else {
 		// Use ES Module loader
 		const importModule = makeModule(compiler, {
 			// Simple URL-style resolver function
 			resolve(specifier, referrer) {
 				const resolved = function() {
-					if (specifier.startsWith('/')) {
-						return specifier;
-					} else if (
-						referrer &&
+					if (
+						referrer !== undefined &&
 						(specifier.startsWith('./') || specifier.startsWith('../'))
 					) {
 						return `${referrer.replace(/[#?].*$/, '')}/../${specifier}`;
@@ -79,7 +81,7 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 
 					case 'wasi_snapshot_preview1': {
 						// Parse query parameters into environment
-						const [ referrerPath, referrerExtra ] = splitLocator(extra.substr(1));
+						const [ referrerPath, referrerExtra ] = splitLocator(extra.slice(1));
 						const env: Record<string, string> = {};
 						const query = /\?(?<query>[^#]+)/.exec(referrerExtra)?.groups!.query;
 						for (const pair of query?.split('&') ?? []) {
@@ -87,7 +89,7 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 							if (ii === -1) {
 								env[decodeURIComponent(pair)] = '';
 							} else {
-								env[decodeURIComponent(pair.substr(0, ii))] = decodeURIComponent(pair.substr(ii + 1));
+								env[decodeURIComponent(pair.slice(0, ii))] = decodeURIComponent(pair.slice(ii + 1));
 							}
 						}
 
@@ -102,8 +104,8 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 
 					default:
 						if (path.startsWith('/')) {
-							const content = modules.get(path.substr(1));
-							if (!content) {
+							const content = modules.get(path.slice(1));
+							if (content === undefined) {
 								return;
 							}
 							// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
@@ -205,12 +207,11 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 		});
 
 		// Grab reference to holder, for use in source translators
-		const holder = (value: any): any => importModule('screeps:holder').set(value);
+		const holder = (value: any): number => {
+			const { set } = importModule('screeps:holder') as { set: (value: unknown) => number };
+			return set(value);
+		};
 		return () => importModule(modules.has('main.js') ? '/main.js' : '/main.mjs');
-
-	} else {
-		// No main defined
-		return () => { throw new Error('Cannot find module \'main\''); };
 	}
 }
 
@@ -221,14 +222,17 @@ function splitLocator(url: string): [ string, string ] {
 	if (pivot === Infinity) {
 		return [ url, '' ];
 	} else {
-		return [ url.substr(0, pivot), url.substr(pivot) ];
+		return [ url.slice(0, pivot), url.slice(pivot) ];
 	}
 }
 
-function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
+function makeRequire(evaluate: Evaluate, loader: Loader<unknown>) {
 
 	// Screeps `require` operates on a flat namespace, independent of the requiring module.
-	const cache = new Map<string | symbol, null | { error?: any; exports?: any }>();
+	const cache = new Map<string | symbol, null | {
+		error?: unknown;
+		exports?: unknown;
+	}>();
 	const require = (specifier: string) => {
 		// Resolve and check for existing or pending module
 		const url = loader.resolve(specifier);
@@ -236,7 +240,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		if (cached !== undefined) {
 			if (cached === null) {
 				throw new Error(`Circular reference to module: ${specifier}`);
-			} else if (cached.error) {
+			} else if (Boolean(cached.error)) {
 				throw cached.error;
 			}
 			return cached.exports;
@@ -249,9 +253,8 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		const exports = function() {
 			if (typeof content === 'string') {
 				// Compile string module and execute
-				const module = {
-					exports: {} as any,
-				};
+				const exports: Record<string, unknown> = {};
+				const module = { exports };
 				const run = function() {
 					try {
 						type Require = (require: unknown, module: unknown, exports: unknown) => void;
@@ -299,7 +302,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 	});
 }
 
-export function makeModule<Module>(compiler: Compiler<Module>, loader: Loader<Module>) {
+export function makeModule<Module extends object>(compiler: Compiler<Module>, loader: Loader<Module>) {
 
 	// Create linker
 	const cache = new Map<string, Module>();
@@ -322,20 +325,20 @@ export function makeModule<Module>(compiler: Compiler<Module>, loader: Loader<Mo
 	// Return instantiate + evaluation
 	const namespaces = new Map<string, {
 		error: boolean;
-		value: any;
+		value: unknown;
 	}>();
 	return (specifier: string) => {
 		const result = getOrSet(namespaces, specifier, () => {
 			try {
 				return { error: false, value: compiler.evaluate(linker(specifier), linker) };
-			} catch (err) {
-				return { error: true, value: err };
+			} catch (error) {
+				return { error: true, value: error };
 			}
 		});
 		if (result.error) {
 			throw result.value;
 		} else {
-			return result.value;
+			return result.value as RuntimeModuleNamespace;
 		}
 	};
 }

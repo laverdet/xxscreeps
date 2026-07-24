@@ -3,11 +3,6 @@ import { compose } from 'xxscreeps/schema/index.js';
 import { StructureLab } from './lab.js';
 import { labShape } from './schema.js';
 
+export type ChemistryRoomSchema = typeof labSchema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const labSchema = registerVariant('Room.objects', compose(labShape, StructureLab));
-
-// ---
-
-declare module 'xxscreeps/game/room/index.js' {
-	interface RoomSchema { chemistry: [ typeof labSchema ] }
-}

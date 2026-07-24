@@ -1,8 +1,8 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
 import { extensionShape, spawnShape } from './schema.js';
 import { StructureSpawn } from './spawn.js';
@@ -18,7 +18,7 @@ declare module 'xxscreeps/game/game.js' {
 		spawns: Record<string, StructureSpawn>;
 	}
 }
-hooks.register('gameInitializer', Game => Game.spawns = Object.create(null));
+hooks.register('gameInitializer', Game => Game.spawns = Object.create(null) as Record<string, StructureSpawn>);
 
 hooks.register('roomInitializer', room => {
 	room.energyAvailable = 0;
@@ -40,6 +40,7 @@ registerGlobal(StructureSpawn);
 registerGlobal('Spawn', StructureSpawn);
 
 // Register FIND_ types for `Spawn`
+export type SpawnFind = typeof find;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
@@ -49,6 +50,8 @@ const find = registerFindHandlers({
 });
 
 // Register schema
+export type SpawnRoomSchemas = [ typeof extensionSchema, typeof spawnSchema ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extensionSchema = registerVariant('Room.objects', compose(extensionShape, StructureExtension));
 
@@ -66,7 +69,6 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 declare module 'xxscreeps/game/room/index.js' {
-	interface Find { spawn: typeof find }
 	interface Room {
 		/**
 		 * Total amount of energy available in all spawns and extensions in the room.
@@ -82,5 +84,4 @@ declare module 'xxscreeps/game/room/index.js' {
 		 */
 		energyCapacityAvailable: number;
 	}
-	interface RoomSchema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

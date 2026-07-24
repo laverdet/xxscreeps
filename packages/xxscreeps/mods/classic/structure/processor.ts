@@ -1,12 +1,10 @@
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as ResourceIntent from 'xxscreeps/mods/classic/resource/processor/resource.js';
+import * as C from 'xxscreeps:mods/constants';
 import { Ruin } from './ruin.js';
 import { Structure, checkDestroy } from './structure.js';
 
-declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { structure: typeof intents }
-}
+export type StructureIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Structure, 'destroyStructure', {}, (structure, context) => {

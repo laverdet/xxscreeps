@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import * as C from 'xxscreeps:mods/constants';
 import { create as createFactory } from './factory.js';
 
 function createFactoryWithResources(pos: RoomPosition, owner: string, resources: Partial<Record<ResourceType, number>>) {
@@ -18,7 +18,7 @@ function getFactory(game: { rooms: Record<string, Room> }) {
 	return lookForStructures(game.rooms.W1N1, C.STRUCTURE_FACTORY)[0]!;
 }
 
-describe('mod/modern/factory', () => {
+describe('mods/modern/factory', () => {
 
 	// =========================================================================
 	// produce — core mechanics
