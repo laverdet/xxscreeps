@@ -13,6 +13,10 @@ import * as C from 'xxscreeps:mods/constants';
 export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	...variant('powerCreep'),
 
+	// `cooldownTime` is game-tick absolute; `0` = ready. Roster copies never carry a cooldown — it
+	// is set only on the spawned room copy.
+	'#powers': vector(struct({ cooldownTime: 'int32', level: 'int8', power: 'int8' })),
+
 	/**
 	 * Power creep’s name. You can choose the name while creating a new power creep, and it cannot be
 	 * changed later. This name is a hash key to access the creep via the
@@ -28,9 +32,6 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @see https://docs.screeps.com/api/#PowerCreep.className
 	 */
 	className: enumerated(...Object.values(C.POWER_CLASS)),
-	// `cooldownTime` is game-tick absolute; `0` = ready. Roster copies never carry a cooldown — it
-	// is set only on the spawned room copy.
-	'#powers': vector(struct({ cooldownTime: 'int32', level: 'int8', power: 'int8' })),
 
 	/**
 	 * The timestamp when spawning or deleting this creep will become available.

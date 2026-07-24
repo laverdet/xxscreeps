@@ -125,13 +125,11 @@ const intents = [
 		const entry = creep['#powers'].find(entry => entry.power === power)!;
 		switch (power) {
 			case C.PWR_GENERATE_OPS: {
-				const { store } = creep;
-				store['#add'](C.RESOURCE_OPS, info.effect![entry.level - 1]!);
-				const overflow = -store.getFreeCapacity();
+				const amount = info.effect![entry.level - 1]!;
+				const overflow = Math.max(amount - creep.store.getFreeCapacity(C.RESOURCE_OPS), 0);
+				creep.store['#add'](C.RESOURCE_OPS, amount - overflow);
 				if (overflow > 0) {
-					const spill = Math.min(store[C.RESOURCE_OPS], overflow);
-					store['#subtract'](C.RESOURCE_OPS, spill);
-					dropResource(creep.pos, C.RESOURCE_OPS, spill);
+					dropResource(creep.pos, C.RESOURCE_OPS, overflow);
 				}
 				break;
 			}

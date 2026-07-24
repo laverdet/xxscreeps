@@ -24,6 +24,25 @@ import * as C from 'xxscreeps:mods/constants';
 import { powerCreepShape } from './schema.js';
 
 /**
+ * An available power on a PowerCreep. See
+ * [`PowerCreep.powers`](https://docs.screeps.com/api/#PowerCreep.powers).
+ * @public
+ */
+export interface PowerType {
+	/**
+	 * Cooldown ticks remaining, or undefined if the power creep is not spawned in the world.
+	 * @public
+	 */
+	cooldown: number;
+
+	/**
+	 * Current level of the power.
+	 * @public
+	 */
+	level: number;
+}
+
+/**
  * Power Creeps are immortal "heroes" that are tied to your account and can be respawned in any
  * `PowerSpawn` after death. You can upgrade their abilities ("powers") up to your account Global
  * Power Level (see [`Game.gpl`](https://docs.screeps.com/api/#Game.gpl)).
@@ -45,15 +64,14 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 
 	/**
 	 * Available powers, an object with power ID as a key, and an object with the power's current
-	 * `level` and remaining `cooldown` ticks as a value.
+	 * `level` as a value.
 	 * @public
 	 * @see https://docs.screeps.com/api/#PowerCreep.powers
 	 */
-	get powers(): Record<number, { cooldown: number; level: number }> {
+	get powers(): Record<number, PowerType> {
 		// Roster copies are read outside a game context; their cooldowns are always `0`, which
 		// short-circuits before the `Game.time` read.
-		return Object.fromEntries(Fn.map(this['#powers'], ({ cooldownTime: time, level, power }) =>
-			[ power, { cooldown: time === 0 ? 0 : cooldownTime(time), level } ]));
+		return Object.fromEntries(Fn.map(this['#powers'], ({ cooldownTime: time, level, power }) => [ power, { cooldown: cooldownTime(time), level } ]));
 	}
 
 	/**
@@ -360,6 +378,7 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 * `ERR_NOT_IN_RANGE`
 	 * @public
 	 * @see https://docs.screeps.com/api/#PowerCreep.usePower
+	 * @see https://docs.screeps.com/power.html#Powers
 	 */
 	usePower(power: number, target?: RoomObject) {
 		return chainIntentChecks(
@@ -410,7 +429,7 @@ function checkPowersEnabled(creep: PowerCreep) {
 /** Ops consumed per use — flat, or per-rank when the table carries an array. */
 export function powerOpsCost(info: PowerInfo, level: number) {
 	const { ops } = info;
-	return Array.isArray(ops) ? ops[level - 1]! : ops ?? 0;
+	return (Array.isArray(ops) ? ops[level - 1] : ops) ?? 0;
 }
 
 export function checkUsePower(creep: PowerCreep, power: number, target?: RoomObject) {
