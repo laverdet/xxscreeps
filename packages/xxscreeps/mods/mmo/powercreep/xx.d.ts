@@ -6,7 +6,7 @@ declare module 'xxscreeps:mods/game' {
 	enum ActionLogSchema {
 		power = 'power',
 	}
-	interface EventLog { power: PowerEventType	}
+	interface EventLog { power: PowerEventType }
 	interface Find { powerCreep: PowerCreepFind }
 	interface Look { powerCreep: PowerCreepLook }
 	interface RoomObjects { powerCreep: PowerCreep }
