@@ -558,7 +558,7 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 // `boosts` names the boost mineral for each part positionally, `null` for an unboosted one. Body
 // parts are boosted as they're built so the store is sized against any boosted `CARRY`.
-export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string, boosts?: readonly (ResourceType | null)[] | null) {
+export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string, boosts: readonly (ResourceType | null)[] | null = null) {
 	const body = parts.map((type, index) => ({ type, hits: 100, boost: boosts?.[index] ?? undefined }));
 	const creep = assign(createRoomObject(new Creep(), pos), {
 		body,

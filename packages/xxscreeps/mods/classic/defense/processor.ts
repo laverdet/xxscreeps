@@ -5,15 +5,9 @@ import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/classic/combat/processor.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
-import { clamp } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureRampart } from './rampart.js';
-import { StructureTower, checkTower } from './tower.js';
-
-function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
-	const range = clamp(C.TOWER_OPTIMAL_RANGE, C.TOWER_FALLOFF_RANGE, tower.pos.getRangeTo(target.pos));
-	return 1 - C.TOWER_FALLOFF * (range - C.TOWER_OPTIMAL_RANGE) / (C.TOWER_FALLOFF_RANGE - C.TOWER_OPTIMAL_RANGE);
-}
+import { StructureTower, calculateEfficiency, checkTower } from './tower.js';
 
 export type DefenseIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
