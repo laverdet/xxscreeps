@@ -69,8 +69,8 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 * @see https://docs.screeps.com/api/#PowerCreep.powers
 	 */
 	get powers(): Record<number, PowerType> {
-		// Roster copies are read outside a game context; their cooldowns are always `0`, which
-		// short-circuits before the `Game.time` read.
+		// `cooldown` counts down from the current tick, so this only resolves inside a game context.
+		// Roster copies are read from the backend; those callers take `#powers` directly.
 		return Object.fromEntries(Fn.map(this['#powers'], ({ cooldownTime: time, level, power }) => [ power, { cooldown: cooldownTime(time), level } ]));
 	}
 
