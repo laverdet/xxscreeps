@@ -56,14 +56,35 @@ function handleController(core: StructureInvaderCore) {
 // tend their towers sporadically.
 function refillTowers({ core, towers, ramparts }: StrongholdContext) {
 	if (Math.random() > towerRefillChance[core.level]!) {
-		return;
+		return false;
 	}
 	const undercharged = towers.filter(tower =>
 		tower.store.energy <= 2 * C.TOWER_ENERGY_COST &&
 		ramparts.some(rampart => rampart.pos.isEqualTo(tower.pos)));
 	const target = Fn.minimum(undercharged, mappedNumericComparator(tower => tower.store.energy));
+	if (!target) {
+		return false;
+	}
+	core['#transferEnergy'](target);
+	return true;
+}
+
+// Top up the emptiest defender carrying less than half its capacity.
+function refillCreeps({ core, defenders }: StrongholdContext) {
+	const undercharged = defenders.filter(creep => {
+		const capacity = creep.store.getCapacity();
+		return capacity > 0 && 2 * creep.store.energy <= capacity;
+	});
+	const target = Fn.minimum(undercharged, mappedNumericComparator(creep => creep.store.energy));
 	if (target) {
 		core['#transferEnergy'](target);
+	}
+}
+
+// The core makes one delivery a tick, and its towers have first claim on it.
+function refill(context: StrongholdContext) {
+	if (!refillTowers(context)) {
+		refillCreeps(context);
 	}
 }
 
@@ -157,9 +178,15 @@ function defaultBehavior(context: StrongholdContext) {
 	focusClosest(context);
 }
 
+function bunker1(context: StrongholdContext) {
+	handleController(context.core);
+	refill(context);
+	focusClosest(context);
+}
+
 function bunker2(context: StrongholdContext) {
 	handleController(context.core);
-	refillTowers(context);
+	refill(context);
 	maintainPopulation(context, bunker2Population);
 	focusClosest(context);
 }
@@ -172,7 +199,7 @@ function bunker3(context: StrongholdContext) {
 }
 
 const bunkerBehaviors: Partial<Record<NonNullable<StructureInvaderCore['#templateName']>, (context: StrongholdContext) => void>> = {
-	bunker1: defaultBehavior,
+	bunker1,
 	bunker2,
 	bunker3,
 };

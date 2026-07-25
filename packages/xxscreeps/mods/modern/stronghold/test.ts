@@ -665,6 +665,41 @@ describe('mods/modern/stronghold', () => {
 			});
 		}));
 
+		const insertCarrier = (room: Room, xx: number, yy: number, name: string, energy: number) => {
+			const creep = createCreep(new RoomPosition(xx, yy, 'W1N1'), [ C.CARRY, C.MOVE ], name, kInvaderUserId);
+			creep.store['#add'](C.RESOURCE_ENERGY, energy);
+			room['#insertObject'](creep);
+		};
+		const carriedEnergy = (room: Room, name: string) => findCreep(room, name)?.store.getUsedCapacity(C.RESOURCE_ENERGY);
+
+		// No tower at all, so the tick's single delivery is free to go to a defender. `half` is
+		// undercharged too — it pins that the *emptiest* one wins — and `full` is not a candidate.
+		const creepRefillScene = (level: number, templateName: StructureInvaderCore['#templateName']) => simulate({
+			W1N1: room => {
+				room['#insertObject'](deployedCore(level, templateName));
+				insertCarrier(room, 26, 25, 'empty', 0);
+				insertCarrier(room, 24, 25, 'half', 10);
+				insertCarrier(room, 25, 24, 'full', C.CARRY_CAPACITY);
+				activateNPC(room, kInvaderUserId);
+			},
+		});
+
+		test('bunker1 tops up the emptiest defender when no tower needs charge', () => creepRefillScene(1, 'bunker1')(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(carriedEnergy(room, 'empty'), C.CARRY_CAPACITY, 'the emptiest defender is filled to capacity');
+				assert.strictEqual(carriedEnergy(room, 'half'), 10, 'only one defender is refilled per tick');
+				assert.strictEqual(carriedEnergy(room, 'full'), C.CARRY_CAPACITY, 'a defender above half capacity is not a candidate');
+			});
+		}));
+
+		test('bunker3 spends its deliveries on towers alone', () => creepRefillScene(3, 'bunker3')(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.strictEqual(carriedEnergy(room, 'empty'), 0, 'bunker3 never backfills a defender');
+			});
+		}));
+
 		// A hostile pair at range 2 and range 5 from the core: every attacker picks the closest one.
 		// The melee defender sits adjacent to it, one ranger at range 2 (rangedAttack), one at range 1
 		// (rangedMassAttack).
