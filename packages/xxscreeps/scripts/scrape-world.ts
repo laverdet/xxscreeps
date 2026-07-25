@@ -37,7 +37,7 @@ import { Source } from 'xxscreeps/mods/classic/source/source.js';
 import { StructureExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { StructureSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { saveMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
-import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
+import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/terrain.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
