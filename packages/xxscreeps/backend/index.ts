@@ -110,13 +110,19 @@ export function bindTerrainRenderer<Type extends RoomObject>(object: Implementat
 	object.prototype[TerrainRender] = render;
 }
 
+interface ValidatedRouteOptions {
+	/**
+	 * Compile against the coercing validator, which rewrites values in place to the type the schema
+	 * asks for (e.g. "180" → 180) before `execute` sees them.
+	 */
+	coerceTypes?: boolean;
+}
+
 export function makeValidatedPayloadRoute<Body>(
 	schema: JSONSchemaType<Body>,
 	execute: ValidatedExecuteRoute<ValidatedPayloadRequest<Body>>,
-	options?: { coerceTypes?: boolean },
+	options?: ValidatedRouteOptions,
 ): ExecuteRoute {
-	// When `coerceTypes` is set the compiled validator mutates the body in place (e.g. "180" → 180),
-	// so `execute` sees the coerced values.
 	const validate = (options?.coerceTypes ? coercingAjv : ajv).compile(schema);
 	return context => {
 		if (validate(context.request.body)) {
@@ -130,8 +136,11 @@ export function makeValidatedPayloadRoute<Body>(
 export function makeValidatedQueryRoute<Query>(
 	schema: JSONSchemaType<Query>,
 	execute: ValidatedExecuteRoute<ValidatedQueryRequest<Query>>,
+	options?: ValidatedRouteOptions,
 ): ExecuteRoute {
-	const validate = ajv.compile(schema);
+	// Query strings carry every value as a string, so a schema with numeric fields only validates
+	// under `coerceTypes`.
+	const validate = (options?.coerceTypes ? coercingAjv : ajv).compile(schema);
 	return context => {
 		if (validate(context.request.query)) {
 			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedQueryRequest<Query>>>);
