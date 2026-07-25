@@ -28,10 +28,26 @@ function parseMineralType(value: string | undefined) {
 	throw new Error(`mineral must be one of ${Object.keys(C.MINERAL_MIN_AMOUNT).join(', ')}`);
 }
 
+// The room-shape flags shared between `generate-room` and `generate-sector`.
+export const roomOptionArguments = [ 'terrain-type', 'swamp-type', 'sources', 'mineral' ] as const;
+
+export function parseRoomOptions(argv: Partial<Record<typeof roomOptionArguments[number], string>>): GenerateRoomOptions {
+	const terrainType = parseOptionalInteger(argv['terrain-type'], 'terrain-type', 1, 28);
+	const swampType = parseOptionalInteger(argv['swamp-type'], 'swamp-type', 0, 14);
+	const sources = parseOptionalInteger(argv.sources, 'sources', 1, 4);
+	const mineral = parseMineralType(argv.mineral);
+	return {
+		...terrainType !== undefined && { terrainType },
+		...swampType !== undefined && { swampType },
+		...sources !== undefined && { sources },
+		...mineral !== undefined && { mineral },
+	};
+}
+
 async function main() {
 	const argv = checkArguments({
 		argv: true,
-		string: [ 'shard', 'terrain-type', 'swamp-type', 'sources', 'mineral' ] as const,
+		string: [ 'shard', ...roomOptionArguments ] as const,
 	});
 	const roomName = argv.argv[0];
 	if (roomName === undefined) {
@@ -40,17 +56,7 @@ async function main() {
 		return;
 	}
 
-	const terrainType = parseOptionalInteger(argv['terrain-type'], 'terrain-type', 1, 28);
-	const swampType = parseOptionalInteger(argv['swamp-type'], 'swamp-type', 0, 14);
-	const sources = parseOptionalInteger(argv.sources, 'sources', 1, 4);
-	const mineral = parseMineralType(argv.mineral);
-	const options: GenerateRoomOptions = {
-		...terrainType !== undefined && { terrainType },
-		...swampType !== undefined && { swampType },
-		...sources !== undefined && { sources },
-		...mineral !== undefined && { mineral },
-	};
-
+	const options = parseRoomOptions(argv);
 	await using db = await Database.connect();
 	await using shard = await Shard.connect(db, argv.shard ?? config.shards[0]!.name);
 	const room = await generateRoom(shard, roomName, options);
