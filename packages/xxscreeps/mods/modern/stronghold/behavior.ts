@@ -298,8 +298,6 @@ function coordinated(creep: Creep, context: StrongholdContext, position?: RoomPo
 
 // A rampart's repair goal: the core level's baseline, raised for every nuke about to land on or
 // beside it. A rampart roofing a reward container is held at the baseline.
-// Divergence from Screeps, which raises the target for a bunker5 only; here every bunker that
-// fields a fortifier fortifies against an inbound nuke.
 function rampartHitsTarget(core: StructureInvaderCore, rampart: StructureRampart, nukes: Nuke[]) {
 	const baseline = C.STRONGHOLD_RAMPART_HITS[core.level]!;
 	if (lookForStructureAt(core.room, rampart.pos, C.STRUCTURE_CONTAINER)) {
@@ -321,7 +319,8 @@ function fortify(creep: Creep, context: StrongholdContext) {
 	if (creep.store.energy === 0) {
 		return;
 	}
-	const nukes = core.room.find(C.FIND_NUKES);
+	// Only a bunker5 fortifies against an inbound nuke; every other bunker holds its baseline.
+	const nukes = core['#templateName'] === 'bunker5' ? core.room.find(C.FIND_NUKES) : [];
 	const repairable = ramparts.filter(rampart => rampart.hits < rampartHitsTarget(core, rampart, nukes));
 	const [ target ] = repairable;
 	if (!target) {

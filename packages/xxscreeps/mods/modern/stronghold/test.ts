@@ -1107,6 +1107,36 @@ describe('mods/modern/stronghold', () => {
 			});
 		}));
 
+		// Only a bunker5 answers a nuke. The same scene under a bunker4 — no containers, so nothing
+		// else holds a rampart down — leaves every rampart at its baseline and its fortifier with
+		// nowhere to walk. The id is pinned to a hand that deals the deck's fortifier into slot 0.
+		const kFortifierHandId = 'aaaaaaaaaaaaaaaaaaaaaabc';
+
+		test('a nuke leaves a bunker4 at its baseline', () => simulate({
+			W1N1: room => {
+				const core = deployedCore(4, 'bunker4', new RoomPosition(25, 21, 'W1N1'));
+				core.id = kFortifierHandId;
+				room['#insertObject'](core);
+				for (const xx of [ 20, 21, 22, 23, 24, 25, 26 ]) {
+					insertRampart(room, xx, 25, C.STRONGHOLD_RAMPART_HITS[4]);
+				}
+				room['#insertObject'](createNuke(new RoomPosition(26, 27, 'W1N1'), 'W2N2', farFuture));
+				const fortifier = createCreep(
+					new RoomPosition(20, 25, 'W1N1'),
+					[ C.WORK, C.CARRY, C.MOVE, C.MOVE, C.MOVE ], 'defender0', kInvaderUserId);
+				fortifier.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
+				room['#insertObject'](fortifier);
+				activateNPC(room, kInvaderUserId);
+			},
+		})(async ({ tick, peekRoom }) => {
+			await tick(5);
+			await peekRoom('W1N1', room => {
+				assert.ok(findCreep(room, 'defender0')?.pos.isEqualTo(new RoomPosition(20, 25, 'W1N1')),
+					`the bunker4 fortifier holds its rampart under a nuke, or ${kFortifierHandId} stopped ` +
+					'dealing its fortifier first');
+			});
+		}));
+
 		// Standing in range is only half the job. The repair intent caps its effect at `hitsMax - hits`,
 		// so a rampart whose maximum does not cover the hits it already carries absorbs no repair at all.
 		const damaged = C.STRONGHOLD_RAMPART_HITS[5]! - 10000;
