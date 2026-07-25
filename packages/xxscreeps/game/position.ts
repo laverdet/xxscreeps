@@ -554,6 +554,13 @@ export const iterateWithRangeTo = function() {
 }();
 
 /**
+ * Iterate all positions in a room.
+ */
+export function iterateAllPositions(roomName: string) {
+	return iterateArea(roomName, 0, 0, 49, 49);
+}
+
+/**
  * Iterate all direct neighbors of the given position.
  */
 export function iterateNeighbors(position: RoomPosition) {

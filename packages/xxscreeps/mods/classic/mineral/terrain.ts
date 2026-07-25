@@ -2,7 +2,7 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { iterateArea, iterateInRangeTo } from 'xxscreeps/game/position.js';
+import { iterateAllPositions, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from './constants.js';
 import { create as createExtractor } from './extractor.js';
@@ -45,7 +45,7 @@ hooks.register('roomGenerator', {
 				return tags.has('source') || tags.has('controller');
 			});
 		const sources = [ ...Fn.filter(
-			iterateArea(context.room.name, 0, 0, 49, 49),
+			iterateAllPositions(context.room.name),
 			candidate => context.tagsAt(candidate).has('source')) ];
 		const position = sources.length >= kSpreadSourceThreshold
 			? context.findSpreadPosition(4, 42, accept, sources)

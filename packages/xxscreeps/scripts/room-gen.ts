@@ -1,6 +1,6 @@
 import type { ExitMap, GenerateRoomOptions, HighwayOrientation, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { RoomType } from 'xxscreeps/mods/modern/sector/sector.js';
+import type { RoomType } from 'xxscreeps/mods/modern/sector/terrain.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -11,7 +11,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { kMaxWorldSize, makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
-import { computeRoomMeta, highwayOrientation, roomType } from 'xxscreeps/mods/modern/sector/sector.js';
+import { computeRoomMeta, highwayOrientation, roomType } from 'xxscreeps/mods/modern/sector/terrain.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import { hashCombine, hashMix } from 'xxscreeps/utility/utility.js';

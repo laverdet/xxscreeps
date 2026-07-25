@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { RoomGeneratorContext } from 'xxscreeps/scripts/symbols.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
-import { iterateArea, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { iterateAllPositions, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -82,7 +82,7 @@ hooks.register('roomGenerator', {
 		if (context.options.keeperLairs !== true) {
 			return true;
 		}
-		for (const position of iterateArea(context.room.name, 0, 0, 49, 49)) {
+		for (const position of iterateAllPositions(context.room.name)) {
 			if (context.tagsAt(position).has('guarded') && !placeKeeperLair(context, position)) {
 				return false;
 			}
