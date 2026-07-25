@@ -94,11 +94,15 @@ export function bindRenderer<Type extends RoomObject>(
 ) {
 	const { prototype } = object;
 	const parent = Object.getPrototypeOf(prototype) as RoomObject;
+	// A downstream mod may add keys to a class another mod already renders, so a renderer already
+	// bound here is captured and layered under this one. The parent stays a late lookup, since base
+	// classes are not guaranteed to have bound theirs yet.
+	const bound = Object.hasOwn(prototype, Render) ? prototype[Render] : undefined;
 	prototype[Render] = function(...rest) {
-		const renderParent = () => parent[Render].call(this, ...rest) ?? function() {
+		const renderPrevious = () => (bound ?? parent[Render]).call(this, ...rest) ?? function() {
 			throw new Error('Render fell through to empty prototype');
 		}();
-		return render(this, renderParent, ...rest);
+		return render(this, renderPrevious, ...rest);
 	};
 }
 
