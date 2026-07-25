@@ -2,6 +2,7 @@ import type { StrongholdStructure, StrongholdTemplate } from './templates.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
 import type { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -127,11 +128,11 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureInvaderCore, 'createCreep', {}, (core, context, body: Creep.PartType[], name: string) => {
+	registerIntentProcessor(StructureInvaderCore, 'createCreep', {}, (core, context, body: Creep.PartType[], name: string, boosts: (ResourceType | null)[] | null) => {
 		if (checkCreateCreep(core) === C.OK) {
 			// Incubate the defender on the core's own tile (`#ageTime === 0` marks it spawning); the
 			// object tick processor spawns it onto an adjacent tile once the timer elapses.
-			const creep = Creep.create(core.pos, body, name, kInvaderUserId);
+			const creep = Creep.create(core.pos, body, name, kInvaderUserId, boosts);
 			creep['#ageTime'] = 0;
 			core.room['#insertObject'](creep);
 			const needTime = C.INVADER_CORE_CREEP_SPAWN_TIME[core.level]! * body.length;

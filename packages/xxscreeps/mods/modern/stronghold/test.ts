@@ -2,6 +2,8 @@ import type { StructureInvaderCore } from './invader-core.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
@@ -341,8 +343,8 @@ describe('mods/modern/stronghold', () => {
 
 		// Inject the NPC-internal `createCreep` intent. NPCs are filtered out of the player intent
 		// pipeline, so the processor is otherwise only reachable from the (slice 5) behavior loop.
-		const requestCreep = (shard: Shard, coreId: string, creepBody = body, name = 'def') =>
-			pushIntentsForRoomNextTick(shard, 'W1N1', kInvaderUserId, { object: { [coreId]: { createCreep: [ creepBody, name ] } } });
+		const requestCreep = (shard: Shard, coreId: string, creepBody: PartType[] = body, name = 'def', boosts: (ResourceType | null)[] | null = null) =>
+			pushIntentsForRoomNextTick(shard, 'W1N1', kInvaderUserId, { object: { [coreId]: { createCreep: [ creepBody, name, boosts ] } } });
 
 		test('createCreep inserts a spawning defender and records the spawn', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
 			const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
@@ -404,6 +406,32 @@ describe('mods/modern/stronghold', () => {
 				const def = findCreep(room, 'def')!;
 				assert.strictEqual(def.spawning, false, 'defender finished spawning');
 				assert.ok(def.pos.isEqualTo(new RoomPosition(26, 25, 'W1N1')), 'defender spawns into the freed tile');
+			});
+		}));
+
+		// The capacity assert is what pins boosting to body construction: a boosted `CARRY` only
+		// enlarges the store if its boost is set before the store is sized.
+		test('createCreep boosts the parts its boost list names', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
+			const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+			await requestCreep(shard, coreId, [ C.ATTACK, C.CARRY, C.MOVE ], 'boosted',
+				[ C.RESOURCE_UTRIUM_ACID, C.RESOURCE_CATALYZED_KEANIUM_ACID, null ]);
+			await tick();
+			await peekRoom('W1N1', room => {
+				const boosted = findCreep(room, 'boosted')!;
+				assert.deepStrictEqual(
+					boosted.body.map(part => part.boost),
+					[ C.RESOURCE_UTRIUM_ACID, C.RESOURCE_CATALYZED_KEANIUM_ACID, undefined ]);
+				assert.strictEqual(boosted.store.getCapacity(C.RESOURCE_ENERGY), C.CARRY_CAPACITY * 4,
+					'a boosted CARRY part sizes the store at its boosted capacity');
+			});
+		}));
+
+		test('createCreep leaves every part unboosted without a boost list', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
+			const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+			await requestCreep(shard, coreId);
+			await tick();
+			await peekRoom('W1N1', room => {
+				assert.ok(findCreep(room, 'def')!.body.every(part => part.boost === undefined));
 			});
 		}));
 
