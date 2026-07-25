@@ -93,6 +93,12 @@ export class SortedSet {
 		return count;
 	}
 
+	rank(member: string) {
+		if (this.#scores.has(member)) {
+			return this.#members.indexOf(member);
+		}
+	}
+
 	score(member: string) {
 		return this.#scores.get(member);
 	}
