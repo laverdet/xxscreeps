@@ -128,11 +128,12 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureInvaderCore, 'createCreep', {}, (core, context, body: Creep.PartType[], name: string, boosts: (ResourceType | null)[] | null) => {
+	registerIntentProcessor(StructureInvaderCore, 'createCreep', {}, (core, context, parts: Creep.PartType[], name: string, boosts: (ResourceType | null)[] | null) => {
 		if (checkCreateCreep(core) === C.OK) {
+			const body = parts.map((type, index) => ({ type, hits: 100, boost: boosts?.[index] ?? undefined }));
 			// Incubate the defender on the core's own tile (`#ageTime === 0` marks it spawning); the
 			// object tick processor spawns it onto an adjacent tile once the timer elapses.
-			const creep = Creep.create(core.pos, body, name, kInvaderUserId, boosts);
+			const creep = Creep.createWithBody(core.pos, body, name, kInvaderUserId);
 			creep['#ageTime'] = 0;
 			core.room['#insertObject'](creep);
 			const needTime = C.INVADER_CORE_CREEP_SPAWN_TIME[core.level]! * body.length;

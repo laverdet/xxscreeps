@@ -60,10 +60,10 @@ describe('mods/classic/defense', () => {
 			},
 		});
 
-		test('a rampart scales with the controller its owner holds', () => roomWithRamparts(async ({ player }) => {
-			await player('100', Game => {
+		test('a rampart scales with the controller its owner holds', () => roomWithRamparts(async ({ peekRoom }) => {
+			await peekRoom('W2N2', room => {
 				const maxAt = (xx: number) =>
-					lookForStructureAt(Game.rooms.W2N2!, new RoomPosition(xx, 25, 'W2N2'), C.STRUCTURE_RAMPART)?.hitsMax;
+					lookForStructureAt(room, new RoomPosition(xx, 25, 'W2N2'), C.STRUCTURE_RAMPART)?.hitsMax;
 				assert.strictEqual(maxAt(25), C.RAMPART_HITS_MAX[4], "the controller owner's rampart scales with the level");
 				assert.strictEqual(maxAt(26), 0, "another player's rampart has no maximum here");
 				assert.strictEqual(maxAt(27), C.RAMPART_HITS_MAX[8], 'an invader rampart holds the RCL8 maximum');
