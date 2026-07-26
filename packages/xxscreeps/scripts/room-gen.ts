@@ -147,8 +147,8 @@ function checkFlood(grid: Grid): boolean {
 	let startXx = -1;
 	let startYy = -1;
 
-	outer: for (const [ xx, row ] of grid.entries()) {
-		for (const [ yy, cell ] of row.entries()) {
+	outer: for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
 			if (!cell.wall) {
 				startXx = xx;
 				startYy = yy;
