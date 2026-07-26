@@ -509,11 +509,22 @@ interface HighwayMass {
 	amp: number;
 	expo: number;
 }
-const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 26, expo: 2.9 };
-const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 8, expo: 2.5 };
+// Both amplitudes carry the mass the smoothing pass below erodes, so the finished room lands on the
+// live density rather than a few percent under it.
+const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
+const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 15, expo: 2.5 };
 // A coarse value-noise field thresholded into solid wall blobs that stud the open lane.
 const kHighwayBlobCell = 6;
 const kHighwayBlobThreshold = 0.82;
+
+// Masses and lane blobs come off two independent noise fields, so a blob lands a tile clear of a mass
+// as readily as flush against it, leaving a one-tile seam neither field knows it made. A normal room
+// never shows those: `buildBaseTerrain` runs the same majority-rule automaton over its noise 2 to 20
+// times. A highway ran it zero. One pass at the automaton's usual threshold closes a one-wide channel
+// -- its 3x3 holds six walls -- and rounds the wedge boundary, while leaving any mass or blob with
+// body to it intact. A second pass keeps eating: it takes lane clutter under the live figure.
+const kHighwaySmoothPasses = 1;
+const kHighwaySmoothFactor = 5;
 
 // Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
 // (low base, high exponent), mostly shallow with a rare deep plunge. edgeNoise in [0, 1) bounds it
@@ -615,9 +626,12 @@ function genHighwayTerrain(
 				valueNoise(wox + xx, woy + yy, kHighwayBlobCell) > kHighwayBlobThreshold;
 		}
 	}
-	connectExits(grid, exits);
-	fillUnreachable(grid);
-	return applySwamp(grid, swampType);
+	const smoothed = Fn.pipe(
+		Fn.range(kHighwaySmoothPasses),
+		$$ => Fn.reduce($$, grid, working => smoothTerrain(working, kHighwaySmoothFactor, 'wall')));
+	connectExits(smoothed, exits);
+	fillUnreachable(smoothed);
+	return applySwamp(smoothed, swampType);
 }
 
 const kNoTags: ReadonlySet<string> = new Set();
