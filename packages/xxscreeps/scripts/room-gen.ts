@@ -462,6 +462,25 @@ function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
 	return mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo;
 }
 
+// A multiplier on a border tile's mass depth that anchors the mass at the room's corners and thins it
+// toward mid-border, where the diagonal sector blocks stop reaching. The live corpus runs 7.8 tiles
+// deep a tile from a corner down to 1.5 at the midpoint; the noise field alone is flat along the
+// border, which is what makes a generated mass read as a uniform band rather than a wedge.
+// Exponential to a floor, fit to that profile, over its own mean so total mass is unchanged.
+const kHighwayCornerFloor = 0.4;
+const kHighwayCornerDecay = 7;
+const kHighwayCornerReach = 25;
+function cornerMass(corner: number): number {
+	return kHighwayCornerFloor + (1 - kHighwayCornerFloor) * Math.exp(-corner / kHighwayCornerDecay);
+}
+const kHighwayCornerNorm = Fn.pipe(
+	Fn.range(kHighwayCornerReach),
+	$$ => Fn.map($$, cornerMass),
+	$$ => Fn.reduce($$, 0, (total, value) => total + value) / kHighwayCornerReach);
+function cornerTaper(along: number): number {
+	return cornerMass(Math.min(along, 49 - along)) / kHighwayCornerNorm;
+}
+
 // A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit -- 0 over
 // the exit rising to 1 at the radius -- so a throat opens as a natural mouth, not the bored tunnel
 // a reconnect cuts. Concave (sqrt) easing keeps the mass tight to the exit; 2D distance so a mass
@@ -504,8 +523,9 @@ function genHighwayTerrain(
 		...exits.right.map(yy => [ 49, yy ] as const),
 	];
 	// Depth (in tiles) the mass intrudes along one border, indexed by the tile `at(ii)`: the noise
-	// wedge sampled at that tile's world position, receding toward any nearby exit. A border the
-	// lane runs along carries no mass and stays zeroed, so its term never walls a lane tile.
+	// wedge sampled at that tile's world position, anchored at the corners and receding toward any
+	// nearby exit. A border the lane runs along carries no mass and stays zeroed, so its term never
+	// walls a lane tile.
 	const depthAlongBorder = (active: boolean, at: (ii: number) => readonly [ number, number ]) => {
 		if (!active) {
 			return new Array<number>(50).fill(0);
@@ -514,7 +534,8 @@ function genHighwayTerrain(
 			Fn.range(50),
 			$$ => Fn.map($$, ii => {
 				const [ bx, by ] = at(ii);
-				return edgeDepth(wox + bx, woy + by, mass) * exitClearance(bx, by, exitPoints);
+				return edgeDepth(wox + bx, woy + by, mass) * cornerTaper(ii) *
+					exitClearance(bx, by, exitPoints);
 			}),
 			$$ => [ ...$$ ]);
 	};
