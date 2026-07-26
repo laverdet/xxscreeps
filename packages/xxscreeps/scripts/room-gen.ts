@@ -540,16 +540,18 @@ function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
 // Exponential to a floor, fit to that profile, over its own mean so total mass is unchanged.
 const kHighwayCornerFloor = 0.4;
 const kHighwayCornerDecay = 7;
-const kHighwayCornerReach = 25;
-function cornerMass(corner: number): number {
+// Distinct corner distances along a 50-tile border: `min(along, 49 - along)` runs 0 to 24, and every
+// value occurs exactly twice, so averaging the falloff over them averages it over the whole border.
+const kHighwayCornerDistances = 25;
+function cornerFalloff(corner: number): number {
 	return kHighwayCornerFloor + (1 - kHighwayCornerFloor) * Math.exp(-corner / kHighwayCornerDecay);
 }
 const kHighwayCornerNorm = Fn.pipe(
-	Fn.range(kHighwayCornerReach),
-	$$ => Fn.map($$, cornerMass),
-	$$ => Fn.reduce($$, 0, (total, value) => total + value) / kHighwayCornerReach);
+	Fn.range(kHighwayCornerDistances),
+	$$ => Fn.map($$, cornerFalloff),
+	$$ => Fn.reduce($$, 0, (total, value) => total + value) / kHighwayCornerDistances);
 function cornerTaper(along: number): number {
-	return cornerMass(Math.min(along, 49 - along)) / kHighwayCornerNorm;
+	return cornerFalloff(Math.min(along, 49 - along)) / kHighwayCornerNorm;
 }
 
 // A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit -- 0 over
