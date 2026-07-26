@@ -229,6 +229,29 @@ function *genExit(): Iterable<number> {
 	}
 }
 
+// The borders a highway's lane runs out through -- the ends of the corridor. A vertical lane runs top
+// to bottom, a horizontal one left to right, and a crossing carries both, so all four of its sides are
+// lane ends. The complement is the sector-facing pair that carries the wall mass and may seal.
+function isHighwayLaneSide(orientation: HighwayOrientation, dir: keyof ExitMap): boolean {
+	return orientation === 'vertical' ? dir === 'top' || dir === 'bottom' :
+		orientation === 'horizontal' ? dir === 'left' || dir === 'right' :
+		true;
+}
+
+// The live world never narrows the end of a highway lane. Across its 6,832 lane-axis borders every
+// one is a single unbroken opening of 21 to 43 tiles, uniformly distributed and centred to within a
+// few tiles -- none sealed, none under 10 wide. `genExit` describes an ordinary room's border, up to
+// three intervals anywhere from 1 to 43 tiles, and rolls a lane shut often enough to matter.
+const kLaneExitMin = 21;
+const kLaneExitMax = 43;
+function *genLaneExit(): Iterable<number> {
+	const length = kLaneExitMin + Math.floor(Math.random() * (kLaneExitMax - kLaneExitMin + 1));
+	const start = 1 + Math.floor(Math.random() * (49 - length));
+	for (let pos = start; pos < start + length; ++pos) {
+		yield pos;
+	}
+}
+
 function *exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number) {
 	for (let ii = 0; ii < 50; ++ii) {
 		const xx = axis === 'x' ? fixed : ii;
@@ -742,6 +765,8 @@ function buildRoom(
 			exits[dir] = userExits;
 		} else if (neighborTerrain) {
 			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
+		} else if (options?.highway !== undefined && isHighwayLaneSide(options.highway, dir)) {
+			exits[dir] = [ ...genLaneExit() ];
 		} else {
 			exits[dir] = [ ...genExit() ];
 		}
@@ -888,10 +913,7 @@ const kSealSideProbability = 0.3;
 // rooms never seal, since walling off the core would strand the sector's guarded rooms.
 function isSealableSide(type: RoomType, dir: keyof ExitMap, roomName: string, neighborName: string, hasController: boolean): boolean {
 	if (type === 'highway') {
-		const orientation = highwayOrientation(roomName);
-		return orientation === 'vertical' ? dir === 'left' || dir === 'right' :
-			orientation === 'horizontal' ? dir === 'top' || dir === 'bottom' :
-			false;
+		return !isHighwayLaneSide(highwayOrientation(roomName), dir);
 	} else if (type === 'normal' && hasController) {
 		const neighborType = roomType(neighborName);
 		return neighborType === 'normal' || neighborType === 'highway';
