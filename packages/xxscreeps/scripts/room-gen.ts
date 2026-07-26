@@ -390,6 +390,43 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 	}
 }
 
+// Walls off open ground the room's exits cannot reach. `buildBaseTerrain` holds that invariant for a
+// normal room by rerolling until `checkFlood` accepts the layout, but highway terrain is deterministic
+// per room coordinate and has no reroll to fall back on, and `connectExits` only breaches the seal
+// around an exit throat -- a pocket touching no throat is left stranded. Filling costs a third of a
+// tile per room and, unlike breaching, adds no one-wide channel. Reachability is 8-connected because
+// creeps move diagonally, the same neighbourhood `checkFlood` accepts.
+function fillUnreachable(grid: Grid): void {
+	const reached = new Set<number>();
+	const stack: (readonly [ number, number ])[] = [];
+	for (let ii = 0; ii < 50; ii++) {
+		for (const [ xx, yy ] of [ [ ii, 0 ], [ ii, 49 ], [ 0, ii ], [ 49, ii ] ] as const) {
+			const key = yy * 50 + xx;
+			if (!grid[yy]![xx]!.wall && !reached.has(key)) {
+				reached.add(key);
+				stack.push([ xx, yy ]);
+			}
+		}
+	}
+	while (stack.length > 0) {
+		const [ cxx, cyy ] = stack.pop()!;
+		for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
+			const key = nyy * 50 + nxx;
+			if (!grid[nyy]![nxx]!.wall && !reached.has(key)) {
+				reached.add(key);
+				stack.push([ nxx, nyy ]);
+			}
+		}
+	}
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			if (!cell.wall && !reached.has(yy * 50 + xx)) {
+				cell.wall = true;
+			}
+		}
+	}
+}
+
 // Connects every exit throat to the open lane, breaching only the thin seal where a wall mass or
 // lane blob has cut a throat off -- leaving the open lane (and the blobs studding it) otherwise
 // undisturbed.
@@ -556,6 +593,7 @@ function genHighwayTerrain(
 		}
 	}
 	connectExits(grid, exits);
+	fillUnreachable(grid);
 	return applySwamp(grid, swampType);
 }
 
