@@ -260,17 +260,26 @@ function markExits(grid: Grid, exits: ExitMap): void {
 	}
 }
 
+const kTriesPerWallType = 100;
+const kMaxTerrainAttempts = kTriesPerWallType * 10;
+
 // Fills the room with cellular-automaton wall (and swamp) noise, rerolling the wall type until the
-// open terrain is fully connected, then smooths swamp the same way.
+// open terrain is fully connected, then smooths swamp the same way. A seeded room draws from a
+// stream fixed by its coordinates, so a layout that never connects never connects on a rerun
+// either -- the reroll is bounded to fail rather than hang.
 function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): Grid {
 	let grid: Grid;
 	let activeWallType = wallType;
 	let tries = 0;
+	let attempts = 0;
 	do {
+		if (++attempts > kMaxTerrainAttempts) {
+			throw new Error(`Failed to connect room terrain after ${kMaxTerrainAttempts} attempts`);
+		}
 		grid = makeGrid();
 		markExits(grid, exits);
 		tries++;
-		if (tries > 100) {
+		if (tries > kTriesPerWallType) {
 			activeWallType = randomWallType();
 			tries = 0;
 		}
