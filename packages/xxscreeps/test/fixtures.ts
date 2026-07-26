@@ -1,5 +1,3 @@
-import { hashMix } from 'xxscreeps/utility/utility.js';
-
 export class DeterministicClockForTesting {
 	readonly #now = Date.now;
 	#ts: number;
@@ -24,13 +22,4 @@ export class DeterministicClockForTesting {
 	set(value: number) {
 		this.#ts = value;
 	}
-}
-
-export function deterministicRandomForTesting(seed = 1) {
-	const disposable = new DisposableStack();
-	const { random } = Math;
-	disposable.defer(() => Math.random = random);
-	let state = hashMix(seed);
-	Math.random = () => (state = hashMix(state)) / 0xffffffff + 0.5;
-	return disposable;
 }

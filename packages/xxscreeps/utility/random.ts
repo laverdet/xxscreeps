@@ -1,5 +1,23 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { hashCombine } from './utility.js';
+import { hashCombine, hashMix } from './utility.js';
+
+/**
+ * Replaces `Math.random` with a stream determined entirely by `seed`, restored on disposal, so every
+ * random value the scope draws replays on the next run with the same seed. Hashing a counter rather
+ * than chaining the hash into itself keeps every seed on a full-period stream: `hashMix` fixes zero,
+ * and a chained state seeded there would return zero forever. The seed is mixed before it keys the
+ * counter because `hashCombine` adds its arguments -- keyed on the raw seed, each seed's stream is
+ * the next seed's shifted by one draw.
+ */
+export function deterministicRandom(seed = 1) {
+	const disposable = new DisposableStack();
+	const { random } = Math;
+	disposable.defer(() => Math.random = random);
+	const key = hashMix(seed);
+	let index = 0;
+	Math.random = () => (hashCombine(key, index++) >>> 0) / 0x100000000;
+	return disposable;
+}
 
 /**
  * Yields every integer in `[0, count)` exactly once, in a pseudo-random order drawn from

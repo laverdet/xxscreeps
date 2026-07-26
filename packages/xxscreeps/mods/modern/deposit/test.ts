@@ -9,9 +9,9 @@ import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
-import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { deterministicRandom } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './main.js';
@@ -122,7 +122,7 @@ describe('mods/modern/deposit', () => {
 	// W5N5 comes due the moment it's seeded), scoped to the test and restored on disposal.
 	function withFixedPlacement(seed = 1): Disposable {
 		const stack = new DisposableStack();
-		stack.use(deterministicRandomForTesting(seed));
+		stack.use(deterministicRandom(seed));
 		stack.use(setDepositBootstrapScatterForTesting(() => 0));
 		return stack;
 	}
@@ -218,7 +218,7 @@ describe('mods/modern/deposit', () => {
 				room['#insertObject'](createCreep(new RoomPosition(20, 21, 'W0N0'), [ C.MOVE ], 'parker', '100'));
 			},
 		})(async ({ shard, tick }) => {
-			using rng = deterministicRandomForTesting();
+			using rng = deterministicRandom();
 			// No bootstrap: the decay path is the sole scheduler of W5N5. Decay fires this tick and marks
 			// W5N5 due immediately (score 0); the shard processor drains it the same tick, tallies the
 			// sector without the corpse, and pushes a refill intent.

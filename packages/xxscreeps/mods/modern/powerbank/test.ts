@@ -8,8 +8,8 @@ import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
-import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { deterministicRandom } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
 import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';
 import { StructurePowerBank, create as createPowerBank } from './powerbank.js';
@@ -132,7 +132,7 @@ describe('mods/modern/powerbank', () => {
 	// Scripted values for the first calls, then the LCG — steers the base/crit rolls while leaving
 	// placement free to vary.
 	function makeRngWithPrefix(prefix: number[], seed = 1) {
-		const disposable = deterministicRandomForTesting(seed);
+		const disposable = deterministicRandom(seed);
 		const { random } = Math;
 		let index = 0;
 		Math.random = () => index < prefix.length ? prefix[index++]! : random();
@@ -148,7 +148,7 @@ describe('mods/modern/powerbank', () => {
 
 	describe('placement', () => {
 		test('bootstrap seeds every highway room without placing', () => emptyWorld(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
+			using rng = deterministicRandom();
 			const seededAt = shard.time;
 			await runShardInitializers(shard);
 			const due = await inspectDuePowerBankRoomsForTest(shard);
@@ -167,7 +167,7 @@ describe('mods/modern/powerbank', () => {
 		}));
 
 		test('a due highway room places one valid power bank', () => emptyWorld(async ({ shard, tick }) => {
-			using rng = deterministicRandomForTesting();
+			using rng = deterministicRandom();
 			const scheduledAt = shard.time;
 			await scheduleRoom(shard, 'W0N0', 0);
 			// Tick 1: the shard processor pushes a placement intent and reschedules. Tick 2: the room
@@ -198,7 +198,7 @@ describe('mods/modern/powerbank', () => {
 		}));
 
 		test('non-highway rooms are never seeded', () => emptyWorld(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
+			using rng = deterministicRandom();
 			await runShardInitializers(shard);
 			const seeded = new Set((await inspectDuePowerBankRoomsForTest(shard)).map(([ , roomName ]) => roomName));
 			assert.ok(!seeded.has('W5N5'), 'sector center is not seeded');
@@ -221,7 +221,7 @@ describe('mods/modern/powerbank', () => {
 			// a match proves the schedule was repopulated from the room rather than rolled from scratch.
 			W0N0: room => { room['#nextPowerBankTime'] = 12345; },
 		})(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
+			using rng = deterministicRandom();
 			await runShardInitializers(shard);
 			const due = await inspectDuePowerBankRoomsForTest(shard);
 			const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
