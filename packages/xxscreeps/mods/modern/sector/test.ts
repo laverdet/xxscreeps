@@ -3,8 +3,8 @@ import * as assert from 'node:assert';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { describe, test } from 'xxscreeps/test/index.js';
-import { makeSectorRadiusPredicate } from './sector.js';
-import { computeRoomMeta, iterateSectors } from './terrain.js';
+import { iterateSectors, makeSectorRadiusPredicate } from './sector.js';
+import { computeRoomMeta } from './terrain.js';
 
 // Every room in the W/N quadrant corner of the given size — e.g. 21 spans W0..W20 x N0..N20.
 function roomQuadrant(size: number): ReadonlySet<string> {
