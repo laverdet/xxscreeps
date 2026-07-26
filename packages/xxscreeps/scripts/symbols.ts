@@ -24,6 +24,16 @@ export interface GenerateRoomOptions {
 	swampType?: number;
 }
 
+export interface GenerationOptions extends GenerateRoomOptions {
+	/**
+	 * Seeds every random value the generation draws, so the same seed rebuilds the same rooms --
+	 * terrain, objects, and their ids. Accepts 0 to 0xffffffff; omit to generate at random. Unlike
+	 * the room-shape flags this belongs to the generation, not the room, so it never reaches a
+	 * `roomGenerator` hook's `options`.
+	 */
+	seed?: number;
+}
+
 export interface RoomGeneratorContext {
 	options: GenerateRoomOptions;
 	/** The room being generated. Insert objects through `place` so their positions are tagged. */
