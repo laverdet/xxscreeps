@@ -494,9 +494,10 @@ function genHighwayTerrain(
 	const wox = rx * 50;
 	const woy = ry * 50;
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
-	// Crossing corners sit off the crossed lanes, so they seal nothing and want no clearance (the
-	// exit set stays empty); lane masses span the exits, so they recede for them.
-	const exitPoints = orientation === 'crossing' ? [] : [
+	// Every border a mass sits on recedes for the exits it crosses. A crossing is no exception: its
+	// masses are shallow, but two tiles of wall over a throat strand the pair markExits force-opens
+	// behind it, and the reconnect then bores its way out to the lane.
+	const exitPoints = [
 		...exits.top.map(xx => [ xx, 0 ] as const),
 		...exits.bottom.map(xx => [ xx, 49 ] as const),
 		...exits.left.map(yy => [ 0, yy ] as const),
