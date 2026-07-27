@@ -244,9 +244,36 @@ function isHighwayLaneSide(orientation: HighwayOrientation, dir: keyof ExitMap):
 // three intervals anywhere from 1 to 43 tiles, and rolls a lane shut often enough to matter.
 const kLaneExitMin = 21;
 const kLaneExitMax = 43;
-function *genLaneExit(): Iterable<number> {
-	const length = kLaneExitMin + Math.floor(Math.random() * (kLaneExitMax - kLaneExitMin + 1));
-	const start = 1 + Math.floor(Math.random() * (49 - length));
+
+// A lane end opens where the two masses flanking it stop. In the live world those are one piece of
+// terrain and so they agree: an opening clears its corner by 9.1 tiles on average against a mass
+// that reaches 7.3. Rolling the run's position independently of the masses, as a uniform start did,
+// seated it alongside one about half the time -- and `markExits` holds the tile inboard of a border
+// open across the whole opening, so the overlap reads as a one- or two-tile slot hugging the border
+// for as far as the mass reaches.
+//
+// `dir` indexes its opening along its own border, so the low end is flanked by the left or top mass
+// and the high end by the right or bottom one, each sampled a step inboard of the lane border.
+function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap): [ number, number ] {
+	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
+	const along = dir === 'left' || dir === 'right';
+	const inboard = dir === 'top' || dir === 'left' ? 2 : 47;
+	const depthAt = (far: boolean): number => {
+		const bx = along ? inboard : far ? 49 : 0;
+		const by = along ? far ? 49 : 0 : inboard;
+		return edgeDepth(rx * 50 + bx, ry * 50 + by, mass) * cornerTaper(inboard);
+	};
+	return [ depthAt(false), depthAt(true) ];
+}
+
+function *genLaneExit(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap): Iterable<number> {
+	const [ low, high ] = laneEndMargins(rx, ry, orientation, dir);
+	const from = Math.round(low) + 1;
+	const to = 48 - Math.round(high);
+	// The live world never runs a lane end outside this span, so a gap the masses leave too wide or
+	// too narrow is clamped and re-centred on itself rather than pinned against one of them.
+	const length = Math.min(kLaneExitMax, Math.max(kLaneExitMin, to - from + 1));
+	const start = Math.min(49 - length, Math.max(1, Math.round((from + to - length) / 2)));
 	for (let pos = start; pos < start + length; ++pos) {
 		yield pos;
 	}
@@ -510,9 +537,11 @@ interface HighwayMass {
 	expo: number;
 }
 // Both amplitudes carry the mass the smoothing passes below erode, so the finished room lands on the
-// live density rather than a few percent under it.
+// live density rather than a few percent under it. The corner amplitude carries a second job since
+// `genLaneExit` seats a lane end in the gap its flanking masses leave: on a crossing, where every
+// side is a lane end, it is what stops all four openings from running the full width of the border.
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
-const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 15, expo: 2.5 };
+const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 19, expo: 2.5 };
 // The free-standing lumps that stud an open lane are stamped ellipses. That is not the process the
 // rest of the map uses, and the corpus is unusually blunt about it: a lump's share of its bounding
 // box holds at 0.75 to 0.79 from ten tiles to seventy, where a lump grown the way `buildBaseTerrain`
@@ -840,7 +869,7 @@ function buildRoom(
 		} else if (neighborTerrain) {
 			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
 		} else if (options?.highway !== undefined && isHighwayLaneSide(options.highway, dir)) {
-			exits[dir] = [ ...genLaneExit() ];
+			exits[dir] = [ ...genLaneExit(rx, ry, options.highway, dir) ];
 		} else {
 			exits[dir] = [ ...genExit() ];
 		}
