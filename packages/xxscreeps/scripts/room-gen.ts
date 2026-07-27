@@ -229,6 +229,49 @@ function *genExit(): Iterable<number> {
 	}
 }
 
+// The borders a highway's lane runs out through -- the ends of the corridor. A vertical lane runs top
+// to bottom, a horizontal one left to right, and a crossing carries both, so all four of its sides are
+// lane ends. The complement is the sector-facing pair that carries the wall mass and may seal.
+function isHighwayLaneSide(orientation: HighwayOrientation, dir: keyof ExitMap): boolean {
+	return orientation === 'vertical' ? dir === 'top' || dir === 'bottom' :
+		orientation === 'horizontal' ? dir === 'left' || dir === 'right' :
+		true;
+}
+
+// The live world never narrows the end of a highway lane. Across its 6,832 lane-axis borders every
+// one is a single unbroken opening of 21 to 43 tiles, uniformly distributed and centred to within a
+// few tiles -- none sealed, none under 10 wide. `genExit` describes an ordinary room's border, up to
+// three intervals anywhere from 1 to 43 tiles, and rolls a lane shut often enough to matter.
+const kLaneExitMin = 21;
+const kLaneExitMax = 43;
+
+// A lane end opens where the two masses flanking it stop; in the live world they are one piece of
+// terrain, so the opening always clears them. Rolling its position independently seated it alongside
+// a mass about half the time, and since `markExits` holds the tile inboard of a border open across
+// the whole opening, the overlap left a one- or two-tile slot hugging the border.
+function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap) {
+	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
+	const along = dir === 'left' || dir === 'right';
+	const inboard = dir === 'top' || dir === 'left' ? 2 : 47;
+	const depthAt = (far: boolean): number => {
+		const bx = along ? inboard : far ? 49 : 0;
+		const by = along ? far ? 49 : 0 : inboard;
+		return edgeDepth(rx * 50 + bx, ry * 50 + by, mass) * cornerTaper(inboard);
+	};
+	return [ depthAt(false), depthAt(true) ] as const;
+}
+
+function genLaneExit(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap): Iterable<number> {
+	const [ low, high ] = laneEndMargins(rx, ry, orientation, dir);
+	const from = Math.round(low) + 1;
+	const to = 48 - Math.round(high);
+	// The live world never runs a lane end outside this span, so a gap the masses leave too wide or
+	// too narrow is clamped and re-centred on itself rather than pinned against one of them.
+	const length = Math.min(kLaneExitMax, Math.max(kLaneExitMin, to - from + 1));
+	const start = Math.min(48 - length, Math.max(2, Math.round((from + to - length) / 2)));
+	return Fn.range(start, start + length);
+}
+
 function *exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number) {
 	for (let ii = 0; ii < 50; ++ii) {
 		const xx = axis === 'x' ? fixed : ii;
@@ -355,6 +398,21 @@ function reachableOpen(grid: Grid, xx: number, yy: number): Set<number> {
 	return reached;
 }
 
+// The distinct open areas the given throats sit in. Throats sharing one are the common case -- a
+// lane end is a run of them -- so an area is flooded once and the throats it covers are skipped.
+function *throatAreas(grid: Grid, throats: readonly (readonly [ number, number ])[]): Iterable<Set<number>> {
+	const covered = new Set<number>();
+	for (const [ xx, yy ] of throats) {
+		if (!covered.has(yy * 50 + xx)) {
+			const area = reachableOpen(grid, xx, yy);
+			for (const key of area) {
+				covered.add(key);
+			}
+			yield area;
+		}
+	}
+}
+
 // Breaches the thinnest seal between a cut-off exit throat and the open network: a wall-piercing
 // BFS to the nearest open tile, clearing only its shortest path so the throat opens with a slot,
 // not a bored channel. Carved tiles join `reached` for the next throat.
@@ -390,6 +448,39 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 	}
 }
 
+// Walls off open ground the room's exits cannot reach. `buildBaseTerrain` gets that from rerolling
+// until `checkFlood` accepts the layout, which deterministic highway terrain has no equivalent for,
+// and `connectExits` only breaches around a throat -- a pocket touching none is left stranded. Fires
+// on 0.3% of rooms, and unlike a breach it adds no one-wide channel. 8-connected, as `checkFlood`.
+function fillUnreachable(grid: Grid): void {
+	const reached = new Set<number>();
+	const stack: (readonly [ number, number ])[] = [];
+	for (let ii = 0; ii < 50; ++ii) {
+		for (const [ xx, yy ] of [ [ ii, 0 ], [ ii, 49 ], [ 0, ii ], [ 49, ii ] ] as const) {
+			const key = yy * 50 + xx;
+			if (!grid[yy]![xx]!.wall && !reached.has(key)) {
+				reached.add(key);
+				stack.push([ xx, yy ]);
+			}
+		}
+	}
+	while (stack.length > 0) {
+		const [ cxx, cyy ] = stack.pop()!;
+		for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
+			const key = nyy * 50 + nxx;
+			if (!grid[nyy]![nxx]!.wall && !reached.has(key)) {
+				reached.add(key);
+				stack.push([ nxx, nyy ]);
+			}
+		}
+	}
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			cell.wall ||= !reached.has(yy * 50 + xx);
+		}
+	}
+}
+
 // Connects every exit throat to the open lane, breaching only the thin seal where a wall mass or
 // lane blob has cut a throat off -- leaving the open lane (and the blobs studding it) otherwise
 // undisturbed.
@@ -400,12 +491,15 @@ function connectExits(grid: Grid, exits: ExitMap): void {
 		...exits.left.map(yy => [ 1, yy ] as const),
 		...exits.right.map(yy => [ 48, yy ] as const),
 	];
-	if (throats.length <= 1) {
+	// Anchor on the largest open area a throat sits in -- the lane. Anchoring on whichever throat
+	// happens to come first lets one stranded in a shallow border pocket become the target, and
+	// every other throat then breaches along the border to reach that pocket instead of straight
+	// through to the lane.
+	const reached = Fn.maximum(throatAreas(grid, throats), mappedNumericComparator(area => area.size));
+	if (reached === undefined) {
 		return;
 	}
-	const [ ax, ay ] = throats[0]!;
-	const reached = reachableOpen(grid, ax, ay);
-	for (const [ bx, by ] of throats.slice(1)) {
+	for (const [ bx, by ] of throats) {
 		if (!reached.has(by * 50 + bx)) {
 			carveToOpen(grid, bx, by, reached);
 		}
@@ -449,17 +543,102 @@ interface HighwayMass {
 	amp: number;
 	expo: number;
 }
-const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 26, expo: 2.9 };
-const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 8, expo: 2.5 };
-// A coarse value-noise field thresholded into solid wall blobs that stud the open lane.
-const kHighwayBlobCell = 6;
-const kHighwayBlobThreshold = 0.82;
+// Both amplitudes carry the mass the smoothing passes erode, so the finished room lands on the live
+// density rather than a few percent under it. The corner amplitude carries a second job since
+// `genLaneExit` seats a lane end in the gap its flanking masses leave: on a crossing, where every
+// side is a lane end, it is what stops all four openings from running the full width of the border.
+const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
+const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 19, expo: 2.5 };
+// The free-standing lumps that stud an open lane are stamped ellipses, not the automaton the rest of
+// the map uses. A live lump fills 0.75 to 0.79 of its bounding box from ten tiles to seventy, where
+// one grown the way `buildBaseTerrain` grows a normal room's decays 0.75 to 0.52 over that range as
+// it sprawls. Flat in size means fixed in shape, and 0.776 is pi/4 -- a filled ellipse in its own
+// box. Thresholded noise gives the field's level sets instead, which run to ridges.
+const kHighwayBlobCell = 8;
+const kHighwayBlobChance = 0.4;
+// Radius in tiles, biased toward the small end: half the live lumps are under fifteen tiles.
+const kHighwayBlobMinRadius = 1.3;
+const kHighwayBlobMaxRadius = 3.6;
+const kHighwayBlobRadiusExpo = 2;
+// Long-to-short axis ratio, area held constant across it. The corpus runs 1.35 for every room type.
+const kHighwayBlobAspect = 1.35;
+
+// Masses and clutter are laid down independently, so a lump can land one tile clear of a mass and
+// leave a seam. `buildBaseTerrain` smooths a normal room 2 to 20 times; a highway ran it zero. A
+// pass closes a one-wide channel (its 3x3 holds six walls, over the factor) without eroding a mass
+// with body to it. A third rounds the lumps past the corpus, which carries some ragged ones.
+const kHighwaySmoothPasses = 2;
+const kHighwaySmoothFactor = 5;
+
+// Tiles of depth a clipped mass wins back per tile away from the lane opening bounding it.
+const kHighwayLaneClipSlope = 3;
 
 // Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
 // (low base, high exponent), mostly shallow with a rare deep plunge. edgeNoise in [0, 1) bounds it
 // to base + amp.
 function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
 	return mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo;
+}
+
+interface ClutterBlob {
+	cx: number;
+	cy: number;
+	rx: number;
+	ry: number;
+}
+
+// The blob a lattice cell carries, or undefined where it carries none. Everything about it comes off
+// the cell's own world coordinates, so a blob straddling a room border is the same blob on both
+// sides and re-generating a room reproduces it exactly.
+function clutterBlob(ix: number, iy: number): ClutterBlob | undefined {
+	if (latticeValue(ix, iy) >= kHighwayBlobChance) {
+		return undefined;
+	}
+	// Area is held across the aspect stretch, so the radius roll alone sets how big a lump reads.
+	const radius = kHighwayBlobMinRadius + (kHighwayBlobMaxRadius - kHighwayBlobMinRadius) *
+		latticeValue(ix + 0x1000, iy + 0x1000) ** kHighwayBlobRadiusExpo;
+	const stretch = Math.sqrt(kHighwayBlobAspect);
+	const upright = latticeValue(ix + 0x3000, iy + 0x3000) < 0.5;
+	return {
+		cx: (ix + latticeValue(ix + 0x2000, iy)) * kHighwayBlobCell,
+		cy: (iy + latticeValue(ix, iy + 0x2000)) * kHighwayBlobCell,
+		rx: upright ? radius / stretch : radius * stretch,
+		ry: upright ? radius * stretch : radius / stretch,
+	};
+}
+
+// Lane clutter for the room at world tile origin (wox, woy), as a `wall` predicate over its tiles.
+// Overlapping stamps merge into the larger, rarer lumps the corpus carries in its tail.
+function genHighwayClutter(wox: number, woy: number): (xx: number, yy: number) => boolean {
+	// A blob centred this far outside the room can still reach into it.
+	const reach = Math.ceil(kHighwayBlobMaxRadius * Math.sqrt(kHighwayBlobAspect) / kHighwayBlobCell) + 1;
+	const blobs = Fn.pipe(
+		Fn.range(Math.floor(wox / kHighwayBlobCell) - reach, Math.floor((wox + 49) / kHighwayBlobCell) + reach + 1),
+		$$ => Fn.transform($$, ix => Fn.map(
+			Fn.range(Math.floor(woy / kHighwayBlobCell) - reach, Math.floor((woy + 49) / kHighwayBlobCell) + reach + 1),
+			iy => clutterBlob(ix, iy))),
+		$$ => Fn.reject($$, blob => blob === undefined),
+		$$ => [ ...$$ ]);
+	return (xx, yy) => blobs.some(blob =>
+		((wox + xx - blob.cx) / blob.rx) ** 2 + ((woy + yy - blob.cy) / blob.ry) ** 2 <= 1);
+}
+
+// A multiplier on a border tile's mass depth, anchoring the mass at the corners where the diagonal
+// sector blocks reach and thinning it toward mid-border. A live mass runs several times deeper
+// beside a corner than at the midpoint, where the noise field alone is flat -- which is what made a
+// generated mass read as a band rather than a wedge. Divided by its own mean, so total mass holds.
+const kHighwayCornerFloor = 0.4;
+const kHighwayCornerDecay = 7;
+// Distinct corner distances along a 50-tile border: `min(along, 49 - along)` runs 0 to 24, and every
+// value occurs exactly twice, so averaging the falloff over them averages it over the whole border.
+const kHighwayCornerDistances = 25;
+function cornerFalloff(corner: number): number {
+	return kHighwayCornerFloor + (1 - kHighwayCornerFloor) * Math.exp(-corner / kHighwayCornerDecay);
+}
+const kHighwayCornerNorm = Fn.accumulate(Fn.range(kHighwayCornerDistances), cornerFalloff) /
+	kHighwayCornerDistances;
+function cornerTaper(along: number): number {
+	return cornerFalloff(Math.min(along, 49 - along)) / kHighwayCornerNorm;
 }
 
 // A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit -- 0 over
@@ -477,8 +656,9 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 
 // Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding
 // from the sector-facing borders -- left+right for a vertical lane, top+bottom for a horizontal
-// one, all four corners for a crossing. Wall masses (noise-driven wedge depth) + lane blobs + exit
-// recede + a slot-carve reconnect, then swamp. Every piece is tuned to the live highway corpus.
+// one, all four corners for a crossing. Wall masses (corner-anchored, receding at exits, clipped to
+// the lane openings) + ellipse clutter, smoothed, then a slot-carve reconnect, an unreachable-ground
+// fill, and swamp. Every piece is tuned to the live highway corpus.
 function genHighwayTerrain(
 	exits: ExitMap,
 	rx: number,
@@ -494,17 +674,19 @@ function genHighwayTerrain(
 	const wox = rx * 50;
 	const woy = ry * 50;
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
-	// Crossing corners sit off the crossed lanes, so they seal nothing and want no clearance (the
-	// exit set stays empty); lane masses span the exits, so they recede for them.
-	const exitPoints = orientation === 'crossing' ? [] : [
+	// Every border a mass sits on recedes for the exits it crosses. A crossing is no exception: its
+	// masses are shallow, but two tiles of wall over a throat strand the pair markExits force-opens
+	// behind it, and the reconnect then bores its way out to the lane.
+	const exitPoints = [
 		...exits.top.map(xx => [ xx, 0 ] as const),
 		...exits.bottom.map(xx => [ xx, 49 ] as const),
 		...exits.left.map(yy => [ 0, yy ] as const),
 		...exits.right.map(yy => [ 49, yy ] as const),
 	];
 	// Depth (in tiles) the mass intrudes along one border, indexed by the tile `at(ii)`: the noise
-	// wedge sampled at that tile's world position, receding toward any nearby exit. A border the
-	// lane runs along carries no mass and stays zeroed, so its term never walls a lane tile.
+	// wedge sampled at that tile's world position, anchored at the corners and receding toward any
+	// nearby exit. A border the lane runs along carries no mass and stays zeroed, so its term never
+	// walls a lane tile.
 	const depthAlongBorder = (active: boolean, at: (ii: number) => readonly [ number, number ]) => {
 		if (!active) {
 			return new Array<number>(50).fill(0);
@@ -513,14 +695,41 @@ function genHighwayTerrain(
 			Fn.range(50),
 			$$ => Fn.map($$, ii => {
 				const [ bx, by ] = at(ii);
-				return edgeDepth(wox + bx, woy + by, mass) * exitClearance(bx, by, exitPoints);
+				return edgeDepth(wox + bx, woy + by, mass) * cornerTaper(ii) *
+					exitClearance(bx, by, exitPoints);
 			}),
 			$$ => [ ...$$ ]);
 	};
-	const leftDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]);
-	const rightDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]);
-	const topDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]);
-	const bottomDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]);
+	// How far a mass may reach at one end of its border before it would wall the tile inboard of the
+	// lane opening running across that end. `markExits` holds that tile open for the whole opening,
+	// so a mass reaching under one leaves a one- or two-tile slot to walk instead of a room. Which
+	// end of the opening bounds it is the side of the room the mass grows from.
+	const laneBound = (lane: readonly number[], lowSide: boolean) =>
+		lane.length === 0 ? Infinity : lowSide ? Math.min(...lane) - 1 : 48 - Math.max(...lane);
+	// `genLaneExit` seats an opening it rolls itself clear of these masses, but a room inherits its
+	// openings from whichever neighbour was generated first, and that one was seated against the
+	// neighbour's masses. Clip to the opening this room actually got, releasing over a few tiles so
+	// the silhouette away from the corner stays the mass's own.
+	const clipToLanes = (depth: number[], low: number, high: number) => Fn.pipe(
+		depth.entries(),
+		$$ => Fn.map($$, ([ ii, tiles ]) => Math.min(
+			tiles,
+			low + Math.max(0, ii - 2) * kHighwayLaneClipSlope,
+			high + Math.max(0, 47 - ii) * kHighwayLaneClipSlope)),
+		$$ => [ ...$$ ]);
+	const leftDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]),
+		laneBound(exits.top, true), laneBound(exits.bottom, true));
+	const rightDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]),
+		laneBound(exits.top, false), laneBound(exits.bottom, false));
+	const topDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]),
+		laneBound(exits.left, true), laneBound(exits.right, true));
+	const bottomDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]),
+		laneBound(exits.left, false), laneBound(exits.right, false));
+	const clutter = genHighwayClutter(wox, woy);
 	for (const [ yy, row ] of grid.entries()) {
 		for (const [ xx, cell ] of row.entries()) {
 			if (cell.forceOpen) {
@@ -530,11 +739,16 @@ function genHighwayTerrain(
 			cell.wall = isBorder(xx, yy) ||
 				xx <= leftDepth[yy]! || 49 - xx <= rightDepth[yy]! ||
 				yy <= topDepth[xx]! || 49 - yy <= bottomDepth[xx]! ||
-				valueNoise(wox + xx, woy + yy, kHighwayBlobCell) > kHighwayBlobThreshold;
+				clutter(xx, yy);
 		}
 	}
-	connectExits(grid, exits);
-	return applySwamp(grid, swampType);
+	let smoothed = grid;
+	for (let ii = 0; ii < kHighwaySmoothPasses; ++ii) {
+		smoothed = smoothTerrain(smoothed, kHighwaySmoothFactor, 'wall');
+	}
+	connectExits(smoothed, exits);
+	fillUnreachable(smoothed);
+	return applySwamp(smoothed, swampType);
 }
 
 const kNoTags: ReadonlySet<string> = new Set();
@@ -682,6 +896,8 @@ function buildRoom(
 			exits[dir] = userExits;
 		} else if (neighborTerrain) {
 			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
+		} else if (options?.highway !== undefined && isHighwayLaneSide(options.highway, dir)) {
+			exits[dir] = [ ...genLaneExit(rx, ry, options.highway, dir) ];
 		} else {
 			exits[dir] = [ ...genExit() ];
 		}
@@ -828,10 +1044,7 @@ const kSealSideProbability = 0.3;
 // rooms never seal, since walling off the core would strand the sector's guarded rooms.
 function isSealableSide(type: RoomType, dir: keyof ExitMap, roomName: string, neighborName: string, hasController: boolean): boolean {
 	if (type === 'highway') {
-		const orientation = highwayOrientation(roomName);
-		return orientation === 'vertical' ? dir === 'left' || dir === 'right' :
-			orientation === 'horizontal' ? dir === 'top' || dir === 'bottom' :
-			false;
+		return !isHighwayLaneSide(highwayOrientation(roomName), dir);
 	} else if (type === 'normal' && hasController) {
 		const neighborType = roomType(neighborName);
 		return neighborType === 'normal' || neighborType === 'highway';
