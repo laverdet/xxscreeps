@@ -70,20 +70,18 @@ declare module 'xxscreeps/game/object.js' {
 
 // Note: `ajv` doesn't properly support `undefined`....
 // https://github.com/ajv-validator/ajv/issues/2040
-const ajv = new Ajv();
-// Query strings carry every value as a string, so a schema with non-string fields only validates
-// under `coerceTypes`, which rewrites values in place to the type the schema asks for (e.g. "180" →
-// 180). It's an Ajv constructor option rather than a keyword, so query routes need their own
-// instance. Payloads arrive as JSON and are validated as-is.
-const coercingAjv = new Ajv({ coerceTypes: true });
+//
+// Every route validates under `coerceTypes`, which rewrites a value in place to the type its schema
+// asks for before `execute` sees it. A query string carries everything as a string, and the official
+// client is loose about it in payloads too (notify-prefs posts `interval: "180"`), so a schema which
+// describes what a field means rather than how it arrived would otherwise never validate.
+const ajv = new Ajv({ coerceTypes: true });
 
 // `JSONSchemaType` has no way to express a property which accepts any value, but it does allow
 // plain `$ref` entries in `properties`, so an unconstrained schema is registered as an escape
 // hatch. https://github.com/ajv-validator/ajv/issues/1375
 export const anySchema = { $ref: 'any' };
-for (const instance of [ ajv, coercingAjv ]) {
-	instance.addSchema({}, 'any');
-}
+ajv.addSchema({}, 'any');
 
 // Backend render hooks
 export function bindRenderer<Type extends RoomObject>(
@@ -130,7 +128,7 @@ export function makeValidatedQueryRoute<Query>(
 	schema: JSONSchemaType<Query>,
 	execute: ValidatedExecuteRoute<ValidatedQueryRequest<Query>>,
 ): ExecuteRoute {
-	const validate = coercingAjv.compile(schema);
+	const validate = ajv.compile(schema);
 	return context => {
 		if (validate(context.request.query)) {
 			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedQueryRequest<Query>>>);
