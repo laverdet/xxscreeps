@@ -2,6 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 import * as Timers from 'node:timers/promises';
 import { config } from 'xxscreeps/config/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
+import { bootstrapSandbox } from 'xxscreeps/driver/sandbox/index.js';
 import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
@@ -48,6 +49,7 @@ loadTerrain(world); // pathfinder
 
 // Shared worker context
 await using runner = await acquireRunnerContext(shard);
+await bootstrapSandbox();
 
 // Persistent player instances
 const playerInstances = disposable.adopt(

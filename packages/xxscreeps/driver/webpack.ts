@@ -28,7 +28,7 @@ function resolve(module: string) {
 	return fileURLToPath(import.meta.resolve(module));
 }
 
-const IS_DEV = true as boolean;
+const IS_DEV = Boolean(false);
 
 export async function compile(moduleName: string, transform: Transform) {
 	const baseName = Path.basename(moduleName);
@@ -72,6 +72,10 @@ export async function compile(moduleName: string, transform: Transform) {
 						sourceMapLoader,
 					],
 				} ],
+			},
+
+			performance: {
+				hints: false,
 			},
 
 			resolve: {
