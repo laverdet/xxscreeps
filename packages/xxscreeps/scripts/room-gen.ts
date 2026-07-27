@@ -254,7 +254,7 @@ const kLaneExitMax = 43;
 //
 // `dir` indexes its opening along its own border, so the low end is flanked by the left or top mass
 // and the high end by the right or bottom one, each sampled a step inboard of the lane border.
-function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap): [ number, number ] {
+function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap) {
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
 	const along = dir === 'left' || dir === 'right';
 	const inboard = dir === 'top' || dir === 'left' ? 2 : 47;
@@ -263,7 +263,7 @@ function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation,
 		const by = along ? far ? 49 : 0 : inboard;
 		return edgeDepth(rx * 50 + bx, ry * 50 + by, mass) * cornerTaper(inboard);
 	};
-	return [ depthAt(false), depthAt(true) ];
+	return [ depthAt(false), depthAt(true) ] as const;
 }
 
 function *genLaneExit(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap): Iterable<number> {
@@ -567,6 +567,9 @@ const kHighwayBlobAspect = 1.35;
 const kHighwaySmoothPasses = 2;
 const kHighwaySmoothFactor = 5;
 
+// Tiles of depth a clipped mass wins back per tile away from the lane opening bounding it.
+const kHighwayLaneClipSlope = 3;
+
 // Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
 // (low base, high exponent), mostly shallow with a rare deep plunge. edgeNoise in [0, 1) bounds it
 // to base + amp.
@@ -698,10 +701,35 @@ function genHighwayTerrain(
 			}),
 			$$ => [ ...$$ ]);
 	};
-	const leftDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]);
-	const rightDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]);
-	const topDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]);
-	const bottomDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]);
+	// How far a mass may reach at one end of its border before it would wall the tile inboard of the
+	// lane opening running across that end. `markExits` holds that tile open for the whole opening,
+	// so a mass reaching under one leaves a one- or two-tile slot to walk instead of a room. Which
+	// end of the opening bounds it is the side of the room the mass grows from.
+	const laneBound = (lane: readonly number[], lowSide: boolean) =>
+		lane.length === 0 ? Infinity : lowSide ? Math.min(...lane) - 1 : 48 - Math.max(...lane);
+	// `genLaneExit` seats an opening it rolls itself clear of these masses, but a room inherits its
+	// openings from whichever neighbour was generated first, and that one was seated against the
+	// neighbour's masses. Clip to the opening this room actually got, releasing over a few tiles so
+	// the silhouette away from the corner stays the mass's own.
+	const clipToLanes = (depth: number[], low: number, high: number) => Fn.pipe(
+		Fn.range(50),
+		$$ => Fn.map($$, ii => Math.min(
+			depth[ii]!,
+			low + Math.max(0, ii - 2) * kHighwayLaneClipSlope,
+			high + Math.max(0, 47 - ii) * kHighwayLaneClipSlope)),
+		$$ => [ ...$$ ]);
+	const leftDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]),
+		laneBound(exits.top, true), laneBound(exits.bottom, true));
+	const rightDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]),
+		laneBound(exits.top, false), laneBound(exits.bottom, false));
+	const topDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]),
+		laneBound(exits.left, true), laneBound(exits.right, true));
+	const bottomDepth = clipToLanes(
+		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]),
+		laneBound(exits.left, false), laneBound(exits.right, false));
 	const clutter = genHighwayClutter(wox, woy);
 	for (const [ yy, row ] of grid.entries()) {
 		for (const [ xx, cell ] of row.entries()) {
