@@ -1,3 +1,4 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -14,7 +15,7 @@ import { StructureNuker, checkLaunchNuke } from './nuker.js';
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		'#applyNukeImpact'(nuke: RoomObject): void;
+		'#applyNukeImpact'(nuke: RoomObject, context: ProcessorContext): void;
 	}
 }
 
@@ -63,7 +64,7 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 	if (timeToLand > 0) {
 		context.wakeAt(nuke['#landTime']);
 	} else if (timeToLand === 0) {
-		applyNukeImpact(nuke);
+		applyNukeImpact(nuke, context);
 		context.setActive();
 	} else if (timeToLand === -1) {
 		nuke.room['#removeObject'](nuke);
@@ -71,12 +72,13 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 	}
 });
 
-function applyNukeImpact(nuke: Nuke) {
+function applyNukeImpact(nuke: Nuke, context: ProcessorContext) {
 	const { room } = nuke;
 
-	// Apply immediate destruction of creeps, resources, and others
-	for (const object of room['#immediateObjects']()) {
-		object['#applyNukeImpact'](nuke);
+	// Apply immediate destruction of creeps, resources, and others. Materialized first so the sweep
+	// skips objects the impact itself inserts, like a killed power creep's tombstone.
+	for (const object of [ ...room['#immediateObjects']() ]) {
+		object['#applyNukeImpact'](nuke, context);
 	}
 
 	// 5x5 blast: rampart on tile absorbs first, residual hits non-rampart structures.

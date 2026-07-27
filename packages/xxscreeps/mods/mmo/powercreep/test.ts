@@ -4,8 +4,10 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
+import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { lookForStructureAt, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { create as createNuke } from 'xxscreeps/mods/modern/nuker/nuke.js';
 import { create as createPowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -225,6 +227,46 @@ describe('mods/mmo/powercreep', () => {
 		});
 	}));
 
+	// A power creep and two creeps — one bare, one weighed down by a WORK part — around the open
+	// tile at (25, 24).
+	const moveTieSim = simulate({
+		W1N1: room => {
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = owner;
+			const alice = createSpawnedPowerCreep(
+				new RoomPosition(25, 23, 'W1N1'),
+				createPowerCreep('pc1', 'Alice', C.POWER_CLASS.OPERATOR, owner));
+			alice['#ageTime'] = 1000;
+			room['#insertObject'](alice);
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE ], 'bare', owner));
+			room['#insertObject'](createCreep(new RoomPosition(26, 24, 'W1N1'), [ C.WORK, C.MOVE ], 'laden', owner));
+		},
+	});
+
+	test('a power creep loses a movement tie to a bare creep', () => moveTieSim(async ({ player, tick }) => {
+		await player(owner, Game => {
+			assert.strictEqual(Game.creeps.bare?.move(C.TOP), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.move(C.BOTTOM), C.OK);
+		});
+		await tick();
+		await player(owner, Game => {
+			assert.strictEqual(Game.creeps.bare?.pos.isEqualTo(25, 24), true);
+			assert.strictEqual(Game.powerCreeps.Alice?.pos.isEqualTo(25, 23), true);
+		});
+	}));
+
+	test('a power creep loses a movement tie to a laden creep', () => moveTieSim(async ({ player, tick }) => {
+		await player(owner, Game => {
+			assert.strictEqual(Game.creeps.laden?.move(C.LEFT), C.OK);
+			assert.strictEqual(Game.powerCreeps.Alice?.move(C.BOTTOM), C.OK);
+		});
+		await tick();
+		await player(owner, Game => {
+			assert.strictEqual(Game.creeps.laden?.pos.isEqualTo(25, 24), true);
+			assert.strictEqual(Game.powerCreeps.Alice?.pos.isEqualTo(25, 23), true);
+		});
+	}));
+
 	test('a spawned power creep crosses a room border', () => creepSim(async ({ player, poke, peekRoom, tick, shard }) => {
 		const id = await createAlice(shard.db);
 		await player(owner, Game => {
@@ -410,6 +452,51 @@ describe('mods/mmo/powercreep', () => {
 		});
 		const [ entry ] = await Model.loadRoster(shard.db, owner);
 		assert.ok(entry!.spawnCooldownTime > Date.now());
+	}));
+
+	test('a nuke impact routes death through the tombstone + respawn cooldown', () => creepSim(async ({ player, poke, peekRoom, tick, shard }) => {
+		const id = await createAlice(shard.db);
+		await player(owner, Game => {
+			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+			assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+		});
+		await tick();
+		// Land outside blast range of the creep: the room-wide sweep is what kills it.
+		await poke('W1N1', owner, (Game, room) => {
+			room['#insertObject'](createNuke(new RoomPosition(40, 40, 'W1N1'), 'W2N1', Game.time + 2));
+		});
+		await tick();
+		await peekRoom('W1N1', room => {
+			// Still alive on the approach tick; death lands exactly at impact.
+			assert.strictEqual(room['#lookFor'](C.LOOK_POWER_CREEPS).length, 1);
+		});
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(room['#lookFor'](C.LOOK_POWER_CREEPS).length, 0);
+			assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 1);
+		});
+		const [ entry ] = await Model.loadRoster(shard.db, owner);
+		assert.ok(entry!.spawnCooldownTime > Date.now());
+	}));
+
+	test('a nuke impact in blast range buries the creep exactly once', () => creepSim(async ({ player, poke, peekRoom, tick, shard }) => {
+		const id = await createAlice(shard.db);
+		// The nuke predates the creep so it ticks first at impact: the sweep kill and the blast
+		// damage dealt to the same creep settle in one pass, which must not bury it twice.
+		await poke('W1N1', owner, (Game, room) => {
+			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W1N1'), 'W2N1', Game.time + 3));
+		});
+		await player(owner, Game => {
+			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+			assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+		});
+		await tick();
+		await tick();
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(room['#lookFor'](C.LOOK_POWER_CREEPS).length, 0);
+			assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 1);
+		});
 	}));
 
 	test('spawning a creep you do not own is rejected', () => creepSim(async ({ player }) => {
