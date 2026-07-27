@@ -273,7 +273,7 @@ function *genLaneExit(rx: number, ry: number, orientation: HighwayOrientation, d
 	// The live world never runs a lane end outside this span, so a gap the masses leave too wide or
 	// too narrow is clamped and re-centred on itself rather than pinned against one of them.
 	const length = Math.min(kLaneExitMax, Math.max(kLaneExitMin, to - from + 1));
-	const start = Math.min(49 - length, Math.max(1, Math.round((from + to - length) / 2)));
+	const start = Math.min(48 - length, Math.max(2, Math.round((from + to - length) / 2)));
 	for (let pos = start; pos < start + length; ++pos) {
 		yield pos;
 	}
