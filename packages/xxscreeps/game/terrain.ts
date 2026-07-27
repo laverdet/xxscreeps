@@ -19,6 +19,8 @@ export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const
  * @see https://docs.screeps.com/api/#Room-Terrain
  */
 export class Terrain {
+	// The room's 2500 tiles packed into 625 bytes: two bits per tile, four tiles per byte from the
+	// low end, indexed row-major as `yy * 50 + xx`. Each pair holds the value `get` returns.
 	readonly #buffer: Uint8Array;
 
 	/**
@@ -127,10 +129,15 @@ export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
 
+// The two-tile band along any edge -- 0, 1, 48, or 49 on either axis. The modulo wraps the high end
+// onto the low one so both ends fall out of a single comparison.
 export function isNearBorder(xx: number, yy: number) {
 	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
 }
 
+// Which sides the room can be walked out of, as the bitfield `World` stores and `describeExits`
+// reads: 1 top, 2 right, 4 bottom, 8 left. A side counts when any of its tiles is passable; the
+// corners are skipped because an exit never occupies one.
 export function packExits(terrain: Terrain) {
 	const checkExit = (fn: (ii: number) => [ number, number ]) =>
 		Fn.some(Fn.range(1, 49), ii => terrain.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);

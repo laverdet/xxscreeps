@@ -184,6 +184,12 @@ server before running it so cached world state in the backend, processor, and
 runner workers doesn't go stale. Exits are read from any already-generated
 neighbor, so adjacent generated rooms connect.
 
+Also available as `npx xxscreeps generate-room W12N5`, which takes the room
+shape as flags — `--shard`, `--terrain-type 1-28`, `--swamp-type 0-14`,
+`--sources 1-4`, `--mineral H|O|Z|K|U|L|X` — and prints its usage line when
+run without a room name. `controller` and `keeperLairs` have no flags, so
+source-keeper and center rooms are script-only.
+
 `generateSector` builds the full 11×11 room block from an origin corner (a
 room at printed multiples of 10 on both axes) under the vanilla mod-10 sector
 template: highway rooms on the boundary rings, the central room and its 3×3
@@ -193,7 +199,8 @@ and some borders between normal and highway rooms seal at random, like the
 live world's. Rooms that already exist are skipped, so adjacent sectors share
 their boundary rings and a partially built sector can be re-entered. The same
 options apply to the sector's normal rooms. Also available as
-`npx xxscreeps generate-sector W20N20`.
+`npx xxscreeps generate-sector W20N20`, taking the same flags as
+`generate-room`.
 
 ## Docker
 
