@@ -464,7 +464,7 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 function fillUnreachable(grid: Grid): void {
 	const reached = new Set<number>();
 	const stack: (readonly [ number, number ])[] = [];
-	for (let ii = 0; ii < 50; ii++) {
+	for (let ii = 0; ii < 50; ++ii) {
 		for (const [ xx, yy ] of [ [ ii, 0 ], [ ii, 49 ], [ 0, ii ], [ 49, ii ] ] as const) {
 			const key = yy * 50 + xx;
 			if (!grid[yy]![xx]!.wall && !reached.has(key)) {
@@ -485,9 +485,7 @@ function fillUnreachable(grid: Grid): void {
 	}
 	for (const [ yy, row ] of grid.entries()) {
 		for (const [ xx, cell ] of row.entries()) {
-			if (!cell.wall && !reached.has(yy * 50 + xx)) {
-				cell.wall = true;
-			}
+			cell.wall ||= !reached.has(yy * 50 + xx);
 		}
 	}
 }
@@ -554,8 +552,8 @@ interface HighwayMass {
 	amp: number;
 	expo: number;
 }
-// Both amplitudes carry the mass the smoothing passes below erode, so the finished room lands on the
-// live density rather than a few percent under it. The corner amplitude carries a second job since
+// Both amplitudes carry the mass the smoothing passes erode, so the finished room lands on the live
+// density rather than a few percent under it. The corner amplitude carries a second job since
 // `genLaneExit` seats a lane end in the gap its flanking masses leave: on a crossing, where every
 // side is a lane end, it is what stops all four openings from running the full width of the border.
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
@@ -636,7 +634,7 @@ function genHighwayClutter(wox: number, woy: number): (xx: number, yy: number) =
 			iy => clutterBlob(ix, iy))),
 		$$ => Fn.reject($$, blob => blob === undefined),
 		$$ => [ ...$$ ]);
-	return (xx, yy) => Fn.some(blobs, blob =>
+	return (xx, yy) => blobs.some(blob =>
 		((wox + xx - blob.cx) / blob.rx) ** 2 + ((woy + yy - blob.cy) / blob.ry) ** 2 <= 1);
 }
 
@@ -653,10 +651,8 @@ const kHighwayCornerDistances = 25;
 function cornerFalloff(corner: number): number {
 	return kHighwayCornerFloor + (1 - kHighwayCornerFloor) * Math.exp(-corner / kHighwayCornerDecay);
 }
-const kHighwayCornerNorm = Fn.pipe(
-	Fn.range(kHighwayCornerDistances),
-	$$ => Fn.map($$, cornerFalloff),
-	$$ => Fn.reduce($$, 0, (total, value) => total + value) / kHighwayCornerDistances);
+const kHighwayCornerNorm = Fn.accumulate(Fn.range(kHighwayCornerDistances), cornerFalloff) /
+	kHighwayCornerDistances;
 function cornerTaper(along: number): number {
 	return cornerFalloff(Math.min(along, 49 - along)) / kHighwayCornerNorm;
 }
@@ -730,9 +726,9 @@ function genHighwayTerrain(
 	// neighbour's masses. Clip to the opening this room actually got, releasing over a few tiles so
 	// the silhouette away from the corner stays the mass's own.
 	const clipToLanes = (depth: number[], low: number, high: number) => Fn.pipe(
-		Fn.range(50),
-		$$ => Fn.map($$, ii => Math.min(
-			depth[ii]!,
+		depth.entries(),
+		$$ => Fn.map($$, ([ ii, tiles ]) => Math.min(
+			tiles,
 			low + Math.max(0, ii - 2) * kHighwayLaneClipSlope,
 			high + Math.max(0, 47 - ii) * kHighwayLaneClipSlope)),
 		$$ => [ ...$$ ]);
@@ -761,9 +757,10 @@ function genHighwayTerrain(
 				clutter(xx, yy);
 		}
 	}
-	const smoothed = Fn.pipe(
-		Fn.range(kHighwaySmoothPasses),
-		$$ => Fn.reduce($$, grid, working => smoothTerrain(working, kHighwaySmoothFactor, 'wall')));
+	let smoothed = grid;
+	for (let ii = 0; ii < kHighwaySmoothPasses; ++ii) {
+		smoothed = smoothTerrain(smoothed, kHighwaySmoothFactor, 'wall');
+	}
 	connectExits(smoothed, exits);
 	fillUnreachable(smoothed);
 	return applySwamp(smoothed, swampType);
