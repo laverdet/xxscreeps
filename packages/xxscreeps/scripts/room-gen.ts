@@ -245,15 +245,10 @@ function isHighwayLaneSide(orientation: HighwayOrientation, dir: keyof ExitMap):
 const kLaneExitMin = 21;
 const kLaneExitMax = 43;
 
-// A lane end opens where the two masses flanking it stop. In the live world those are one piece of
-// terrain and so they agree: an opening clears its corner by 9.1 tiles on average against a mass
-// that reaches 7.3. Rolling the run's position independently of the masses, as a uniform start did,
-// seated it alongside one about half the time -- and `markExits` holds the tile inboard of a border
-// open across the whole opening, so the overlap reads as a one- or two-tile slot hugging the border
-// for as far as the mass reaches.
-//
-// `dir` indexes its opening along its own border, so the low end is flanked by the left or top mass
-// and the high end by the right or bottom one, each sampled a step inboard of the lane border.
+// A lane end opens where the two masses flanking it stop; in the live world they are one piece of
+// terrain, so the opening always clears them. Rolling its position independently seated it alongside
+// a mass about half the time, and since `markExits` holds the tile inboard of a border open across
+// the whole opening, the overlap left a one- or two-tile slot hugging the border.
 function laneEndMargins(rx: number, ry: number, orientation: HighwayOrientation, dir: keyof ExitMap) {
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
 	const along = dir === 'left' || dir === 'right';
@@ -453,13 +448,10 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 	}
 }
 
-// Walls off open ground the room's exits cannot reach. `buildBaseTerrain` holds that invariant for a
-// normal room by rerolling until `checkFlood` accepts the layout, but highway terrain is deterministic
-// per room coordinate and has no reroll to fall back on, and `connectExits` only breaches the seal
-// around an exit throat -- a pocket touching no throat is left stranded. It fires on 0.3% of rooms,
-// walling up to 40 tiles when it does, and unlike breaching it adds no one-wide channel.
-// Reachability is 8-connected because creeps move diagonally, the same neighbourhood `checkFlood`
-// accepts.
+// Walls off open ground the room's exits cannot reach. `buildBaseTerrain` gets that from rerolling
+// until `checkFlood` accepts the layout, which deterministic highway terrain has no equivalent for,
+// and `connectExits` only breaches around a throat -- a pocket touching none is left stranded. Fires
+// on 0.3% of rooms, and unlike a breach it adds no one-wide channel. 8-connected, as `checkFlood`.
 function fillUnreachable(grid: Grid): void {
 	const reached = new Set<number>();
 	const stack: (readonly [ number, number ])[] = [];
@@ -557,12 +549,11 @@ interface HighwayMass {
 // side is a lane end, it is what stops all four openings from running the full width of the border.
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
 const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 19, expo: 2.5 };
-// The free-standing lumps that stud an open lane are stamped ellipses. That is not the process the
-// rest of the map uses, and the corpus is unusually blunt about it: a lump's share of its bounding
-// box holds at 0.75 to 0.79 from ten tiles to seventy, where a lump grown the way `buildBaseTerrain`
-// grows a normal room's decays 0.75 to 0.52 across the same range as it sprawls. A figure flat in
-// size is a figure with a fixed shape, and 0.776 is pi/4 -- a filled ellipse in its own box.
-// Thresholded noise gives the level sets of the field instead, which run to ridges.
+// The free-standing lumps that stud an open lane are stamped ellipses, not the automaton the rest of
+// the map uses. A live lump fills 0.75 to 0.79 of its bounding box from ten tiles to seventy, where
+// one grown the way `buildBaseTerrain` grows a normal room's decays 0.75 to 0.52 over that range as
+// it sprawls. Flat in size means fixed in shape, and 0.776 is pi/4 -- a filled ellipse in its own
+// box. Thresholded noise gives the field's level sets instead, which run to ridges.
 const kHighwayBlobCell = 8;
 const kHighwayBlobChance = 0.4;
 // Radius in tiles, biased toward the small end: half the live lumps are under fifteen tiles.
@@ -572,13 +563,10 @@ const kHighwayBlobRadiusExpo = 2;
 // Long-to-short axis ratio, area held constant across it. The corpus runs 1.35 for every room type.
 const kHighwayBlobAspect = 1.35;
 
-// Masses and lane clutter are laid down independently, so a lump lands a tile clear of a mass as
-// readily as flush against it, leaving a one-tile seam neither knows it made. A normal room never
-// shows those: `buildBaseTerrain` runs the same majority-rule automaton over its fill 2 to 20 times.
-// A highway ran it zero. Each pass closes a one-wide channel -- its 3x3 holds six walls -- and rounds
-// the wedge boundary, while leaving any mass or lump with body to it intact. Two passes halve the
-// seams a single pass leaves; a third rounds the lumps past the live corpus, which carries a few
-// genuinely ragged ones.
+// Masses and clutter are laid down independently, so a lump can land one tile clear of a mass and
+// leave a seam. `buildBaseTerrain` smooths a normal room 2 to 20 times; a highway ran it zero. A
+// pass closes a one-wide channel (its 3x3 holds six walls, over the factor) without eroding a mass
+// with body to it. A third rounds the lumps past the corpus, which carries some ragged ones.
 const kHighwaySmoothPasses = 2;
 const kHighwaySmoothFactor = 5;
 
@@ -620,9 +608,7 @@ function clutterBlob(ix: number, iy: number): ClutterBlob | undefined {
 }
 
 // Lane clutter for the room at world tile origin (wox, woy), as a `wall` predicate over its tiles.
-// Every lattice cell within reach of the room contributes at most one ellipse; a tile is clutter
-// when it falls inside any of them. Overlapping stamps merge into the larger, rarer lumps the
-// corpus carries in its tail.
+// Overlapping stamps merge into the larger, rarer lumps the corpus carries in its tail.
 function genHighwayClutter(wox: number, woy: number): (xx: number, yy: number) => boolean {
 	// A blob centred this far outside the room can still reach into it.
 	const reach = Math.ceil(kHighwayBlobMaxRadius * Math.sqrt(kHighwayBlobAspect) / kHighwayBlobCell) + 1;
@@ -637,11 +623,10 @@ function genHighwayClutter(wox: number, woy: number): (xx: number, yy: number) =
 		((wox + xx - blob.cx) / blob.rx) ** 2 + ((woy + yy - blob.cy) / blob.ry) ** 2 <= 1);
 }
 
-// A multiplier on a border tile's mass depth that anchors the mass at the room's corners and thins it
-// toward mid-border, where the diagonal sector blocks stop reaching. The live corpus runs 7.8 tiles
-// deep a tile from a corner down to 1.5 at the midpoint; the noise field alone is flat along the
-// border, which is what makes a generated mass read as a uniform band rather than a wedge.
-// Exponential to a floor, fit to that profile, over its own mean so total mass is unchanged.
+// A multiplier on a border tile's mass depth, anchoring the mass at the corners where the diagonal
+// sector blocks reach and thinning it toward mid-border. A live mass runs several times deeper
+// beside a corner than at the midpoint, where the noise field alone is flat -- which is what made a
+// generated mass read as a band rather than a wedge. Divided by its own mean, so total mass holds.
 const kHighwayCornerFloor = 0.4;
 const kHighwayCornerDecay = 7;
 // Distinct corner distances along a 50-tile border: `min(along, 49 - along)` runs 0 to 24, and every
@@ -671,8 +656,9 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 
 // Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding
 // from the sector-facing borders -- left+right for a vertical lane, top+bottom for a horizontal
-// one, all four corners for a crossing. Wall masses (noise-driven wedge depth) + lane blobs + exit
-// recede + a slot-carve reconnect, then swamp. Every piece is tuned to the live highway corpus.
+// one, all four corners for a crossing. Wall masses (corner-anchored, receding at exits, clipped to
+// the lane openings) + ellipse clutter, smoothed, then a slot-carve reconnect, an unreachable-ground
+// fill, and swamp. Every piece is tuned to the live highway corpus.
 function genHighwayTerrain(
 	exits: ExitMap,
 	rx: number,
