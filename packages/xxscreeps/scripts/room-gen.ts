@@ -405,6 +405,21 @@ function reachableOpen(grid: Grid, xx: number, yy: number): Set<number> {
 	return reached;
 }
 
+// The distinct open areas the given throats sit in. Throats sharing one are the common case -- a
+// lane end is a run of them -- so an area is flooded once and the throats it covers are skipped.
+function *throatAreas(grid: Grid, throats: readonly (readonly [ number, number ])[]): Iterable<Set<number>> {
+	const covered = new Set<number>();
+	for (const [ xx, yy ] of throats) {
+		if (!covered.has(yy * 50 + xx)) {
+			const area = reachableOpen(grid, xx, yy);
+			for (const key of area) {
+				covered.add(key);
+			}
+			yield area;
+		}
+	}
+}
+
 // Breaches the thinnest seal between a cut-off exit throat and the open network: a wall-piercing
 // BFS to the nearest open tile, clearing only its shortest path so the throat opens with a slot,
 // not a bored channel. Carved tiles join `reached` for the next throat.
@@ -487,12 +502,15 @@ function connectExits(grid: Grid, exits: ExitMap): void {
 		...exits.left.map(yy => [ 1, yy ] as const),
 		...exits.right.map(yy => [ 48, yy ] as const),
 	];
-	if (throats.length <= 1) {
+	// Anchor on the largest open area a throat sits in -- the lane. Anchoring on whichever throat
+	// happens to come first lets one stranded in a shallow border pocket become the target, and
+	// every other throat then breaches along the border to reach that pocket instead of straight
+	// through to the lane.
+	const reached = Fn.maximum(throatAreas(grid, throats), mappedNumericComparator(area => area.size));
+	if (reached === undefined) {
 		return;
 	}
-	const [ ax, ay ] = throats[0]!;
-	const reached = reachableOpen(grid, ax, ay);
-	for (const [ bx, by ] of throats.slice(1)) {
+	for (const [ bx, by ] of throats) {
 		if (!reached.has(by * 50 + bx)) {
 			carveToOpen(grid, bx, by, reached);
 		}
