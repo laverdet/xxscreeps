@@ -12,7 +12,7 @@ import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/classic/source/source.js';
-import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/sector.js';
+import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/terrain.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import * as C from 'xxscreeps:mods/constants';
 import { testRedis } from './context.js';

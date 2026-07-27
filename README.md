@@ -160,7 +160,7 @@ and gives full TypeScript types on the operations you call.
 
 ```ts
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
+import { generateRoom, generateSector } from 'xxscreeps/scripts/room-gen.js';
 
 await using db = await Database.connect();
 await using shard = await Shard.connect(db, 'shard0');
@@ -168,6 +168,7 @@ await using shard = await Shard.connect(db, 'shard0');
 await generateRoom(shard, 'W12N5');
 await generateRoom(shard, 'W11N5', { terrainType: 3, swampType: 2 });
 await generateRoom(shard, 'W10N5', { sources: 1, mineral: 'H' });
+await generateSector(shard, 'W20N20');
 await Promise.all([ db.save(), shard.save() ]);
 ```
 
@@ -182,6 +183,17 @@ omitted. Like `npx xxscreeps import`, it is an offline operation — stop the
 server before running it so cached world state in the backend, processor, and
 runner workers doesn't go stale. Exits are read from any already-generated
 neighbor, so adjacent generated rooms connect.
+
+`generateSector` builds the full 11×11 room block from an origin corner (a
+room at printed multiples of 10 on both axes) under the vanilla mod-10 sector
+template: highway rooms on the boundary rings, the central room and its 3×3
+source-keeper core, and normal rooms elsewhere. Highway terrain is an open
+travel lane flanked by wall masses that flow continuously across room borders,
+and some borders between normal and highway rooms seal at random, like the
+live world's. Rooms that already exist are skipped, so adjacent sectors share
+their boundary rings and a partially built sector can be re-entered. The same
+options apply to the sector's normal rooms. Also available as
+`npx xxscreeps generate-sector W20N20`.
 
 ## Docker
 
