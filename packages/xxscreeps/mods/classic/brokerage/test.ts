@@ -209,4 +209,25 @@ describe('mods/classic/brokerage', () => {
 			assert.strictEqual(terminal?.send(C.RESOURCE_ENERGY, 1000, 'W2N1'), C.ERR_TIRED);
 		});
 	}));
+
+	test('an unparseable destination returns ERR_INVALID_ARGS', () => sendSim(async ({ player }) => {
+		await player('100', Game => {
+			const terminal = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_TERMINAL)[0];
+			assert.strictEqual(terminal?.send(C.RESOURCE_ENERGY, 1000, 'nowhere'), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('cooldown outranks the transfer cost and the description', () => sendSim(async ({ player, tick }) => {
+		await player('100', Game => {
+			const terminal = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_TERMINAL)[0];
+			terminal?.send(C.RESOURCE_ENERGY, 1000, 'W2N1');
+		});
+		await tick();
+		await player('100', Game => {
+			const terminal = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_TERMINAL)[0];
+			// The store holds the whole amount, but not the amount plus its transfer cost.
+			assert.strictEqual(terminal?.send(C.RESOURCE_ENERGY, terminal.store.energy, 'W2N1'), C.ERR_TIRED);
+			assert.strictEqual(terminal.send(C.RESOURCE_ENERGY, 1000, 'W2N1', 'x'.repeat(101)), C.ERR_TIRED);
+		});
+	}));
 });
