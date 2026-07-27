@@ -509,21 +509,33 @@ interface HighwayMass {
 	amp: number;
 	expo: number;
 }
-// Both amplitudes carry the mass the smoothing pass below erodes, so the finished room lands on the
+// Both amplitudes carry the mass the smoothing passes below erode, so the finished room lands on the
 // live density rather than a few percent under it.
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 27.5, expo: 2.9 };
 const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 15, expo: 2.5 };
-// A coarse value-noise field thresholded into solid wall blobs that stud the open lane.
-const kHighwayBlobCell = 6;
-const kHighwayBlobThreshold = 0.82;
+// The free-standing lumps that stud an open lane are stamped ellipses. That is not the process the
+// rest of the map uses, and the corpus is unusually blunt about it: a lump's share of its bounding
+// box holds at 0.75 to 0.79 from ten tiles to seventy, where a lump grown the way `buildBaseTerrain`
+// grows a normal room's decays 0.75 to 0.52 across the same range as it sprawls. A figure flat in
+// size is a figure with a fixed shape, and 0.776 is pi/4 -- a filled ellipse in its own box.
+// Thresholded noise gives the level sets of the field instead, which run to ridges.
+const kHighwayBlobCell = 8;
+const kHighwayBlobChance = 0.4;
+// Radius in tiles, biased toward the small end: half the live lumps are under fifteen tiles.
+const kHighwayBlobMinRadius = 1.3;
+const kHighwayBlobMaxRadius = 3.6;
+const kHighwayBlobRadiusExpo = 2;
+// Long-to-short axis ratio, area held constant across it. The corpus runs 1.35 for every room type.
+const kHighwayBlobAspect = 1.35;
 
-// Masses and lane blobs come off two independent noise fields, so a blob lands a tile clear of a mass
-// as readily as flush against it, leaving a one-tile seam neither field knows it made. A normal room
-// never shows those: `buildBaseTerrain` runs the same majority-rule automaton over its noise 2 to 20
-// times. A highway ran it zero. One pass at the automaton's usual threshold closes a one-wide channel
-// -- its 3x3 holds six walls -- and rounds the wedge boundary, while leaving any mass or blob with
-// body to it intact. A second pass keeps eating: it takes lane clutter under the live figure.
-const kHighwaySmoothPasses = 1;
+// Masses and lane clutter are laid down independently, so a lump lands a tile clear of a mass as
+// readily as flush against it, leaving a one-tile seam neither knows it made. A normal room never
+// shows those: `buildBaseTerrain` runs the same majority-rule automaton over its fill 2 to 20 times.
+// A highway ran it zero. Each pass closes a one-wide channel -- its 3x3 holds six walls -- and rounds
+// the wedge boundary, while leaving any mass or lump with body to it intact. Two passes halve the
+// seams a single pass leaves; a third rounds the lumps past the live corpus, which carries a few
+// genuinely ragged ones.
+const kHighwaySmoothPasses = 2;
 const kHighwaySmoothFactor = 5;
 
 // Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
@@ -531,6 +543,51 @@ const kHighwaySmoothFactor = 5;
 // to base + amp.
 function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
 	return mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo;
+}
+
+interface ClutterBlob {
+	cx: number;
+	cy: number;
+	rx: number;
+	ry: number;
+}
+
+// The blob a lattice cell carries, or undefined where it carries none. Everything about it comes off
+// the cell's own world coordinates, so a blob straddling a room border is the same blob on both
+// sides and re-generating a room reproduces it exactly.
+function clutterBlob(ix: number, iy: number): ClutterBlob | undefined {
+	if (latticeValue(ix, iy) >= kHighwayBlobChance) {
+		return undefined;
+	}
+	// Area is held across the aspect stretch, so the radius roll alone sets how big a lump reads.
+	const radius = kHighwayBlobMinRadius + (kHighwayBlobMaxRadius - kHighwayBlobMinRadius) *
+		latticeValue(ix + 0x1000, iy + 0x1000) ** kHighwayBlobRadiusExpo;
+	const stretch = Math.sqrt(kHighwayBlobAspect);
+	const upright = latticeValue(ix + 0x3000, iy + 0x3000) < 0.5;
+	return {
+		cx: (ix + latticeValue(ix + 0x2000, iy)) * kHighwayBlobCell,
+		cy: (iy + latticeValue(ix, iy + 0x2000)) * kHighwayBlobCell,
+		rx: upright ? radius / stretch : radius * stretch,
+		ry: upright ? radius * stretch : radius / stretch,
+	};
+}
+
+// Lane clutter for the room at world tile origin (wox, woy), as a `wall` predicate over its tiles.
+// Every lattice cell within reach of the room contributes at most one ellipse; a tile is clutter
+// when it falls inside any of them. Overlapping stamps merge into the larger, rarer lumps the
+// corpus carries in its tail.
+function genHighwayClutter(wox: number, woy: number): (xx: number, yy: number) => boolean {
+	// A blob centred this far outside the room can still reach into it.
+	const reach = Math.ceil(kHighwayBlobMaxRadius * Math.sqrt(kHighwayBlobAspect) / kHighwayBlobCell) + 1;
+	const blobs = Fn.pipe(
+		Fn.range(Math.floor(wox / kHighwayBlobCell) - reach, Math.floor((wox + 49) / kHighwayBlobCell) + reach + 1),
+		$$ => Fn.transform($$, ix => Fn.map(
+			Fn.range(Math.floor(woy / kHighwayBlobCell) - reach, Math.floor((woy + 49) / kHighwayBlobCell) + reach + 1),
+			iy => clutterBlob(ix, iy))),
+		$$ => Fn.reject($$, blob => blob === undefined),
+		$$ => [ ...$$ ]);
+	return (xx, yy) => Fn.some(blobs, blob =>
+		((wox + xx - blob.cx) / blob.rx) ** 2 + ((woy + yy - blob.cy) / blob.ry) ** 2 <= 1);
 }
 
 // A multiplier on a border tile's mass depth that anchors the mass at the room's corners and thins it
@@ -616,6 +673,7 @@ function genHighwayTerrain(
 	const rightDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]);
 	const topDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]);
 	const bottomDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]);
+	const clutter = genHighwayClutter(wox, woy);
 	for (const [ yy, row ] of grid.entries()) {
 		for (const [ xx, cell ] of row.entries()) {
 			if (cell.forceOpen) {
@@ -625,7 +683,7 @@ function genHighwayTerrain(
 			cell.wall = isBorder(xx, yy) ||
 				xx <= leftDepth[yy]! || 49 - xx <= rightDepth[yy]! ||
 				yy <= topDepth[xx]! || 49 - yy <= bottomDepth[xx]! ||
-				valueNoise(wox + xx, woy + yy, kHighwayBlobCell) > kHighwayBlobThreshold;
+				clutter(xx, yy);
 		}
 	}
 	const smoothed = Fn.pipe(
