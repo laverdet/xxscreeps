@@ -117,7 +117,7 @@ describe('mods/meta/leaderboard', () => {
 		assert.deepStrictEqual(await readAllRanks(db, 'power', alice, november), []);
 	});
 
-	test('removing a user drops them from every board and renumbers the rest', async () => {
+	test('removing a user leaves the boards they ranked on untouched', async () => {
 		await using testShard = await instantiateTestShard();
 		const { db } = testShard.shard;
 		await writeScores(db, [
@@ -127,9 +127,12 @@ describe('mods/meta/leaderboard', () => {
 		], october);
 
 		await User.remove(db, bob);
-		assert.strictEqual(await readRank(db, 'world', '2023-10', bob), undefined);
-		assert.strictEqual(await readRank(db, 'power', '2023-10', bob), undefined);
-		assert.deepStrictEqual(await readRank(db, 'world', '2023-10', alice), { rank: 0, score: 10, user: alice });
+		// The season played out the way it played out, so nobody moves up
+		assert.deepStrictEqual((await readPage(db, 'world', '2023-10', 0, 10)).list, [
+			{ rank: 0, score: 30, user: bob },
+			{ rank: 1, score: 10, user: alice },
+		]);
+		assert.deepStrictEqual(await readRank(db, 'power', '2023-10', bob), { rank: 0, score: 2, user: bob });
 	});
 
 	test('a flushed stats bucket lands on the leaderboard of its month', async () => {

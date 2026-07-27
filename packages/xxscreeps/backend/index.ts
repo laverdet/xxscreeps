@@ -71,8 +71,10 @@ declare module 'xxscreeps/game/object.js' {
 // Note: `ajv` doesn't properly support `undefined`....
 // https://github.com/ajv-validator/ajv/issues/2040
 const ajv = new Ajv();
-// Separate instance for routes that opt into `coerceTypes` (e.g. the official client sends numeric
-// fields as strings). `coerceTypes` is an Ajv constructor option, so it can't be set per-schema.
+// Query strings carry every value as a string, so a schema with non-string fields only validates
+// under `coerceTypes`, which rewrites values in place to the type the schema asks for (e.g. "180" →
+// 180). It's an Ajv constructor option rather than a keyword, so query routes need their own
+// instance. Payloads arrive as JSON and are validated as-is.
 const coercingAjv = new Ajv({ coerceTypes: true });
 
 // `JSONSchemaType` has no way to express a property which accepts any value, but it does allow
@@ -110,20 +112,11 @@ export function bindTerrainRenderer<Type extends RoomObject>(object: Implementat
 	object.prototype[TerrainRender] = render;
 }
 
-interface ValidatedRouteOptions {
-	/**
-	 * Compile against the coercing validator, which rewrites values in place to the type the schema
-	 * asks for (e.g. "180" → 180) before `execute` sees them.
-	 */
-	coerceTypes?: boolean;
-}
-
 export function makeValidatedPayloadRoute<Body>(
 	schema: JSONSchemaType<Body>,
 	execute: ValidatedExecuteRoute<ValidatedPayloadRequest<Body>>,
-	options?: ValidatedRouteOptions,
 ): ExecuteRoute {
-	const validate = (options?.coerceTypes ? coercingAjv : ajv).compile(schema);
+	const validate = ajv.compile(schema);
 	return context => {
 		if (validate(context.request.body)) {
 			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedPayloadRequest<Body>>>);
@@ -136,11 +129,8 @@ export function makeValidatedPayloadRoute<Body>(
 export function makeValidatedQueryRoute<Query>(
 	schema: JSONSchemaType<Query>,
 	execute: ValidatedExecuteRoute<ValidatedQueryRequest<Query>>,
-	options?: ValidatedRouteOptions,
 ): ExecuteRoute {
-	// Query strings carry every value as a string, so a schema with numeric fields only validates
-	// under `coerceTypes`.
-	const validate = (options?.coerceTypes ? coercingAjv : ajv).compile(schema);
+	const validate = coercingAjv.compile(schema);
 	return context => {
 		if (validate(context.request.query)) {
 			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedQueryRequest<Query>>>);

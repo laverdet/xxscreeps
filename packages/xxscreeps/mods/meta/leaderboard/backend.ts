@@ -36,6 +36,11 @@ const leaderboardListSchema: JSONSchemaType<LeaderboardListQuery> = {
 	required: [ 'mode', 'season' ],
 };
 
+// Stands in for a player who has since been deleted, whose scores remain on the boards they were
+// earned on. The client indexes into `users` without checking, so the row would otherwise render
+// nameless and badgeless; `checkUsername` rejects brackets, so this can't collide with a real name.
+const deletedUser = { badge: null, username: '[deleted]' };
+
 // `GET /api/leaderboard/list?mode=world&season=2026-07&offset=0&limit=10` — one page of a
 // leaderboard plus the referenced players, which the list template renders by user id.
 hooks.register('route', {
@@ -50,16 +55,16 @@ hooks.register('route', {
 		const { count, list } = await readPage(context.db, mode, season, offset, limit);
 		const users = Object.fromEntries(await Fn.mapAwait(list, async ({ user }) => {
 			const info = await User.loadBackendUserInfo(context.db, user);
-			return [ user, { _id: user, ...info } ] as const;
+			return [ user, { _id: user, ...info ?? deletedUser } ] as const;
 		}));
 		return { ok: 1, count, list: list.map(entry => ({ season, ...entry })), users };
-	}, { coerceTypes: true }),
+	}),
 });
 
 interface LeaderboardFindQuery {
 	mode: string;
 	username: string;
-	season?: string | null;
+	season?: string;
 }
 
 const leaderboardFindSchema: JSONSchemaType<LeaderboardFindQuery> = {
@@ -74,7 +79,8 @@ const leaderboardFindSchema: JSONSchemaType<LeaderboardFindQuery> = {
 
 // `GET /api/leaderboard/find?mode=world&username=…[&season=2026-07]` — one player's standing. With
 // a season this answers "my rank" and the search box; without one the profile page reads every
-// season at once. Being unranked is an error response, which the client catches everywhere.
+// season at once, and needs a list even for a player who never ranked, since it doesn't catch the
+// error the other pages do.
 hooks.register('route', {
 	path: '/api/leaderboard/find',
 
@@ -82,8 +88,8 @@ hooks.register('route', {
 		const { mode, season, username } = context.request.query;
 		const userId = await User.findUserByName(context.db, username);
 		if (userId === null || !isLeaderboardMode(mode)) {
-			return season == null ? { ok: 1, list: [] } : { error: 'Result not found' };
-		} else if (season == null) {
+			return { error: 'Result not found' };
+		} else if (season === undefined) {
 			return { ok: 1, list: await readAllRanks(context.db, mode, userId) };
 		}
 		const entry = await readRank(context.db, mode, season, userId);

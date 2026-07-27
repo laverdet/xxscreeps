@@ -1,7 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { StatEntry } from 'xxscreeps/mods/meta/stats/model.js';
 import type { StatName } from 'xxscreeps/mods/meta/stats/schema.js';
-import { hooks as userHooks } from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 
 // A leaderboard is the cumulative, per-season view of a stat which `mods/meta/stats` otherwise only
@@ -11,6 +10,11 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 //
 // Like GCL and the account-level stat totals these live in `db.data` rather than shard storage, so a
 // player's standing aggregates across shards.
+//
+// A board is never rewritten once its scores land, not even to drop a deleted user: taking an entry
+// out renumbers everyone below it and quietly rewrites a month which has already been played. The
+// entry stays and the backend renders it as a tombstone, since a rank is a record of the season, not
+// of the account.
 
 // The two modes the client ranks: `world` is the "Expansion Rank" page (control points spent on
 // upgrading), `power` the "Power Rank" page (power processed in power spawns).
@@ -138,20 +142,3 @@ export async function readAllRanks(db: Database, mode: LeaderboardMode, userId: 
 	});
 	return [ ...Fn.filter(entries) ];
 }
-
-/**
- * Drop a removed user from every leaderboard. Their absence renumbers the players below them, which
- * is what the sorted set does for free.
- */
-async function removeAllForUser(db: Database, userId: string) {
-	const seasons = await readSeasons(db);
-	await Promise.all(function*() {
-		for (const season of seasons) {
-			for (const mode of leaderboardModeNames) {
-				yield db.data.zRem(leaderboardKey(mode, season), [ userId ]);
-			}
-		}
-	}());
-}
-
-userHooks.register('remove', removeAllForUser);
