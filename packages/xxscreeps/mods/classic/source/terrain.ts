@@ -91,11 +91,33 @@ hooks.register('roomGenerator', {
 	},
 });
 
+// A payload records ownership only as the presence of a controller, so a source reads back at
+// keeper or neutral capacity and never at an owner's. Which of the two can't be told from the tile
+// either -- the controller's marker may come after this one -- so it rides the metadata.
+hooks.register('payload', {
+	marker: 'E',
+	encode: object => object instanceof Source ? {
+		...object.energyCapacity === C.SOURCE_ENERGY_KEEPER_CAPACITY && { keeper: true },
+	} : undefined,
+	decode(meta) {
+		const source = new Source();
+		source.energy = source.energyCapacity = meta.keeper === true
+			? C.SOURCE_ENERGY_KEEPER_CAPACITY
+			: C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
+		return source;
+	},
+});
+
 declare module 'xxscreeps/scripts/symbols.js' {
 	interface GenerateRoomOptions {
 		/** Number of sources; omit for a random 1 or 2. */
 		sources?: number;
 		/** Whether keeper lairs guard each source and the mineral. Default is false. */
 		keeperLairs?: boolean;
+	}
+
+	interface PayloadObject {
+		/** Whether the source holds a controller-less room's larger energy capacity. */
+		keeper?: boolean;
 	}
 }

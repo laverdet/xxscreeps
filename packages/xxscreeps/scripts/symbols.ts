@@ -54,6 +54,33 @@ export interface RoomGeneratorContext {
 	tagsAt: (position: RoomPosition) => ReadonlySet<string>;
 }
 
+/**
+ * One entry of a room's `objects` array in a payload. The engine owns `id`; each codec augments
+ * this interface with the fields it encodes.
+ */
+export interface PayloadObject {
+	id: string;
+}
+
+/**
+ * Reads and writes the objects of one type in a payload's room layouts. Registered from the mod's
+ * `terrain.ts`, the slot `scripts/payload.js` resolves its codecs from.
+ */
+export interface PayloadCodec {
+	/**
+	 * The layout character this codec owns, standing in for the terrain character of the tile its
+	 * object occupies. May not be one the terrain alphabet spells, and that tile reads back as wall.
+	 */
+	marker: string;
+	/** The fields this codec encodes for `object`, or undefined when it doesn't own the object. */
+	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | undefined;
+	/**
+	 * Rebuilds the object `meta` describes. The engine stamps its id and position and inserts it
+	 * into `room`, which is passed only for the room-level state an object implies.
+	 */
+	decode: (meta: PayloadObject, room: Room) => RoomObject;
+}
+
 export const hooks = makeHookRegistration<{
 	roomGenerator: {
 		/** Passes run in ascending order; constraints may consult earlier placements. */
@@ -64,4 +91,5 @@ export const hooks = makeHookRegistration<{
 		 */
 		generate: (context: RoomGeneratorContext) => boolean;
 	};
+	payload: PayloadCodec;
 }>();
