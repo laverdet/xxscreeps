@@ -85,6 +85,14 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
 		return false;
 	}
 
+	/**
+	 * How long the ruin left behind by this structure lasts. Mods that schedule a structure's
+	 * demise extend its ruin to match.
+	 */
+	'#ruinDecay'() {
+		return C.RUIN_DECAY_STRUCTURES[this.structureType] ?? C.RUIN_DECAY;
+	}
+
 	override '#destroy'(type?: number) {
 		if (super['#destroy']()) {
 			// TODO: Mod concern leak

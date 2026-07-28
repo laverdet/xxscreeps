@@ -671,6 +671,33 @@ describe('mods/modern/stronghold', () => {
 			});
 		}));
 
+		// A peer killed long before the stronghold would have collapsed. Its ruin outlives `RUIN_DECAY`
+		// so the spoils of a raided stronghold stay put for as long as the stronghold itself would have.
+		const peerCollapseTime = 50000;
+		const peerKilledEarly = simulate({
+			W1N1: room => {
+				const container = createContainer(corePos);
+				container['#collapseTime'] = peerCollapseTime;
+				container.hits = 1;
+				room['#insertObject'](container);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		test('the ruin of a damage-destroyed peer decays with the stronghold', () => peerKilledEarly(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				const [ container ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER);
+				assert.ok(container, 'peer is visible to the player');
+				assert.strictEqual(Game.creeps.killer!.attack(container), C.OK);
+			});
+			await tick();
+			await peekRoom('W1N1', (room, game) => {
+				const [ ruin ] = room.find(C.FIND_RUINS);
+				assert.ok(ruin, 'damage-destroy leaves a Ruin');
+				assert.strictEqual(ruin.ticksToDecay, peerCollapseTime - game.time, 'the ruin lasts until the collapse it was carrying');
+			});
+		}));
+
 		// A core that took over the room controller (level > 0, owned by '2'), then collapses: the controller is
 		// released to neutral while its reservation, when any, is left to expire on its own.
 		const ownedThenCollapsing = simulate({
