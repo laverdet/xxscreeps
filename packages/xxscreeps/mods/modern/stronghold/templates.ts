@@ -1,9 +1,15 @@
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import {
-	RESOURCE_BATTERY, RESOURCE_COMPOSITE, RESOURCE_CRYSTAL, RESOURCE_GHODIUM_MELT,
-	RESOURCE_KEANIUM_BAR, RESOURCE_LEMERGIUM_BAR, RESOURCE_LIQUID, RESOURCE_OXIDANT,
-	RESOURCE_PURIFIER, RESOURCE_REDUCTANT, RESOURCE_UTRIUM_BAR, RESOURCE_ZYNTHIUM_BAR,
+	RESOURCE_ALLOY, RESOURCE_BATTERY, RESOURCE_BIOMASS, RESOURCE_CELL, RESOURCE_CIRCUIT,
+	RESOURCE_COMPOSITE, RESOURCE_CONCENTRATE, RESOURCE_CONDENSATE, RESOURCE_CRYSTAL, RESOURCE_DEVICE,
+	RESOURCE_EMANATION, RESOURCE_ESSENCE, RESOURCE_EXTRACT, RESOURCE_FIXTURES, RESOURCE_FRAME,
+	RESOURCE_GHODIUM_MELT, RESOURCE_HYDRAULICS, RESOURCE_KEANIUM_BAR, RESOURCE_LEMERGIUM_BAR,
+	RESOURCE_LIQUID, RESOURCE_MACHINE, RESOURCE_METAL, RESOURCE_MICROCHIP, RESOURCE_MIST,
+	RESOURCE_MUSCLE, RESOURCE_ORGANISM, RESOURCE_ORGANOID, RESOURCE_OXIDANT, RESOURCE_PHLEGM,
+	RESOURCE_PURIFIER, RESOURCE_REDUCTANT, RESOURCE_SILICON, RESOURCE_SPIRIT, RESOURCE_SWITCH,
+	RESOURCE_TISSUE, RESOURCE_TRANSISTOR, RESOURCE_TUBE, RESOURCE_UTRIUM_BAR, RESOURCE_WIRE,
+	RESOURCE_ZYNTHIUM_BAR,
 } from 'xxscreeps/mods/modern/factory/constants.js';
 import { shuffle } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -86,7 +92,7 @@ export const templates = {
 
 // Weighted resource table for the loot in a stronghold's containers; `containerAmounts` maps a
 // template's reward level to the total density distributed across the rolled resources.
-const containerRewards: Record<string, number> = {
+export const containerRewards: Record<string, number> = {
 	[RESOURCE_UTRIUM_BAR]: 5,
 	[RESOURCE_LEMERGIUM_BAR]: 5,
 	[RESOURCE_ZYNTHIUM_BAR]: 5,
@@ -101,15 +107,29 @@ const containerRewards: Record<string, number> = {
 	[RESOURCE_LIQUID]: 30,
 };
 
-const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
+export const containerAmounts = [ 0, 500, 4000, 10000, 50000, 360000 ];
+
+// The commodity chain each deposit type rewards, in refinement order. A destroyed core's reward
+// level decides how far along its deposit's chain the loot reaches; `coreAmounts` maps that level to
+// the total density distributed across those links and `coreDensities` weights each link in turn.
+export const coreRewards = {
+	[RESOURCE_SILICON]: [ RESOURCE_WIRE, RESOURCE_SWITCH, RESOURCE_TRANSISTOR, RESOURCE_MICROCHIP, RESOURCE_CIRCUIT, RESOURCE_DEVICE ],
+	[RESOURCE_METAL]: [ RESOURCE_ALLOY, RESOURCE_TUBE, RESOURCE_FIXTURES, RESOURCE_FRAME, RESOURCE_HYDRAULICS, RESOURCE_MACHINE ],
+	[RESOURCE_BIOMASS]: [ RESOURCE_CELL, RESOURCE_PHLEGM, RESOURCE_TISSUE, RESOURCE_MUSCLE, RESOURCE_ORGANOID, RESOURCE_ORGANISM ],
+	[RESOURCE_MIST]: [ RESOURCE_CONDENSATE, RESOURCE_CONCENTRATE, RESOURCE_EXTRACT, RESOURCE_SPIRIT, RESOURCE_EMANATION, RESOURCE_ESSENCE ],
+} satisfies Record<string, ResourceType[]>;
+
+export const coreAmounts = [ 0, 1000, 16000, 60000, 400000, 3000000 ];
+
+export const coreDensities = [ 10, 220, 1400, 5100, 14000, 31500 ];
 
 /**
- * Roll three resources at random from the weighted table and distribute the reward level's density
- * across them. The chosen resources sum (in weighted density) to roughly the target.
+ * Shuffle the resources on offer, keep `itemsLimit` of them if given, and distribute `targetDensity`
+ * across the picks. The chosen resources sum (in weighted density) to roughly the target.
  */
-export function *calcReward(rewardLevel: number): Iterable<[ ResourceType, number ]> {
-	const targetDensity = containerAmounts[rewardLevel]!;
-	const picks = [ ...Fn.take(shuffle(Object.entries(containerRewards)), 3) ];
+export function *calcReward(resourceDensities: Iterable<readonly [ string, number ]>, targetDensity: number, itemsLimit?: number): Iterable<[ ResourceType, number ]> {
+	const offered = [ ...resourceDensities ];
+	const picks = [ ...Fn.take(shuffle(offered), itemsLimit ?? offered.length) ];
 	let currentDensity = 0;
 	for (const [ ii, [ resource, density ] ] of picks.entries()) {
 		const remaining = targetDensity - currentDensity;

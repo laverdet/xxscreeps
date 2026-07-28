@@ -33,6 +33,8 @@ export const invaderCoreShape = declare('InvaderCore', struct(ownedStructureShap
 	spawning: optional(spawningFormat, null),
 	'#actionLog': actionLogFormat,
 	'#deployTime': 'int32',
+	// Commodity chain the loot in this core's ruin is rolled from. Set at placement.
+	'#depositType': enumerated(undefined, 'silicon', 'metal', 'biomass', 'mist'),
 	// Unowned template peers (roads, reward containers) this core deployed; owned peers are already
 	// linked by ownership.
 	'#ownedNeutralStructureIds': vector(Id.format),
