@@ -181,7 +181,6 @@ registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
 		const controller = core.room.controller;
 		if (controller && controller.level > 0) {
 			release(context, controller);
-			controller['#upgradeInvulnerableUntil'] = 0;
 		}
 		next();
 	}
