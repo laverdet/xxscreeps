@@ -36,6 +36,20 @@ export type SubscriptionEndpoint = {
 	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
 };
 
+/**
+ * One subscription of a socket. A channel is addressed by its name alone, so a name must never be
+ * held by two of them at once. Tearing one down is asynchronous, which is why the name stays taken
+ * until the old subscription has finished stopping.
+ */
+interface Subscription {
+	/** Resolves once it is listening, to the effect which stops it. */
+	effect: Promise<Effect>;
+	/** Drops anything it sends from here on. Applied the moment the name is given up. */
+	mute: Effect;
+	/** Set once it has been unsubscribed; resolves once its listener is gone. */
+	stopped?: Promise<void>;
+}
+
 // Undocumented SockJS internals
 interface ConnectionWithSession extends Connection {
 	_session: {
@@ -146,25 +160,36 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 
 		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
-		const subscriptions = new Map<string, Promise<Effect>>();
+
+		const subscriptions = new Map<string, Subscription>();
+
+		/** Stops a subscription and gives up its name. Idempotent: the same stop is handed back. */
+		const stop = (name: string, subscription: Subscription) => subscription.stopped ?? function() {
+			// Tearing the listener down doesn't reach a callback which is already running, so the
+			// subscription is muted here instead of when the effect eventually resolves.
+			subscription.mute();
+			const stopped = async function() {
+				try {
+					(await subscription.effect)();
+				} catch (error) {
+					console.error(error);
+				} finally {
+					// A resubscribe may already have claimed the name, and that one is not ours to drop.
+					if (subscriptions.get(name) === subscription) {
+						subscriptions.delete(name);
+					}
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+					pendingTeardowns.delete(stopped!);
+				}
+			}();
+			subscription.stopped = stopped;
+			pendingTeardowns.add(stopped);
+			return stopped;
+		}();
+
 		const close = () => {
 			void async function() {
-				await Fn.mapAwait(subscriptions, async ([ name, subscription ]) => {
-					subscriptions.delete(name);
-					const teardown = async function() {
-						try {
-							const effect = await subscription;
-							effect();
-						} catch (error) {
-							console.error(error);
-						} finally {
-							// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-							pendingTeardowns.delete(teardown!);
-						}
-					}();
-					pendingTeardowns.add(teardown);
-					await teardown;
-				});
+				await Fn.mapAwait(subscriptions, ([ name, subscription ]) => stop(name, subscription));
 			}();
 			connection.close();
 		};
@@ -217,18 +242,32 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 						const result = handler.pattern.exec(name!);
 						if (result) {
 							// Don't let subscriptions collide
-							if (subscriptions.has(name!)) {
+							const previous = subscriptions.get(name!);
+							if (previous !== undefined && previous.stopped === undefined) {
 								return;
 							}
 							const encodedName = JSON.stringify(name);
+							let muted = false as boolean;
 							const instance: SubscriptionInstance = {
 								context,
 								user,
-								send: jsonEncodedMessage => connection.write(`[${encodedName},${jsonEncodedMessage}]`),
+								send: jsonEncodedMessage => {
+									if (!muted) {
+										connection.write(`[${encodedName},${jsonEncodedMessage}]`);
+									}
+								},
 							};
-							const subscription = Promise.resolve(handler.subscribe.call(instance, result.groups!));
+							// The client gives a channel up and claims it again as it moves between rooms, so a
+							// resubscribe waits the old subscription out rather than running alongside it.
+							const subscription: Subscription = {
+								effect: async function() {
+									await previous?.stopped;
+									return handler.subscribe.call(instance, result.groups!);
+								}(),
+								mute: () => { muted = true; },
+							};
 							subscriptions.set(name!, subscription);
-							subscription.catch(error => {
+							subscription.effect.catch(error => {
 								console.error(error);
 								close();
 							});
@@ -240,10 +279,9 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 				const unsubscriptionRequest = /^unsubscribe (?<name>.+)$/.exec(message);
 				if (unsubscriptionRequest) {
 					const { name } = unsubscriptionRequest.groups!;
-					const unlistener = subscriptions.get(name!);
-					if (unlistener) {
-						subscriptions.delete(name!);
-						unlistener.then(unlistener => unlistener(), console.error);
+					const subscription = subscriptions.get(name!);
+					if (subscription !== undefined) {
+						void stop(name!, subscription);
 					}
 				}
 			}
