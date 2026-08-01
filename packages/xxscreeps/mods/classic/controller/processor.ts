@@ -1,7 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
@@ -269,7 +269,10 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;
 			const userId = controller['#user']!;
-			const level = --room['#level'];
+			// The new level is not written to the room here. `release` reads the current level to tell
+			// a controlled room from a reserved one, and both branches below publish the new level
+			// through `updateRoomStatus` anyway.
+			const level = controller.level - 1;
 			controller.safeModeAvailable = 0;
 			const message = `Your Controller in room ${room.name} has been downgraded to level ${level} due to absence of upgrading activity!`;
 			context.task(upsertNotification(context.shard, userId, 'msg', message, 0));
@@ -287,5 +290,14 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			context.task(upsertNotification(context.shard, controller['#user']!, 'msg', message, 0));
 		}
 		context.wakeAt(controller['#downgradeTime']);
+	}
+});
+
+hooks.register('refreshRoom', async (shard, room) => {
+	const userId = room['#user'];
+	if (userId != null) {
+		if (room['#level'] > 0) {
+			await insertControlledRoom(shard, userId, room.name);
+		}
 	}
 });

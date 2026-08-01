@@ -372,6 +372,33 @@ describe('mods/classic/controller', () => {
 			}));
 	});
 
+	describe('downgrade to neutral', () => {
+		// Controller downgrades on the first processed tick, taking it from level 1 to neutral.
+		const aboutToGoNeutral = simulate({
+			W3N3: room => {
+				room['#user'] = '100';
+				room['#level'] = 1;
+				room.controller!['#user'] = '100';
+				room.controller!['#downgradeTime'] = 1;
+			},
+		});
+
+		test('the room drops out of the player\'s controlled rooms',
+			() => aboutToGoNeutral(async ({ peekRoom, player, tick }) => {
+				await player('100', Game => {
+					assert.strictEqual(Game.gcl['#roomCount'], 1);
+				});
+				await tick();
+				await peekRoom('W3N3', room => {
+					assert.strictEqual(room.controller!.level, 0);
+					assert.strictEqual(room.controller!['#user'], null);
+				});
+				await player('100', Game => {
+					assert.strictEqual(Game.gcl['#roomCount'], 0);
+				});
+			}));
+	});
+
 	describe('lifecycle notifications', () => {
 		// One UPGRADE_CONTROLLER_POWER pushes #progress to CONTROLLER_LEVELS[1] (=200) and triggers a level-up.
 		const onCuspOfLevelUp = simulate({
