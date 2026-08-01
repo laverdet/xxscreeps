@@ -19,8 +19,7 @@ export function getProcessorChannel(shard: Shard) {
 
 export function getRoomChannel(shard: Shard, roomName: string) {
 	type Message =
-		{ type: 'didUpdate'; time: number } |
-		{ type: 'willSpawn' };
+		{ type: 'didUpdate'; time: number };
 	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 
