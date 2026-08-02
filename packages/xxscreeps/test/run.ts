@@ -3,6 +3,7 @@ import './import.js';
 import 'xxscreeps:mods/driver';
 
 await import('xxscreeps/driver/private/test.js');
+await import('xxscreeps/driver/sandbox/test.js');
 await import('xxscreeps/engine/db/storage/local/test.js');
 await import('xxscreeps/engine/db/user/test.js');
 await import('xxscreeps/game/test.js');

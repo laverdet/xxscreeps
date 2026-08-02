@@ -10,6 +10,10 @@ import AcornPrivateMethods from 'acorn-private-methods';
 import Webpack from 'webpack';
 
 const Acorn = createRequire(import.meta.url)('acorn') as typeof import('acorn');
+// Webpack's own minimizer, asked of webpack rather than declared here: it is the plugin webpack
+// would have used anyway, and the only way to hand it options is to construct it.
+const TerserPlugin = createRequire(import.meta.resolve('webpack'))('terser-webpack-plugin') as
+	new (options: { terserOptions: { keep_classnames: boolean; keep_fnames: boolean } }) => Webpack.WebpackPluginInstance;
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
 
@@ -89,6 +93,12 @@ export async function compile(moduleName: string, transform: Transform) {
 
 			optimization: {
 				concatenateModules: true,
+				// The runtime reads `Function.prototype.name` off the classes it exports to the player
+				// sandbox — `registerGlobal(Creep)` publishes `Creep` under whatever the class calls
+				// itself — and trims player stack traces by looking for a named function. Minifying those
+				// names away leaves the sandbox with globals nobody can address and stack traces nobody
+				// can read, so this build keeps them.
+				minimizer: [ new TerserPlugin({ terserOptions: { keep_classnames: true, keep_fnames: true } }) ],
 			},
 
 			output: {
