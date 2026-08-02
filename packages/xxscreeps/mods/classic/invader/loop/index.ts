@@ -1,4 +1,5 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import * as C from 'xxscreeps:mods/constants';
 import findAttack from './find-attack.js';
 import healer from './healer.js';
@@ -18,8 +19,9 @@ export function loop(Game: GameConstructor) {
 		const fortifications = room.find(C.FIND_HOSTILE_STRUCTURES).filter(structure =>
 			structure.structureType === C.STRUCTURE_RAMPART ||
 			structure.structureType === C.STRUCTURE_WALL);
-		// TODO: Filter SK
-		const hostiles = room.find(C.FIND_HOSTILE_CREEPS);
+		// Source keepers guard their own patch and are no business of a raid
+		const hostiles = room.find(C.FIND_HOSTILE_CREEPS).filter(
+			creep => creep['#user'] !== kSourceKeeperUserId);
 
 		for (const creep of creeps) {
 			if (creep.getActiveBodyparts('heal') > 0) {
@@ -27,7 +29,7 @@ export function loop(Game: GameConstructor) {
 			} else {
 				findAttack(creep, healers, hostiles, fortifications);
 			}
-			shootAtWill(creep);
+			shootAtWill(creep, hostiles);
 		}
 	}
 

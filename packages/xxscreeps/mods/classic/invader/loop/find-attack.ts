@@ -4,13 +4,18 @@ import type { Creep, SavedMovePath } from 'xxscreeps/mods/classic/creep/creep.js
 import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps:mods/constants';
 import flee from './flee.js';
+import { isRaidTarget } from './target.js';
 
+/**
+ * Whether `pos1` can walk up to `pos2`. An empty path means the search never left the origin, which
+ * is either because it's already there or because nothing leads there at all.
+ */
 function checkPath(pos1: RoomPosition, pos2: RoomPosition) {
-	const target = pos1.findPathTo(pos2, { maxRooms: 1 }).at(-1);
-	if (target === undefined) {
-		return false;
+	const step = pos1.findPathTo(pos2, { maxRooms: 1 }).at(-1);
+	if (step === undefined) {
+		return pos1.isNearTo(pos2);
 	} else {
-		return pos1.isNearTo(target.x, target.y);
+		return pos2.isNearTo(step.x, step.y);
 	}
 }
 
@@ -20,8 +25,9 @@ function costCallbackIgnoreRamparts(fortifications: Structure[], roomName: strin
 
 const pathOptions = { maxRoads: 1, maxRooms: 1, ignoreRoads: true, serializeMemory: false };
 export default function findAttack(creep: Creep, healers: Creep[], hostiles: Creep[], fortifications: Structure[]) {
+	// Shooters kite rather than trade blows; anything without a ranged weapon has to close in
 	const haveAttack = creep.getActiveBodyparts(C.ATTACK) > 0;
-	if (!haveAttack && creep.getActiveBodyparts(C.RANGED_ATTACK) === 0 && flee(creep, 3)) {
+	if (!haveAttack && creep.getActiveBodyparts(C.RANGED_ATTACK) > 0 && flee(creep, 3)) {
 		return;
 	}
 
@@ -63,21 +69,29 @@ export default function findAttack(creep: Creep, healers: Creep[], hostiles: Cre
 		return;
 	}
 
-	const target = unreachableSpawns[0];
-	if (target) {
-		creep.moveTo(target, { ...pathOptions, ignoreDestructibleStructures: true });
+	// With nobody left to chase there's nothing here worth wrecking. Walk up to whatever spawn is
+	// walled off, in case its owner comes out, and otherwise wait it out.
+	if (!hasTarget) {
+		const spawn = unreachableSpawns[0];
+		if (spawn) {
+			creep.moveTo(spawn, { ...pathOptions, ignoreDestructibleStructures: true });
+		}
 		return;
 	}
 
+	// The path to the victim may run straight through a fortification. Break it down instead of
+	// walking into it forever.
 	const { _move } = creep.memory as { _move?: SavedMovePath };
 	if ((haveAttack || creep.getActiveBodyparts(C.WORK) > 0) && _move?.path !== undefined) {
 		const [ pos ] = _move.path;
 		if (pos !== undefined) {
-			const [ target ] = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(
-				look => look.structureType !== 'spawn');
+			const [ target ] = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(isRaidTarget);
 			if (target) {
+				if (creep.getActiveBodyparts(C.RANGED_ATTACK) > 0) {
+					creep.rangedAttack(target);
+				}
 				if (creep.getActiveBodyparts(C.WORK) > 0) {
-					// creep.dismantle(target);
+					creep.dismantle(target);
 				} else {
 					creep.attack(target);
 				}
