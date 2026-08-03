@@ -70,7 +70,7 @@ interface Simulation {
 	/**
 	 * Create a player whose code will run in the sandbox automatically every tick.
 	 */
-	sandbox: (userId: string, unsafeMain: (global: SimulationGlobals) => void, options?: { isolated?: boolean }) => Promise<PlayerInstance & AsyncDisposable>;
+	sandbox: (userId: string, unsafeMain: (global: SimulationGlobals) => void) => Promise<PlayerInstance & AsyncDisposable>;
 
 	/**
 	 * Invokes the game processor to dispatch intents.
@@ -184,17 +184,13 @@ export function simulate(
 				}
 			},
 
-			async sandbox(userId: string, unsafeMain: (global: SimulationGlobals) => void, { isolated = false } = {}) {
-				// The unsafe sandbox shares this realm, so the function below keeps its closure and can
-				// be handed `assert`. The isolated one is a real isolate built by webpack: the function
-				// arrives as source text and nothing from the test file exists on the other side, which
-				// is the point of running a test there at all.
-				config.runner.sandbox = isolated ? 'isolated' : 'unsafe';
+			async sandbox(userId: string, unsafeMain: (global: SimulationGlobals) => void) {
+				config.runner.sandbox = 'unsafe';
 				const userName = Id.generateId(12);
 				await User.create(db, userId, userName, []);
 				const main =
 					`const main = ${String(unsafeMain)};
-					${isolated ? '' : 'globalThis.assert = __assert;'}
+					globalThis.assert = __assert;
 					module.exports.loop = () => main(globalThis);`;
 				await Code.saveContent(db, userId, 'main', new Map([ [ 'main', main ] ]));
 				await using disposable = new AsyncDisposableStack();
