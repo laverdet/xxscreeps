@@ -62,9 +62,11 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 		};
 
 		// Listen for room updates
-		disposable.defer(await getRoomChannel(shard, roomName).listen(() => {
-			// This happens before the tick is totally done
-			didUpdate = true;
+		disposable.defer(await getRoomChannel(shard, roomName).listen(event => {
+			if (event.type === 'didUpdate') {
+				// This happens before the tick is totally done
+				didUpdate = true;
+			}
 		}));
 
 		// Listen for game time updates
