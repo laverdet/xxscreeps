@@ -1,5 +1,6 @@
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
 import { create as createExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
@@ -224,6 +225,37 @@ describe('mods/classic/structure', () => {
 				const hostile = Game.rooms.W8N1?.find(C.FIND_HOSTILE_STRUCTURES);
 				assert.ok(hostile);
 				assert.strictEqual(hostile.length, 0, 'should return empty array in unowned room');
+			});
+		}));
+	});
+
+	describe('ignoreDestructibleStructures', () => {
+		// A creep outside a wall ring, with a road on the way to the ring
+		const sim = simulate({
+			W9N1: room => {
+				room['#insertObject'](createCreep(new RoomPosition(28, 25, 'W9N1'), [ C.MOVE ], 'Walker', '100'));
+				room['#insertObject'](createRoad(new RoomPosition(27, 25, 'W9N1')));
+				for (const pos of iterateNeighbors(new RoomPosition(25, 25, 'W9N1'))) {
+					room['#insertObject'](createWall(pos));
+				}
+			},
+		});
+
+		test('walls block a path by default', () => sim(async ({ player }) => {
+			await player('100', Game => {
+				const path = Game.creeps.Walker!.pos.findPathTo(new RoomPosition(25, 25, 'W9N1'), { maxRooms: 1 });
+				assert.ok(!path.some(step => step.x === 25 && step.y === 25), 'path should not reach the walled center');
+			});
+		}));
+
+		test('walls are walked through when ignored', () => sim(async ({ player }) => {
+			await player('100', Game => {
+				const path = Game.creeps.Walker!.pos.findPathTo(new RoomPosition(25, 25, 'W9N1'), {
+					maxRooms: 1,
+					ignoreDestructibleStructures: true,
+				});
+				assert.ok(path.some(step => step.x === 25 && step.y === 25), 'path should run through the walls');
+				assert.ok(path.some(step => step.x === 27 && step.y === 25), 'the road should stay walkable');
 			});
 		}));
 	});
