@@ -1,99 +1,20 @@
-import type { Payload } from './export.js';
-import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Payload } from 'xxscreeps/scripts/payload.js';
 import * as fs from 'node:fs/promises';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Room } from 'xxscreeps/game/room/index.js';
-import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
-import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
-import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
-import { Source } from 'xxscreeps/mods/classic/source/source.js';
-import { computeRoomMeta } from 'xxscreeps/mods/modern/sector/terrain.js';
-import { makeWriter } from 'xxscreeps/schema/write.js';
-import * as C from 'xxscreeps:mods/constants';
+import { importPayload } from 'xxscreeps/scripts/payload.js';
 import { testRedis } from './context.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
 const payload = JSON.parse(await fs.readFile(new URL('../test/data/shard.json', root), 'utf8')) as Payload;
 
-// Generate rooms
-const rooms = Object.entries(payload).map(([ roomName, info ]) => {
-	const terrain = new TerrainWriter();
-	const room = new Room();
-	room.name = roomName;
-
-	let ii = 0;
-	type Metadata = Extract<Payload[string]['objects'], any[]>[any];
-	const saveObject = (object: RoomObject, xx: number, yy: number, fn?: (metadata: Metadata) => void) => {
-		const metadata = info.objects![ii++]!;
-		object.id = metadata.id;
-		object.pos = new RoomPosition(xx, yy, room.name);
-		object['#posId'] = object.pos['#id'];
-		fn?.(metadata);
-		room['#insertObject'](object);
-	};
-
-	for (const [ yy, line ] of info.layout.entries()) {
-		for (const [ xx, character ] of [ ...line as Iterable<string> ].entries()) {
-			switch (character) {
-				case ' ': break;
-				case '#':
-					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					break;
-
-				case ',':
-					terrain.set(xx, yy, C.TERRAIN_MASK_SWAMP);
-					break;
-
-				case '@': {
-					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const controller = new StructureController();
-					room['#user'] = null;
-					saveObject(controller, xx, yy);
-					break;
-				}
-
-				case 'E': {
-					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const source = new Source();
-					source.energy =
-						source.energyCapacity = C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
-					saveObject(source, xx, yy);
-					break;
-				}
-
-				case 'M': {
-					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const mineral = new Mineral();
-					saveObject(mineral, xx, yy, metadata => {
-						mineral.density = metadata.density!;
-						mineral.mineralType = metadata.mineral!;
-						mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density]!;
-					});
-				}
-			}
-		}
-	}
-	room['#flushObjects'](null);
-	return { room, terrain };
-});
-
-// Initialize world terrain blob & path finder
-const roomNames = new Set(Fn.map(rooms, ({ room }) => room.name));
-const terrainMap = new Map(Fn.map(rooms, ({ room, terrain }) => [
-	room.name, {
-		exits: packExits(terrain),
-		terrain,
-		...computeRoomMeta(room.name, roomNames),
-	},
-]));
-const terrain = makeWriter(MapSchema.schema)(terrainMap);
+const { rooms, terrain } = importPayload(payload);
 export const testWorld = new MapSchema.World('test', terrain);
+// Seeds the path finder's global terrain as a side effect of importing this module.
 loadTerrain(testWorld);
 
 // Default users
@@ -150,8 +71,8 @@ export async function instantiateTestShard() {
 	await Promise.all([
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
-		shard.data.sAdd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
-		Promise.all(Fn.map(rooms, async ({ room }) => {
+		shard.data.sAdd('rooms', rooms.map(room => room.name)),
+		Promise.all(Fn.map(rooms, async room => {
 			await shard.saveRoom(room.name, shard.time, room);
 			await shard.copyRoomFromPreviousTick(room.name, shard.time + 1);
 		})),

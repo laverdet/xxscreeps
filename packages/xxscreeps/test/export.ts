@@ -1,79 +1,12 @@
 import * as fs from 'node:fs/promises';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
-import { parseRoomName } from 'xxscreeps/game/room/name.js';
-import * as C from 'xxscreeps:mods/constants';
-import 'xxscreeps:mods/game';
-
-export type Payload = typeof payload;
-
-await using db = await Database.connect();
-await using shard = await Shard.connect(db, 'shard0');
-const map = await shard.loadWorld();
-const terrainMask = [ ' ', '#', ',', '?' ];
-
-// Sort map so that rooms will be continuous in the JSON top to bottom, left to right.
-const roomNames = [ ...Fn.map(map.entries(), ([ roomName ]) => roomName) ].sort((left, right) => {
-	const leftR = parseRoomName(left);
-	const rightR = parseRoomName(right);
-	return (leftR.rx - rightR.rx) || (leftR.ry - rightR.ry);
-});
-const entriesSorted = new Map(Fn.map(roomNames, roomName => [ roomName, map.map.getRoomTerrain(roomName) ]));
-
-// Render room terrain + object string representation
-const payload = Fn.fromEntries(await Fn.pipe(
-	entriesSorted,
-	$$ => Fn.map($$, async ([ roomName, terrain ]) => {
-		const room = await shard.loadRoom(roomName);
-		const objects = Fn.pipe(
-			room['#objects'],
-			$$ => Fn.map($$, object => {
-				const info = function() {
-					// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-					switch (object['#lookType']) {
-						case 'structure':
-							return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
-						case 'mineral': return {
-							marker: 'M',
-							meta: {
-								density: object.density,
-								mineral: object.mineralType,
-							},
-						};
-						case 'source': return { marker: 'E' };
-						default:
-					}
-				}();
-				if (info) {
-					return [ `${object.pos.x},${object.pos.y}`, {
-						marker: info.marker,
-						meta: {
-							id: object.id,
-							...info.meta,
-						},
-					} ] as const;
-				}
-			}),
-			$$ => Fn.filter($$),
-			$$ => new Map($$));
-		const metadata: typeof objects extends Map<any, { meta: infer T }> ? T[] : never = [];
-		const layout = [ ...Fn.map(Fn.range(50), yy => [
-			...Fn.map(Fn.range(50), xx => {
-				const object = objects.get(`${xx},${yy}`);
-				if (object) {
-					metadata.push(object.meta);
-					return object.marker;
-				} else {
-					return terrainMask[terrain.get(xx, yy)];
-				}
-			}),
-		].join('')) ];
-		return [ roomName, { layout, objects: metadata.length > 0 ? metadata : undefined } ] as const;
-	}),
-	$$ => Promise.all($$)));
+import { exportPayload } from 'xxscreeps/scripts/payload.js';
 
 const file = process.argv[2];
 if (!file?.endsWith('.json')) {
 	throw new Error('Destination must be .json file');
 }
-await fs.writeFile(file, JSON.stringify(payload, null, 1));
+
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, 'shard0');
+await fs.writeFile(file, JSON.stringify(await exportPayload(shard), null, 1));
