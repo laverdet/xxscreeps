@@ -288,7 +288,7 @@ function coordinated(creep: Creep, context: StrongholdContext, position?: RoomPo
 		// core wedged shut with nowhere to put the defender it is incubating.
 		const standable = makePositionChecker({ checkTerrain: true, room: core.room, user: creep['#user'] });
 		const retreat = Fn.minimum(
-			context.ramparts.filter(rampart => !rampart.pos.isNearTo(core.pos) && standable(rampart.pos)),
+			Fn.filter(context.ramparts, rampart => !rampart.pos.isNearTo(core.pos) && standable(rampart.pos)),
 			mappedNumericComparator(rampart => creep.pos.getRangeTo(rampart.pos)));
 		if (retreat) {
 			creep.moveTo(retreat, makeSafeSearchOptions(context));
