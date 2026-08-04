@@ -38,7 +38,9 @@ async function loadAndParse(shard: Shard, userId: string, path: string) {
 }
 
 hooks.register('subscription', {
-	pattern: /^user:(?<user>[^/]+)\/memory\/(?<shard>[^/]+)\/(?<path>.+)$/,
+	// The client only includes the shard segment when `Api.options.official` is set, so the Steam
+	// client in private-server mode subscribes without it. Same treatment as the `room:` channel.
+	pattern: /^user:(?<user>[^/]+)\/memory\/(?:(?<shard>[^/]+)\/)?(?<path>.+)$/,
 
 	subscribe(params) {
 		const { user, path } = params;
@@ -129,7 +131,7 @@ hooks.register('route', {
 			}
 		}();
 		if (value !== undefined && value.length > 1024 * 1024) {
-			throw new Error('Memory size is too large');
+			return { error: 'memory size is too large' };
 		}
 		const expression = function() {
 			if (path) {
@@ -139,7 +141,13 @@ hooks.register('route', {
 				return `Object.keys(Memory).forEach(key => delete Memory[key]); Object.assign(Memory, ${value}); undefined;`;
 			}
 		}();
-		await requestRunnerEval(context.shard, userId, expression, false);
+		try {
+			await requestRunnerEval(context.shard, userId, expression, false);
+		} catch (err) {
+			// `Runner did not respond` when the player's runner isn't ticking
+			console.error(err);
+			return { error: err instanceof Error ? err.message : String(err) };
+		}
 		return { ok: 1 };
 	}),
 });
@@ -166,7 +174,7 @@ hooks.register('route', {
 		}
 		const segmentId = Number(context.request.query.segment);
 		if (!isValidSegmentId(segmentId)) {
-			return { error: 'invalid segment' };
+			return { error: 'invalid segment ID' };
 		}
 		const blob = await loadMemorySegmentBlob(context.shard, userId, segmentId);
 		// Missing segments read as an empty string, same as `RawMemory.segments` in the runtime
@@ -200,10 +208,10 @@ hooks.register('route', {
 		}
 		const { segment, data } = context.request.body;
 		if (!isValidSegmentId(segment)) {
-			return { error: 'invalid segment' };
+			return { error: 'invalid segment ID' };
 		}
 		if (data.length > kMaxMemorySegmentLength) {
-			throw new Error('Memory segment size is too large');
+			return { error: 'length limit exceeded' };
 		}
 		await Promise.all([
 			saveMemorySegmentBlob(context.shard, userId, segment, utf16ToBuffer(data)),
