@@ -1,3 +1,4 @@
+import type { CreepBodyPart } from './schema.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Predicate } from 'xxscreeps/functional/predicate.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
@@ -558,6 +559,10 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string) {
 	const body = parts.map(type => ({ type, hits: 100, boost: undefined }));
+	return createWithBody(pos, body, name, owner);
+}
+
+export function createWithBody(pos: RoomPosition, body: CreepBodyPart[], name: string, owner: string) {
 	const creep = assign(createRoomObject(new Creep(), pos), {
 		body,
 		hits: body.length * 100,

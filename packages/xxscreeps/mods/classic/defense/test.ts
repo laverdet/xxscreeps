@@ -1,7 +1,8 @@
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
-import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
+import { lookForStructureAt, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { create as createRampart } from './rampart.js';
@@ -43,6 +44,29 @@ describe('mods/classic/defense', () => {
 				const pos = Game.creeps.rampart_movement?.pos;
 				assert.strictEqual(pos?.x, 25);
 				assert.strictEqual(pos.y, 25);
+			});
+		}));
+	});
+
+	describe('hitsMax', () => {
+		const roomWithRamparts = simulate({
+			W2N2: room => {
+				room['#level'] = 4;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W2N2'), [ C.MOVE ], 'observer', '100'));
+				room['#insertObject'](createRampart(new RoomPosition(25, 25, 'W2N2'), '100'));
+				room['#insertObject'](createRampart(new RoomPosition(26, 25, 'W2N2'), '101'));
+				room['#insertObject'](createRampart(new RoomPosition(27, 25, 'W2N2'), kInvaderUserId));
+			},
+		});
+
+		test('a rampart scales with the controller its owner holds', () => roomWithRamparts(async ({ peekRoom }) => {
+			await peekRoom('W2N2', room => {
+				const maxAt = (xx: number) =>
+					lookForStructureAt(room, new RoomPosition(xx, 25, 'W2N2'), C.STRUCTURE_RAMPART)?.hitsMax;
+				assert.strictEqual(maxAt(25), C.RAMPART_HITS_MAX[4], "the controller owner's rampart scales with the level");
+				assert.strictEqual(maxAt(26), 0, "another player's rampart has no maximum here");
+				assert.strictEqual(maxAt(27), C.RAMPART_HITS_MAX[8], 'an invader rampart holds the RCL8 maximum');
 			});
 		}));
 	});

@@ -3,6 +3,7 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { Game, intents, me } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
+import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { asUnion, assign } from 'xxscreeps/utility/utility.js';
@@ -24,6 +25,11 @@ export class StructureRampart extends withOverlay(OwnedStructure, rampartShape) 
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 
 	override get hitsMax() {
+		// An invader's rampart answers to no controller — it stands in rooms that have none, and never
+		// holds the one it stands next to — so it carries the highest maximum a rampart can reach.
+		if (this['#user'] === kInvaderUserId) {
+			return C.RAMPART_HITS_MAX[8] ?? 0;
+		}
 		return this['#user'] === this.room.controller?.['#user']
 			? C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;
 	}

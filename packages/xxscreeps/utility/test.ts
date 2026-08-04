@@ -31,6 +31,29 @@ describe('utility', () => {
 			assert.deepStrictEqual([ ...shuffle(list) ].sort(numericComparator), list);
 		});
 
+		test('a seeded order is drawn from the seed alone', () => {
+			const seeded = function() {
+				using rng = deterministicRandomForTesting(1);
+				return [ ...shuffledRange(50, 0xbeef) ];
+			}();
+			using rng = deterministicRandomForTesting(2);
+			assert.deepStrictEqual([ ...shuffledRange(50, 0xbeef) ], seeded);
+			assert.notDeepStrictEqual([ ...shuffledRange(50, 0xf00d) ], seeded);
+			assert.notDeepStrictEqual([ ...shuffledRange(50) ], seeded);
+		});
+
+		test('a seeded order is still a permutation', () => {
+			for (const count of [ 0, 1, 2, 3, 4, 15, 16, 17, 100, 1000 ]) {
+				assert.deepStrictEqual([ ...shuffledRange(count, count) ].sort(numericComparator), [ ...Fn.range(count) ]);
+			}
+		});
+
+		test('seeded shuffle deals the same hand for the same seed', () => {
+			const list = [ ...Fn.map(Fn.range(17), index => `card${index}`) ];
+			assert.deepStrictEqual([ ...shuffle(list, 7) ], [ ...shuffle(list, 7) ]);
+			assert.notDeepStrictEqual([ ...shuffle(list, 7) ], [ ...shuffle(list, 8) ]);
+		});
+
 		test('first yielded index is roughly uniform', () => {
 			using rng = deterministicRandomForTesting();
 			const trials = 10000;
