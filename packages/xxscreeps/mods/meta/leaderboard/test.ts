@@ -76,9 +76,9 @@ describe('mods/meta/leaderboard', () => {
 		const { count, list } = await readPage(db, 'world', '2023-10', 10, 10);
 		assert.strictEqual(count, 25);
 		assert.strictEqual(list.length, 10);
-		assert.strictEqual(list[0]!.rank, 10);
-		assert.strictEqual(list[0]!.score, 14);
-		assert.strictEqual(list[9]!.rank, 19);
+		assert.strictEqual(list[0]?.rank, 10);
+		assert.strictEqual(list[0].score, 14);
+		assert.strictEqual(list[9]?.rank, 19);
 		// The last page is short rather than padded
 		assert.strictEqual((await readPage(db, 'world', '2023-10', 20, 10)).list.length, 5);
 		assert.deepStrictEqual((await readPage(db, 'world', '2023-10', 25, 10)).list, []);

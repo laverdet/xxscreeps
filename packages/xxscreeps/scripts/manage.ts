@@ -32,6 +32,7 @@ import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction
 import * as ControllerProc from 'xxscreeps/mods/classic/controller/processor.js';
 // Side-effect imports: register the `User.remove` hooks which tear down per-user state owned by
 // mods — private messages, leaderboard standings.
+// TODO: These should not live in model, which should generally not have top-level effects.
 import 'xxscreeps/mods/meta/leaderboard/model.js';
 import 'xxscreeps/mods/meta/messages/model.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';

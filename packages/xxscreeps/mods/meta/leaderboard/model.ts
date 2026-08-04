@@ -129,7 +129,8 @@ export async function readRank(db: Database, mode: LeaderboardMode, season: stri
 		db.data.zScore(key, userId),
 	]);
 	if (rank !== null && score !== null) {
-		return { rank, score, user: userId } satisfies LeaderboardEntry;
+		const entry: LeaderboardEntry = { rank, score, user: userId };
+		return entry;
 	}
 }
 
