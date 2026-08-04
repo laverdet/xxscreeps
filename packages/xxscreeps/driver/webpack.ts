@@ -3,12 +3,12 @@ import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-// Hack in support for private class fields & methods
 import AcornClassFields from 'acorn-class-fields';
 import AcornPrivateMethods from 'acorn-private-methods';
+import TerserPlugin from 'terser-webpack-plugin';
 import Webpack from 'webpack';
 
+// Hack in support for private class fields & methods
 const Acorn = createRequire(import.meta.url)('acorn') as typeof import('acorn');
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
@@ -89,6 +89,15 @@ export async function compile(moduleName: string, transform: Transform) {
 
 			optimization: {
 				concatenateModules: true,
+				// Don't minimize function & class names since they are required in the player sandbox.
+				minimizer: [
+					new TerserPlugin({
+						terserOptions: {
+							keep_classnames: true,
+							keep_fnames: true,
+						},
+					}),
+				],
 			},
 
 			output: {

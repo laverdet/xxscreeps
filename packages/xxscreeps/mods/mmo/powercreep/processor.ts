@@ -9,7 +9,7 @@ import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { checkCarrier } from 'xxscreeps/mods/classic/creep/creep.js';
-import { borderExitPosition, commitMove, flushActionLog, isHostileInSafeMode, kRetainActionsTime, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
+import { borderExitPosition, commitMove, flushActionLog, kRetainActionsTime, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
 import { Tombstone } from 'xxscreeps/mods/classic/creep/tombstone.js';
 import { drop as dropResource } from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
@@ -38,11 +38,14 @@ function buryPowerCreep(creep: PowerCreep) {
 	};
 	tombstone['#decayTime'] = Game.time + C.TOMBSTONE_DECAY_POWER_CREEP;
 	creep.room['#insertObject'](tombstone);
-	creep['#destroy']();
 }
 
 // The roster lives in account keyspace, so the death writeback rides `context.task`.
 function killPowerCreep(creep: PowerCreep, context: ProcessorContext) {
+	// A nuke's sweep and blast can each kill the same creep in one tick pass; only the first buries.
+	if (!creep['#destroy']()) {
+		return;
+	}
 	const user = creep['#user'];
 	const id = creep.id;
 	buryPowerCreep(creep);
@@ -76,8 +79,8 @@ const intents = [
 
 	registerIntentProcessor(PowerCreep, 'move', {}, (creep, context, direction: Direction) => {
 		if (checkCarrier(creep) === C.OK) {
-			const priority = 1 + (isHostileInSafeMode(creep) ? -500 : 0);
-			Movement.announce(creep, direction, commit => commit(priority, pos => {
+			// No MOVE parts to rank on; any creep that can move takes a contested tile first.
+			Movement.announce(creep, direction, commit => commit(-Infinity, pos => {
 				commitMove(creep, pos, C.ROAD_WEAROUT_POWER_CREEP);
 				context.didUpdate();
 			}));
@@ -162,6 +165,10 @@ registerObjectPreTickProcessor(PowerCreep, (creep, context) => {
 		}
 	}
 });
+
+PowerCreep.prototype['#applyNukeImpact'] = function(this: PowerCreep, _nuke: RoomObject, context: ProcessorContext) {
+	killPowerCreep(this, context);
+};
 
 registerObjectTickProcessor(PowerCreep, (creep, context) => {
 	// Settle damage deferred by `#applyDamage`

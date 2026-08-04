@@ -2,10 +2,9 @@ import type { GlobalControlChannel } from './model.js';
 import type { DeferListener, MessageFor } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { hooks as processorHooks } from 'xxscreeps/engine/processor/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { DisposableResource } from 'xxscreeps/utility/utility.js';
-import { controlledRoomsKey, globalControlChannel, insertControlledRoom } from './model.js';
+import { controlledRoomsKey, globalControlChannel } from './model.js';
 
 class GlobalControlWatcher extends DisposableResource {
 	gcl;
@@ -48,15 +47,6 @@ class GlobalControlWatcher extends DisposableResource {
 		return new GlobalControlWatcher(disposable.move(), Number(gcl) || 0, reservedRooms, listen);
 	}
 }
-
-processorHooks.register('refreshRoom', async (shard, room) => {
-	const userId = room['#user'];
-	if (userId != null) {
-		if (room['#level'] > 0) {
-			await insertControlledRoom(shard, userId, room.name);
-		}
-	}
-});
 
 hooks.register('runnerConnector', async player => {
 	const { shard, userId } = player;

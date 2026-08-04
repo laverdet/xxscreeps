@@ -21,6 +21,15 @@ hooks.register('roomGenerator', {
 	},
 });
 
+hooks.register('payload', {
+	marker: '@',
+	encode: object => object instanceof StructureController ? {} : undefined,
+	decode(meta, room) {
+		room['#user'] = null;
+		return new StructureController();
+	},
+});
+
 declare module 'xxscreeps/scripts/symbols.js' {
 	interface GenerateRoomOptions {
 		/**

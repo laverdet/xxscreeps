@@ -6,6 +6,7 @@ import { openStoreFormat, optionalResourceEnumFormat, resourceEnumFormat } from 
 import { constant, declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps:mods/constants';
 
+export type CreepBodyPart = TypeOf<typeof creepBodyShape>;
 const creepBodyShape = struct({
 	/**
 	 * If the body part is boosted, this property specifies the mineral type which is used for

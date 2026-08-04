@@ -126,8 +126,6 @@ export const roomSubscription: SubscriptionEndpoint = {
 	async subscribe(parameters) {
 		let previous: any;
 		let previousTime = -1;
-		let skipUntil = 0;
-		let missedUpdateDuringSkip = false;
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
 		const roomName = parameters.room!;
@@ -142,16 +140,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
 		await acquireWith(
 			fn => disposable.defer(fn),
-			subscribeToRoom(shard, roomName, (room, time, roomDidUpdate) => mustNotReject(async () => {
-				if (Date.now() < skipUntil) {
-					if (roomDidUpdate) {
-						missedUpdateDuringSkip = true;
-					}
-					return;
-				}
-				const didUpdate = roomDidUpdate || missedUpdateDuringSkip;
-				missedUpdateDuringSkip = false;
-
+			subscribeToRoom(shard, roomName, (room, time, didUpdate) => mustNotReject(async () => {
 				// Render current room state
 				room['#initialize']();
 				const visibleUsers = new Set<string>();
@@ -209,18 +198,6 @@ export const roomSubscription: SubscriptionEndpoint = {
 				this.send(JSON.stringify(response));
 				previousTime = time;
 			})),
-
-			getRoomChannel(shard, roomName).listen(event => {
-				if (event.type === 'willSpawn') {
-					// There is a race condition in the client where if you send an update while placing your
-					// initial spawn the renderer will break until next refresh. It happens because the client
-					// unsubscribes and immediately resubscribes to the channel. Since channels are only
-					// addressed by the name of the channel messages from the old subscription will be sent to
-					// the new handlers. Shut down event for a full second when someone is spawning in the
-					// current room to avoid this condition.
-					skipUntil = Date.now() + 1000;
-				}
-			}),
 		);
 
 		// Disconnect on socket hangup

@@ -1,3 +1,4 @@
+import type { NullMessage } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
@@ -19,8 +20,8 @@ export function getProcessorChannel(shard: Shard) {
 
 export function getRoomChannel(shard: Shard, roomName: string) {
 	type Message =
-		{ type: 'didUpdate'; time: number } |
-		{ type: 'willSpawn' };
+		NullMessage |
+		{ type: 'didUpdate'; time: number };
 	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 

@@ -17,8 +17,8 @@ interface NotifyPrefsRequest {
 }
 
 // Note: unlike vanilla (which coerces booleans with `!!`, so "false" becomes true), these are
-// validated as real JSON booleans. `coerceTypes` handles numeric fields sent as strings (e.g. the
-// official client sends interval as "180" rather than 180).
+// validated as booleans. The numeric fields arrive as strings — the client posts the key of the
+// selected option, e.g. `interval: "180"` — and are coerced back by the validator.
 const notifyPrefsRequestSchema: JSONSchemaType<NotifyPrefsRequest> = {
 	type: 'object',
 	properties: {
@@ -60,7 +60,7 @@ hooks.register('route', {
 		}
 		await setNotifyPrefs(context.db, userId, prefs);
 		return { ok: 1 };
-	}, { coerceTypes: true }),
+	}),
 });
 
 // Surface the user's own notification prefs on `/api/auth/me` so the account UI can render the
