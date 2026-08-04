@@ -4,7 +4,6 @@ import type { Creep, SavedMovePath } from 'xxscreeps/mods/classic/creep/creep.js
 import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps:mods/constants';
 import flee from './flee.js';
-import { isRaidTarget } from './target.js';
 
 /**
  * Whether `pos1` can walk up to `pos2`. An empty path means the search never left the origin, which
@@ -85,7 +84,10 @@ export default function findAttack(creep: Creep, healers: Creep[], hostiles: Cre
 	if ((haveAttack || creep.getActiveBodyparts(C.WORK) > 0) && _move?.path !== undefined) {
 		const [ pos ] = _move.path;
 		if (pos !== undefined) {
-			const [ target ] = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(isRaidTarget);
+			const isRaidTarget = (structure: Structure) =>
+				structure.structureType in C.CONTROLLER_STRUCTURES &&
+				structure.structureType !== C.STRUCTURE_SPAWN;
+			const target = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).find(isRaidTarget);
 			if (target) {
 				if (creep.getActiveBodyparts(C.RANGED_ATTACK) > 0) {
 					creep.rangedAttack(target);
