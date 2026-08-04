@@ -108,7 +108,7 @@ export function simulate(
 	 */
 	initialize?: (shard: Shard) => Promise<void>,
 ) {
-	return async (body: (refs: Simulation) => Promise<void>) => {
+	return async <Type>(body: (refs: Simulation) => Promise<Type>) => {
 
 		Memory.initialize(null);
 		await using testShard = await instantiateTestShard();
@@ -274,7 +274,8 @@ export function simulate(
 				}
 			},
 		};
-		await body(that);
+		// nb: `await` before returning so the body finishes while the shard is still alive
+		return await body(that);
 	};
 }
 

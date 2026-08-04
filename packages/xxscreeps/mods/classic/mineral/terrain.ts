@@ -69,9 +69,31 @@ hooks.register('roomGenerator', {
 	},
 });
 
+hooks.register('payload', {
+	marker: 'M',
+	encode: object => object instanceof Mineral ? {
+		density: object.density,
+		mineral: object.mineralType,
+	} : undefined,
+	decode(meta) {
+		const mineral = new Mineral();
+		mineral.density = meta.density!;
+		mineral.mineralType = meta.mineral!;
+		mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density]!;
+		return mineral;
+	},
+});
+
 declare module 'xxscreeps/scripts/symbols.js' {
 	interface GenerateRoomOptions {
 		/** Mineral type, or `false` for no mineral; omit for a random type. */
 		mineral?: ResourceType | false;
+	}
+
+	interface PayloadObject {
+		/** Mineral density, one of the `DENSITY_*` levels. */
+		density?: number;
+		/** The type of mineral deposited. */
+		mineral?: ResourceType;
 	}
 }

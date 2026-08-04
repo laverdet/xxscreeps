@@ -8,7 +8,7 @@ import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { SingleStore, checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
+import { assign, clamp } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { towerShape } from './schema.js';
 
@@ -102,6 +102,13 @@ registerBuildableStructure(C.STRUCTURE_TOWER, {
 		return create(site.pos, site['#user']);
 	},
 });
+
+// A tower's output multiplier at its range to the target: full inside the optimal range, decaying
+// to `1 - TOWER_FALLOFF` at the far end.
+export function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
+	const range = clamp(C.TOWER_OPTIMAL_RANGE, C.TOWER_FALLOFF_RANGE, tower.pos.getRangeTo(target.pos));
+	return 1 - C.TOWER_FALLOFF * (range - C.TOWER_OPTIMAL_RANGE) / (C.TOWER_FALLOFF_RANGE - C.TOWER_OPTIMAL_RANGE);
+}
 
 export function checkTower<Type extends Creep | Structure>(
 	tower: StructureTower, target: Type, targetType: abstract new(...args: any) => Type,

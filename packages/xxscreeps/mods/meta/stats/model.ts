@@ -3,6 +3,7 @@ import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { KeyValProvider } from 'xxscreeps/engine/db/storage/provider.js';
 import { mappedInvertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import { isStatName, statNames } from './schema.js';
 
 // Bucketed time series over wall-clock time, one hash field per bucket; a windowed total (or
@@ -44,11 +45,23 @@ function windowBuckets(interval: StatInterval, now: number) {
 	return [ ...Fn.range(latest - bucketCount[interval], latest) ];
 }
 
-interface StatEntry {
+export interface StatEntry {
 	amount: number;
 	stat: StatName;
 	userId: string;
 }
+
+export const hooks = makeHookRegistration<{
+	/**
+	 * Fired once per room bucket as it is flushed, with the same coalesced entries and bucket time
+	 * the per-interval series are credited with. Consumers which want to derive their own long-lived
+	 * aggregate from stat contributions hang off this rather than adding a second write path in the
+	 * processor.
+	 */
+	flush: (shard: Shard, entries: readonly StatEntry[], bucketTime: number) => Promise<unknown>;
+}>();
+
+const flushHooks = hooks.makeMapped('flush');
 
 interface BucketedStatEntry extends StatEntry {
 	bucket: number;
@@ -70,7 +83,7 @@ async function truncateExpired(data: KeyValProvider, key: string, oldest: number
  * the bucket began to fill; the whole batch is credited to the bucket it falls in. Expired fields
  * of every touched hash are reclaimed here as well.
  */
-export async function writeRoomBucket(shard: Shard, roomName: string, entries: Iterable<StatEntry>, bucketTime: number) {
+export async function writeRoomBucket(shard: Shard, roomName: string, entries: readonly StatEntry[], bucketTime: number) {
 	await Promise.all(function*() {
 		const statsByUser = Fn.groupBy(entries, entry => [ entry.userId, entry ]);
 		for (const interval of statIntervals) {
@@ -97,6 +110,7 @@ export async function writeRoomBucket(shard: Shard, roomName: string, entries: I
 			// ..truncated once per room
 			yield truncateExpired(shard.data, roomKey, oldest);
 		}
+		yield* flushHooks(shard, entries, bucketTime);
 	}());
 }
 

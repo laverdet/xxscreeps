@@ -288,11 +288,13 @@ export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPos
 // Register pathfinding and movement rules
 const destructibleStructureTypes = new Set(Object.keys(C.CONSTRUCTION_COST));
 registerObstacleChecker(params => {
+	const { user } = params;
 	if (params.ignoreDestructibleStructures) {
+		// Anything which can be torn down is walked through, the rest still blocks
 		return object => object instanceof Structure &&
-			destructibleStructureTypes.has(object.structureType);
+			!destructibleStructureTypes.has(object.structureType) &&
+			object['#checkObstacle'](user);
 	} else {
-		const { user } = params;
 		return object => object instanceof Structure && object['#checkObstacle'](user);
 	}
 });

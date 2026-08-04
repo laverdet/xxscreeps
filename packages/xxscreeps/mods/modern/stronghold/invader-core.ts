@@ -1,6 +1,7 @@
 import type { RoomObject, RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscreeps/game/object.js';
@@ -105,12 +106,12 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 	/**
 	 * Incubate an NPC defender on the core's own tile. The spawn takes
 	 * `INVADER_CORE_CREEP_SPAWN_TIME[level]` ticks per body part and materializes on an adjacent
-	 * tile once it elapses. Boosts arrive with the bunker4/5 populations.
+	 * tile once it elapses. `boosts` names the boost mineral for each body part positionally.
 	 */
-	'#createCreep'(body: PartType[], name: string) {
+	'#createCreep'(body: PartType[], name: string, boosts: (ResourceType | null)[] | null = null) {
 		return chainIntentChecks(
 			() => checkCreateCreep(this),
-			() => intents.save(this, 'createCreep', body, name));
+			() => intents.save(this, 'createCreep', body, name, boosts));
 	}
 
 	override '#applyDamage'(power: number, type: number, source?: RoomObject) {

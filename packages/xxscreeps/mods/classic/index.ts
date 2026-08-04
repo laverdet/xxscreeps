@@ -13,6 +13,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/classic/spawn',
 
 		'xxscreeps/mods/meta/flag',
+		'xxscreeps/mods/meta/leaderboard',
 		'xxscreeps/mods/meta/messages',
 		'xxscreeps/mods/meta/notifications',
 		'xxscreeps/mods/meta/stats',
