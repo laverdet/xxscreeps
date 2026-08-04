@@ -162,7 +162,7 @@ jobs:
       # Setup repository
       - uses: actions/checkout@v5
       - if: matrix.host.container == 'alpine:edge'
-        run: npm install -g pnpm@11.13.0
+        run: npm install -g pnpm@11.20.0
       - if: matrix.host.container != 'alpine:edge'
         uses: pnpm/action-setup@v6
         with:
@@ -334,7 +334,7 @@ jobs:
           # standard.
           node-version: 24
       - if: matrix.host.container == 'alpine:edge'
-        run: npm install -g pnpm@11.13.0
+        run: npm install -g pnpm@11.20.0
       - if: matrix.host.container != 'alpine:edge'
         uses: pnpm/action-setup@v6
         with:
