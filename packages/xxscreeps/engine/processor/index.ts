@@ -1,10 +1,14 @@
 import type { ProcessorContext } from './room.js';
-import type { ExpandModInterface } from '../schema/index.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { ExpandModInterface } from 'xxscreeps/engine/schema/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { flushUsers } from 'xxscreeps/game/room/room.js';
 import type { CounterExtract, Implementation } from 'xxscreeps/utility/types.js';
 import type { Intent } from 'xxscreeps:mods/processor';
+import { hooks } from 'xxscreeps/engine/processor/symbols.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { updateUserRoomRelationships } from './model.js';
 import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
 
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
@@ -190,4 +194,14 @@ export function initializeIntentConstraints() {
 			// Some unrelated intents share names, but not receivers
 			instance => infos.find(info => instance instanceof info.receiver)!);
 	}
+}
+
+export function makeInitializeRoomForProcessor() {
+	const refreshRoom = hooks.makeMapped('refreshRoom');
+	return async function(shard: Shard, room: Room, previous?: ReturnType<typeof flushUsers>) {
+		await Promise.all([
+			updateUserRoomRelationships(shard, room, previous),
+			...refreshRoom(shard, room),
+		]);
+	};
 }

@@ -3,10 +3,9 @@ import { config } from 'xxscreeps/config/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
+import { initializeIntentConstraints, makeInitializeRoomForProcessor } from 'xxscreeps/engine/processor/index.js';
+import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
-import { hooks } from 'xxscreeps/engine/processor/symbols.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
@@ -35,8 +34,7 @@ type FinalizeRequest = {
 	time: number;
 };
 
-// Hooks
-const refreshRoom = hooks.makeMapped('refreshRoom');
+const initializeRoom = makeInitializeRoomForProcessor();
 initializeGameEnvironment();
 initializeIntentConstraints();
 
@@ -63,10 +61,7 @@ await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message =>
 		// Initialize rooms / user relationships
 		case 'initialize': {
 			const room = await shard.loadRoom(message.roomName, undefined, true);
-			await Promise.all([
-				updateUserRoomRelationships(shard, room),
-				...refreshRoom(shard, room),
-			]);
+			await initializeRoom(shard, room);
 			break;
 		}
 
