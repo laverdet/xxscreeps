@@ -1,23 +1,21 @@
 import type { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
-import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps:mods/constants';
 
-export default function shootAtWill(creep: Creep) {
+/**
+ * Free shots at whoever wandered into range. Only creeps are ever shot at — a raid tears down
+ * structures solely to reach its victims, which `findAttack` handles.
+ */
+export default function shootAtWill(creep: Creep, hostiles: Creep[]) {
 	if (creep.getActiveBodyparts(C.RANGED_ATTACK) === 0) {
 		return;
 	}
-	const targets: (Creep | Structure)[] = function() {
-		const creeps = creep.pos.findInRange(C.FIND_HOSTILE_CREEPS, 3);
-		if (creeps.length > 0) {
-			return creeps;
-		}
-		return creep.pos.findInRange(C.FIND_HOSTILE_STRUCTURES, 3);
-	}();
-	if (targets.length === 0) {
-		return;
+	const target = Fn.pipe(
+		hostiles,
+		$$ => Fn.filter($$, hostile => creep.pos.inRangeTo(hostile, 3)),
+		$$ => Fn.minimum($$, mappedNumericComparator(creep => creep.hits)));
+	if (target) {
+		creep.rangedAttack(target);
 	}
-
-	const target = Fn.minimum(targets, (left, right) => left.hits! - right.hits!)!;
-	creep.rangedAttack(target);
 }

@@ -1,7 +1,13 @@
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import { RoomPosition, iterateWithRangeTo } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
+import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kInvaderUserId } from './game.js';
+import { create as createInvader } from './processor.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:
 //   TOP -> W7N8 (y=0 edge), RIGHT -> W6N7 (x=49 edge),
@@ -170,6 +176,92 @@ describe('mods/classic/invader', () => {
 						`invader at (${invader.pos.x},${invader.pos.y}) should be on LEFT exit (x=0)`);
 				}
 			});
+		}));
+	});
+
+	describe('raid', () => {
+		const kWallHits = 10000;
+		const victimHits = (room: Room) =>
+			room['#lookFor'](C.LOOK_CREEPS).find(creep => creep.name === 'victim')?.hits;
+
+		const melee = simulate({
+			W7N7: room => {
+				room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W7N7'), [ C.MOVE, C.MOVE ], 'victim', '100'));
+				room['#insertObject'](createInvader(new RoomPosition(26, 25, 'W7N7'), 'melee', 'small', 5000));
+				activateNPC(room, kInvaderUserId);
+			},
+		});
+
+		test('melee invader damages an adjacent creep', () => melee(async ({ tick, peekRoom }) => {
+			const before = await peekRoom('W7N7', victimHits);
+			await tick();
+			const after = await peekRoom('W7N7', victimHits);
+			assert.ok(after !== undefined && before !== undefined && after < before,
+				`victim should take damage: ${before} -> ${after}`);
+		}));
+
+		// Invaders enter at an exit, so the whole approach has to work, not just the final blow
+		const approach = simulate({
+			W7N7: room => {
+				room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W7N7'), [ C.MOVE, C.MOVE ], 'victim', '100'));
+				room['#insertObject'](createInvader(new RoomPosition(0, 25, 'W7N7'), 'melee', 'small', 5000));
+				room['#insertObject'](createInvader(new RoomPosition(0, 26, 'W7N7'), 'ranged', 'small', 5000));
+				room['#insertObject'](createInvader(new RoomPosition(0, 27, 'W7N7'), 'healer', 'small', 5000));
+				activateNPC(room, kInvaderUserId);
+			},
+		});
+
+		test('invaders cross the room and engage', () => approach(async ({ tick, peekRoom }) => {
+			for (let ii = 0; ii < 40; ++ii) {
+				await tick();
+				const hits = await peekRoom('W7N7', victimHits);
+				if (hits === undefined || hits < 200) {
+					return;
+				}
+			}
+			assert.fail('invaders never damaged the victim');
+		}));
+
+		// A defender and a spawn behind a ring of walls. The invaders have to break in to reach the
+		// creep — and must leave the spawn itself alone while doing it.
+		const fortified = simulate({
+			W7N7: room => {
+				const center = new RoomPosition(25, 25, 'W7N7');
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#level'] = 3;
+				room['#insertObject'](createSpawn(center, '100', 'Spawn1'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 24, 'W7N7'), [ C.MOVE, C.MOVE ], 'victim', '100'));
+				for (const pos of iterateWithRangeTo(center, 2)) {
+					const wall = createWall(pos);
+					wall.hits = kWallHits;
+					room['#insertObject'](wall);
+				}
+				room['#insertObject'](createInvader(new RoomPosition(29, 25, 'W7N7'), 'melee', 'small', 5000));
+				room['#insertObject'](createInvader(new RoomPosition(29, 26, 'W7N7'), 'ranged', 'small', 5000));
+				activateNPC(room, kInvaderUserId);
+			},
+		});
+
+		test('invaders dismantle walls between them and a defender', () => fortified(async ({ tick, peekRoom }) => {
+			for (let ii = 0; ii < 20; ++ii) {
+				await tick();
+				const walls = await peekRoom('W7N7', room => room['#lookFor'](C.LOOK_STRUCTURES)
+					.filter(structure => structure.structureType === C.STRUCTURE_WALL)
+					.map(wall => wall.hits));
+				if (walls.some(hits => hits < kWallHits)) {
+					return;
+				}
+			}
+			assert.fail('invaders never damaged the walls');
+		}));
+
+		test('invaders never damage a spawn', () => fortified(async ({ tick, peekRoom }) => {
+			for (let ii = 0; ii < 30; ++ii) {
+				await tick();
+				const hits = await peekRoom('W7N7', room => room['#lookFor'](C.LOOK_STRUCTURES)
+					.find(structure => structure.structureType === C.STRUCTURE_SPAWN)?.hits);
+				assert.strictEqual(hits, C.SPAWN_HITS, `spawn took damage on tick ${ii}`);
+			}
 		}));
 	});
 });
