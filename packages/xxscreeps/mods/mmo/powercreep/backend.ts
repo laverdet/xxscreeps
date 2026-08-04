@@ -120,7 +120,10 @@ function renderRecord(creep: PowerCreep) {
 		store: {},
 		storeCapacity: 100 * (level + 1),
 		spawnCooldownTime: creep.spawnCooldownTime,
-		powers: creep.powers,
+		// The roster has no tick clock, so cooldowns are always clear here. `creep.powers` would
+		// resolve them against `Game.time`, which the backend has not set up.
+		powers: Object.fromEntries(creep['#powers'].map(({ level, power }) =>
+			[ power, { cooldown: 0, level } ] as const)),
 		...creep.deleteTime !== 0 && { deleteTime: creep.deleteTime },
 	};
 }

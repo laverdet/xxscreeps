@@ -56,6 +56,9 @@ export interface ZRange {
 	limit?: [ number, number ];
 	rev?: boolean;
 }
+export interface ZRank {
+	rev?: boolean;
+}
 
 export type Value = number | string | Readonly<Uint8Array>;
 export interface KeyValProvider {
@@ -124,6 +127,9 @@ export interface KeyValProvider {
 	zRange(key: string, min: number, max: number, options?: ZRange): Promise<string[]>;
 	zRangeStore(into: string, from: string, min: number, max: number, options?: ZRange): Promise<number>;
 	zRangeWithScores(key: string, min: number, max: number, options?: ZRange): Promise<[ number, string ][]>;
+	// Index of `member` within the set, or `null` when it isn't a member. Ordered by score, ties
+	// broken lexicographically; `rev` counts from the high-score end.
+	zRank(key: string, member: string, options?: ZRank): Promise<number | null>;
 	zRem(key: string, members: string[]): Promise<number>;
 	zRemRange(key: string, min: number, max: number): Promise<number>;
 	zScore(key: string, member: string): Promise<number | null>;

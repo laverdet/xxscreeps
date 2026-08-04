@@ -34,6 +34,13 @@ export interface Sandbox {
 	run: (data: TickPayload) => Promise<TickCompletion>;
 }
 
+export async function bootstrapSandbox(): Promise<void> {
+	if ((config.runner.sandbox ?? 'isolated') === 'isolated') {
+		const { IsolatedSandbox } = await import('./isolated/index.js');
+		await IsolatedSandbox.bootstrap();
+	}
+}
+
 export async function createSandbox(userId: string, payload: InitializationPayload): Promise<Sandbox> {
 	const sandbox = await async function() {
 		switch (config.runner.sandbox ?? 'isolated') {

@@ -386,6 +386,10 @@ export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValP
 		return result.map(({ score, value }) => [ score, value ]);
 	}
 
+	zRank(key: string, member: string, options?: Pr.ZRank) {
+		return options?.rev ? this.keyval.zRevRank(key, member) : this.keyval.zRank(key, member);
+	}
+
 	zRem(key: string, members: string[]) {
 		return this.keyval.zRem(key, members);
 	}

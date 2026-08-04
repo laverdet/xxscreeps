@@ -210,5 +210,5 @@ hooks.register('route', {
 			publicSegmentChannel(context.shard, userId).publish({ type: 'segment', id: segment }),
 		]);
 		return { ok: 1 };
-	}, { coerceTypes: true }),
+	}),
 });

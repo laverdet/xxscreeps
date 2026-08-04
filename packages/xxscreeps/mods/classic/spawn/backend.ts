@@ -3,7 +3,7 @@ import type { AnyStructure } from 'xxscreeps/mods/classic/structure/structure.js
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -147,9 +147,6 @@ hooks.register('route', {
 		if (lastSpawn !== null && now < Number(lastSpawn) + config.game.respawnTimeout * 3600 * 1000) {
 			throw new Error('Too soon after last respawn');
 		}
-
-		// Insert delay to workaround client bugs [see room socket]
-		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
 
 		// Ensure user has no objects
 		const roomNames = await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId));

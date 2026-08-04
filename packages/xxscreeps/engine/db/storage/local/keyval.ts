@@ -47,6 +47,19 @@ interface SerializedUint8 {
 	readonly $: string;
 }
 
+/**
+ * `entries` and `entriesByLex` take their direction from the order of their bounds, which is also how
+ * redis reads a score or lex range: `ZRANGE … REV` wants the high bound first. A pair which disagrees
+ * with `rev` answers the whole range here and nothing on redis, so it's rejected rather than
+ * silently divergent.
+ */
+function checkRangeDirection<Type extends number | string>(min: Type, max: Type, options?: Pr.ZRange) {
+	const rev = options?.rev === true;
+	if (rev ? min < max : min > max) {
+		throw new Error(`Invalid range: bounds of a${rev ? ' reversed' : 'n ascending'} range must be given ${rev ? 'high' : 'low'}-first`);
+	}
+}
+
 export class LocalKeyValResponder extends AsyncDisposableResource implements MaybePromises<Pr.KeyValProvider> {
 	readonly blob;
 	private readonly data = new Map<string, InternalValue>();
@@ -629,13 +642,14 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 						};
 						const [ minVal, minInc ] = parse(min satisfies number | string as string);
 						const [ maxVal, maxInc ] = parse(max satisfies number | string as string);
+						checkRangeDirection(minVal, maxVal, options);
 						return set.entriesByLex(minInc, minVal, maxInc, maxVal);
 					}
 					case 'SCORE': {
-						const entries = set.entries(
-							min satisfies number | string as number,
-							max satisfies number | string as number);
-						return Fn.map(entries, entry => entry[1]);
+						const minScore = min satisfies number | string as number;
+						const maxScore = max satisfies number | string as number;
+						checkRangeDirection(minScore, maxScore, options);
+						return Fn.map(set.entries(minScore, maxScore), entry => entry[1]);
 					}
 					case undefined:
 					default: {
@@ -648,6 +662,13 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 						};
 						const from = convert(min satisfies number | string as number);
 						const to = convert(max satisfies number | string as number) + 1;
+						if (options?.rev) {
+							// Index ranges count from the low-score end, or from the high-score end under
+							// `rev`. The score and lex ranges above read their direction from the order of
+							// their bounds, but an index range carries no such signal, so mirror the window
+							// onto the ascending members rather than reversing the whole set.
+							return Fn.reverse([ ...Fn.slice(set.values(), Math.max(0, set.size - to), set.size - from) ]);
+						}
 						return Fn.slice(set.values(), from, to);
 					}
 				}
@@ -696,7 +717,9 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		if (set) {
 			switch (options?.by) {
 				case 'LEX': throw new Error('Invalid request');
-				case 'SCORE': return [ ...set.entries(min, max) ];
+				case 'SCORE':
+					checkRangeDirection(min, max, options);
+					return [ ...set.entries(min, max) ];
 				case undefined:
 				default: {
 					const values = this.zRange(key, min, max, options);
@@ -706,6 +729,17 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		} else {
 			return [];
 		}
+	}
+
+	zRank(key: string, member: string, options?: Pr.ZRank) {
+		const set = this.lookupObject(key, SortedSet);
+		if (set) {
+			const rank = set.rank(member);
+			if (rank !== undefined) {
+				return options?.rev ? set.size - 1 - rank : rank;
+			}
+		}
+		return null;
 	}
 
 	zRem(key: string, members: string[]) {

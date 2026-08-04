@@ -68,6 +68,10 @@ export class IsolatedSandbox implements Sandbox {
 		});
 	}
 
+	static bootstrap() {
+		return getRuntimeSource();
+	}
+
 	async initialize(data: InitializationPayload) {
 		const { isolate } = this;
 		const context = await isolate.createContext({ inspector: useInspector });

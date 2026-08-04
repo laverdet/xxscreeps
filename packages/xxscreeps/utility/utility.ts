@@ -130,7 +130,7 @@ export function hashMix(value: number) {
 }
 
 export function hashCombine(left: number, right: number) {
-	const seed = (left + 0x9e3779b9) | 0;
+	const seed = (left - 0x61c88647) | 0;
 	return hashMix((seed + right) | 0);
 }
 
