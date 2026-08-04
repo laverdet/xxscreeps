@@ -73,10 +73,11 @@ async function exportRoom(shard: Shard, roomName: string, terrain: Terrain): Pro
 		return { marker: object?.marker ?? terrainMask[terrain.get(xx, yy)], meta: object?.meta };
 	}) ]) ];
 	const layout = cells.map(row => row.map(cell => cell.marker).join(''));
-	const metadata = [ ...Fn.pipe(
+	const metadata = Fn.pipe(
 		cells,
 		$$ => Fn.transform($$, row => Fn.map(row, cell => cell.meta)),
-		$$ => Fn.filter($$)) ];
+		$$ => Fn.filter($$),
+		$$ => [ ...$$ ]);
 	return { layout, ...metadata.length > 0 && { objects: metadata } };
 }
 
