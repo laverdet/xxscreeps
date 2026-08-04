@@ -3,8 +3,8 @@ import { config } from 'xxscreeps/config/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, initializeRoom, roomsDidFinalize } from 'xxscreeps/engine/processor/model.js';
+import { initializeIntentConstraints, makeInitializeRoomForProcessor } from 'xxscreeps/engine/processor/index.js';
+import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
@@ -34,6 +34,7 @@ type FinalizeRequest = {
 	time: number;
 };
 
+const initializeRoom = makeInitializeRoomForProcessor();
 initializeGameEnvironment();
 initializeIntentConstraints();
 

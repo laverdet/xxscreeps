@@ -4,7 +4,6 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
-import { hooks } from 'xxscreeps/engine/processor/symbols.js';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -232,16 +231,6 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 			]);
 		}
 	}
-}
-
-const refreshRoom = hooks.makeMapped('refreshRoom');
-
-/** Seed the indices derived from a room's contents, including any a mod maintains itself. */
-export async function initializeRoom(shard: Shard, room: Room, previous?: ReturnType<typeof flushUsers>) {
-	await Promise.all([
-		updateUserRoomRelationships(shard, room, previous),
-		...refreshRoom(shard, room),
-	]);
 }
 
 const isSystemUser = (userId: string) => userId.length <= 2;

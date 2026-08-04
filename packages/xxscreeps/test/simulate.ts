@@ -10,8 +10,8 @@ import { kFdStdError } from 'xxscreeps/driver/runtime/print.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { acquireIntentsForRoom, activeRoomsKey, begetRoomProcessQueue, finalizeExtraRoomsSetKey, initializeRoom, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { initializeIntentConstraints, makeInitializeRoomForProcessor } from 'xxscreeps/engine/processor/index.js';
+import { acquireIntentsForRoom, activeRoomsKey, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { PlayerInstance, acquireRunnerContext, makeTickPayloadForTesting } from 'xxscreeps/engine/runner/instance.js';
@@ -31,6 +31,7 @@ import 'xxscreeps:mods/game';
 import 'xxscreeps:mods/main';
 import 'xxscreeps:mods/processor';
 
+const initializeRoom = makeInitializeRoomForProcessor();
 initializeGameEnvironment();
 initializeIntentConstraints();
 
