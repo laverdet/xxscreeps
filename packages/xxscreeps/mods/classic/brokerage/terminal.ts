@@ -83,25 +83,27 @@ export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape
 
 //
 // Intent checks
+// Divergence from Screeps, which accepts a send to the terminal's own room
+function checkDestination(range: number) {
+	return range < Infinity && range !== 0 ? C.OK : C.ERR_INVALID_ARGS;
+}
+
+function checkCooldown(terminal: StructureTerminal) {
+	return terminal.cooldown === 0 ? C.OK : C.ERR_TIRED;
+}
+
 export function checkSend(terminal: StructureTerminal, resourceType: ResourceType, amount: number, destination: string, description: string | null | undefined) {
 	const range = Game.map.getRoomLinearDistance(terminal.room.name, destination);
 	const energyCost = calculateEnergyCost(amount, range);
+	const energyRequired = resourceType === C.RESOURCE_ENERGY ? amount + energyCost : energyCost;
 	return chainIntentChecks(
 		() => checkMyStructure(terminal, StructureTerminal),
 		() => checkIsActive(terminal),
-		resourceType === C.RESOURCE_ENERGY
-			? () => checkHasResource(terminal, C.RESOURCE_ENERGY, amount + energyCost) :
-			() => chainIntentChecks(
-				() => checkHasResource(terminal, C.RESOURCE_ENERGY, energyCost),
-				() => checkHasResource(terminal, resourceType, amount)),
+		() => checkDestination(range),
+		() => checkHasResource(terminal, resourceType, amount),
+		() => checkCooldown(terminal),
+		() => checkHasResource(terminal, C.RESOURCE_ENERGY, energyRequired),
 		() => description == null ? C.OK : checkString(description, 100),
-		() => {
-			if (!(range < Infinity) || range === 0) {
-				return C.ERR_INVALID_ARGS;
-			} else if (terminal.cooldown) {
-				return C.ERR_TIRED;
-			}
-		},
 	);
 }
 
