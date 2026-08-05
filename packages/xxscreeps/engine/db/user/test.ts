@@ -4,13 +4,15 @@ import * as Badge from './badge.js';
 import * as User from './index.js';
 
 describe('engine/db/user', () => {
-	test('Badge.generateRandom produces a schema-valid badge', () => {
+	test('Badge.generateRandom produces a schema-valid badge', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
 		// A colour channel below 0x100000 renders as fewer than six hex digits; without
 		// zero-padding that fails the `^#[a-f0-9]{6}$` schema (~1/16 per channel), so loop
 		// enough times to surface it. validate() throws on a malformed badge.
 		for (let index = 0; index < 256; ++index) {
 			const badge = Badge.generateRandom();
-			assert.strictEqual(Badge.validate(badge), badge);
+			assert.strictEqual(await Badge.validate(db, '100', badge), badge);
 		}
 	});
 
