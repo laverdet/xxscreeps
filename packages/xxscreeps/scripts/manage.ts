@@ -138,11 +138,13 @@ async function userRemove(who: string) {
 
 // `source` is inline JSON or a path to a `.json` file holding a badge object (the same shape the
 // `/api/user/badge` endpoint accepts). The standard 24 numbered badges are `{ color1, color2,
-// color3, flip, param, type }`; see engine/db/user/badge.ts for the schema.
+// color3, flip, param, type }`; see engine/db/user/badge.ts for the schema. A `type` naming paths
+// instead of a number is a granted symbol — a badge decoration the user has active — and is checked
+// against what they hold, the same way the endpoint checks one.
 async function userBadge(who: string, source: string) {
 	const id = await resolveUserId(who);
 	const json = source.endsWith('.json') ? await fs.readFile(source, 'utf8') : source;
-	const badge = Badge.validate(JSON.parse(json) as object);
+	const badge = await Badge.validate(db, id, JSON.parse(json) as object);
 	await Badge.save(db, id, JSON.stringify(badge));
 	await save();
 	out(`Set badge for ${who} (${id}).`);

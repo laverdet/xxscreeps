@@ -1,5 +1,8 @@
+import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Ajv } from 'ajv';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import jsonSchema from './badge.schema.json' with { type: 'json' };
 import * as User from './index.js';
 
@@ -22,33 +25,89 @@ export interface UserBadge {
 	type: number;
 }
 
+/**
+ * A symbol drawn from paths of its own instead of one of the numbered shapes. The invader wears one;
+ * so does a player who was granted one — see {@link hooks}.
+ */
+export interface BadgeSymbol {
+	path1: string;
+	path2: string;
+}
+
 interface SvgBadge {
 	color1: Color;
 	color2: Color;
 	color3: Color;
-	type: {
-		path1: string;
-		path2: string;
-	};
+	type: BadgeSymbol;
 	flip: boolean;
 }
 
 export type Badge = UserBadge | SvgBadge;
 
+export const hooks = makeHookRegistration<{
+	/**
+	 * The symbols `userId` may wear beyond the numbered shapes everybody has. A mod handing out
+	 * artwork of its own — room decorations offer badges among them — answers with what that user
+	 * holds at this moment; nothing else reaches {@link validate}.
+	 */
+	symbols: (db: Database, userId: string) => Promise<Iterable<BadgeSymbol>>;
+}>();
+const symbolHooks = hooks.makeMapped('symbols');
+
 const ajv = new Ajv();
 const validator = ajv.compile<UserBadge>(jsonSchema);
+
+/**
+ * The other half of {@link Badge}. A request spelling its symbol out is not taken at its word — see
+ * {@link validate} — so this only has to recognise the shape.
+ */
+const svgBadgeSchema: JSONSchemaType<SvgBadge> = {
+	type: 'object',
+	properties: {
+		color1: { type: 'string', pattern: '^#[a-f0-9]{6}$' },
+		color2: { type: 'string', pattern: '^#[a-f0-9]{6}$' },
+		color3: { type: 'string', pattern: '^#[a-f0-9]{6}$' },
+		flip: { type: 'boolean' },
+		type: {
+			type: 'object',
+			properties: {
+				path1: { type: 'string' },
+				path2: { type: 'string' },
+			},
+			required: [ 'path1', 'path2' ],
+		},
+	},
+	required: [ 'color1', 'color2', 'color3', 'flip', 'type' ],
+};
+const validateSvgBadge = ajv.compile(svgBadgeSchema);
 
 export function isUserBadge(badge: Badge): badge is UserBadge {
 	return typeof badge.type === 'number';
 }
 
-export function validate(badge: object): UserBadge {
+/**
+ * The badge `userId` asked for, in the shape it is stored in.
+ *
+ * One of the numbered shapes is taken as it arrives. Anything else has to name a symbol granted to
+ * that user, and the paths are then taken from the grant rather than from the request: the badge
+ * route writes them straight into an svg attribute, so a client may point at a symbol but never
+ * author one.
+ */
+export async function validate(db: Database, userId: string, badge: object): Promise<Badge> {
 	// @ts-expect-error
 	delete badge._watching;
-	if (!validator(badge)) {
+	if (validator(badge)) {
+		return badge;
+	} else if (!validateSvgBadge(badge)) {
 		throw new Error(`Invalid badge\n${validator.errors![0]!.message}`);
 	}
-	return badge;
+	const { path1, path2 } = badge.type;
+	const granted = Fn.concat(await Promise.all(symbolHooks(db, userId)));
+	const symbol = Fn.find(granted, symbol => symbol.path1 === path1 && symbol.path2 === path2);
+	if (symbol === undefined) {
+		throw new Error('Badge symbol was not granted');
+	}
+	return { ...badge, type: symbol };
 }
 
 export async function save(db: Database, userId: string, badge: string) {

@@ -1,4 +1,4 @@
-import type { UserBadge } from './badge.js';
+import type { Badge } from './badge.js';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -19,7 +19,7 @@ export const infoKey = (userId: string) => `user/${userId}`;
 
 interface BackendUserInfo {
 	username: string;
-	badge: UserBadge | null;
+	badge: Badge | null;
 }
 
 const annoyingUsernames = [
@@ -117,7 +117,7 @@ export async function loadBackendUserInfo(db: Database, userId: string): Promise
 	if (info.username != null) {
 		return {
 			username: info.username,
-			badge: info.badge == null ? null : JSON.parse(info.badge) as UserBadge,
+			badge: info.badge == null ? null : JSON.parse(info.badge) as Badge,
 		};
 	}
 }

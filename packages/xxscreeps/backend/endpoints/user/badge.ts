@@ -26,7 +26,7 @@ const BadgeEndpoint: Endpoint = {
 		if (userId === undefined) {
 			return { error: 'not logged in' };
 		}
-		const badge = Badge.validate(context.request.body.badge);
+		const badge = await Badge.validate(context.db, userId, context.request.body.badge);
 		await Badge.save(context.db, userId, JSON.stringify(badge));
 		return { ok: 1 };
 	}),
