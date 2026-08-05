@@ -1,6 +1,7 @@
 import * as Base64 from 'js-base64';
 import * as SourceMap from 'source-map-support';
 
+const runtimeFileName = 'runtime.js';
 const sourceContent = new Map<string, string>();
 // @ts-expect-error
 const runtimeSourceMap = globalThis.runtimeSourceMap as string;
@@ -11,7 +12,7 @@ SourceMap.install({
 
 	overrideRetrieveSourceMap: true,
 	retrieveSourceMap(fileName: string) {
-		if (fileName === 'runtime.js') {
+		if (fileName === runtimeFileName) {
 			return {
 				url: fileName,
 				map: runtimeSourceMap,
@@ -34,6 +35,12 @@ SourceMap.install({
 		return null;
 	},
 });
+
+// `source-map-support` decodes a map the first time it translates a frame from that file, so the
+// runtime bundle's map is otherwise decoded during whichever tick first reads `error.stack` — most
+// of a player's CPU limit, spent on our initialization. A player whose bucket has drained below the
+// decode time instead times out, which resets the sandbox and re-runs the decode on the next one.
+SourceMap.mapSourcePosition({ source: runtimeFileName, line: 1, column: 0 });
 
 export function loadSourceMap(filename: string, source: string) {
 	sourceContent.set(filename, source);
