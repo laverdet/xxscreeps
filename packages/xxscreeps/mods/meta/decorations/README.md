@@ -133,6 +133,89 @@ Beyond that the renderer reads plenty it survives without: `swampColor`, `swampS
 `strokeBrightness`, `strokeWidth`, `strokeLighting`. Those merely render wrong when they are missing,
 so they are the pack's business rather than an invariant — but a landscape wants all of them.
 
+## Storage
+
+```
+user/<userId>/decorations                        set:  itemIds with a stored grant
+user/<userId>/decorations/item/<itemId>          hash: { def, createdAt }
+user/<userId>/decorations/item/<itemId>/active   hash: { activatedAt, shard, prop/<name>… }
+user/<userId>/decorations/active                 set:  itemIds this user has placed
+decorations/<shard>                              zset: `userId/itemId`, scored by room id
+decorations/global                               set:  `userId/itemId` of the creep decorations
+```
+
+Where a room placement stands is the zset's answer, in both directions: a range at a room's score
+is what stands in that room, a member's score is where that member stands, and one read of the
+whole thing tells the world map which rooms it may skip — almost all of them. The hash repeats none
+of it; it carries `shard` only because that names which shard's zset to ask. Deactivation works the
+same way for the other kinds — a member is either in the global set or, a badge, in no shared index
+at all — so nothing has to remember where a placement went: revoking an item drops its ownership
+first, and by the time it is deactivated the indices themselves still answer.
+
+Each fact gets its own hash field. Property values are prefixed `prop/` so a pack may declare a
+property called `room` without colliding with the placement's own fields, and they are decoded back
+to their declared types on read — the definition is the authority in both directions.
+
+The per-user `active` set exists because `grantAll` makes the inventory as large as the catalog;
+without it, listing an inventory would ask after a placement for every definition on the server.
+
+An inventory item always reports a `createdAt`, even the implicit ownership `grantAll` hands out,
+which has no moment of acquisition to report and so reports the epoch. Clients sort the inventory by
+it without checking that it is there — the field is not optional on the official server, because
+there every item is a stored grant. `activatedAt` is genuinely absent until the item is placed.
+
+## Placement
+
+- The item is owned — including implicitly, under `grantAll`.
+- The target shard is this one and the room exists.
+- The player controls or reserves the room, unless `decorations.requireRoomOwnership` is off. That
+  question goes through the controller mod's `isRoomControlled` / `isRoomReserved`, not its keys.
+- Property values are checked against the definition: range bounds, `#rrggbb` colours, string
+  length, unknown properties rejected. An invalid value is an error, never a silent default. Omitted
+  properties fall back to the definition's seed, so a stored placement is always complete.
+- Collisions are checked per user against whichever index the placement lands in: `landscape` blocks
+  `floorLandscape` and `wallLandscape` in the same room, `object` and `metadata` only argue with
+  their own kind decorating the same `objectType`, `wallGraffiti` stacks freely. The check races —
+  two activations can both find the index clear — so after the write the index is read back and
+  same-user conflicts are settled in itemId order, which every racer computes the same way.
+- `creep` decorations name no room — they follow their owner and so appear in every one — and are
+  indexed under `decorations/global`, which is also where they compete with each other. The world map
+  does not draw them: there is no room to draw them in.
+- `badge` decorations name no room either, and land in no shared index at all: they decorate an
+  account rather than a place, so no room view and no map query has anything to ask after one. Only
+  their owner's inventory reports them, which is exactly where the client looks. Several may be worn
+  at once — see below.
+- Activating an already-placed item moves it. The client depends on this when repositioning.
+- A placement goes over the wire flat: the item's `_id`, its target and the property values in one
+  bag. `_id` has to be *inside* it, not beside it — the room view flattens the bag into the object it
+  renders and then matches socket updates against its `_id`. Hand it out only next to the bag and
+  every update appends the decoration again instead of recognising the copy it already has. `_id` is
+  the official client's spelling and stays wire shape only: the backend strips it from what comes in
+  and puts it back on what goes out, and nothing behind the backend ever sees it.
+
+Activate and deactivate publish on a channel per room, plus one shared channel for the creep
+decorations. An open room socket listens to both and re-reads only when one of them fires, so an idle
+room costs nothing per tick. A badge placement wakes nobody: no room view shows one, so there is no
+channel to fire.
+
+## Badges
+
+A `badge` decoration grants a symbol: the two svg paths a badge is drawn from, in the 100×100 box the
+client's badge editor authors them in. `path2` may be empty, which is how a one-colour symbol is
+spelled. It carries no colours of its own — the player picks all three in the editor, over whichever
+symbol they chose — so the inventory preview is drawn in the catalog's own greys.
+
+Activating one is what makes the editor offer it beside the 24 numbered shapes. The account badge
+page reads them straight out of the inventory, so nothing else has to be served for it. Saving one
+goes through `/api/user/badge`, which is core's business rather than this mod's: a badge naming paths
+instead of a number has to match a symbol the user has active, and the paths are then taken from the
+grant rather than from the request. The route writes them into an svg attribute, so a client may
+point at a symbol but never author one. Mods answer `Badge.hooks`' `symbols` with what a user holds;
+this one answers with their active badge decorations.
+
+Deactivating a badge takes the symbol out of the editor. A badge already saved from it stays as it
+was — the user's badge is a fact of its own, not a view onto the grant.
+
 ## Configuration
 
 ```yaml
@@ -149,3 +232,22 @@ decorations:
   # its own, or the path a proxy mounts it under — e.g. "/(http://localhost:21025)" for steamless
   assetBaseUrl: https://screeps.example.com
 ```
+
+## Handing out decorations
+
+With `grantAll` (the default) there is nothing to do — everybody owns everything, and the ids the
+inventory reports name a decoration rather than a stored grant, so there is nothing to revoke either.
+With it off:
+
+```sh
+xxscreeps manage decoration catalog
+xxscreeps manage decoration grant   <name|id> <decorationId>
+xxscreeps manage decoration list    <name|id>
+xxscreeps manage decoration revoke  <name|id> <itemId>
+xxscreeps manage decoration cleanup [name|id]
+```
+
+Grants are stored either way, so turning `grantAll` off later leaves each user with exactly what
+they were given. What it does not leave them is the placements they made while ownership was
+implicit: those have no grant behind them, so they go invisible and nothing can reach them any more.
+`decoration cleanup` deactivates them — for one user, or with no argument for all of them.

@@ -1,10 +1,69 @@
 import type { DecorationPack, PackSource } from './catalog.js';
+import type { Database } from 'xxscreeps/engine/db/index.js';
+import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { config } from 'xxscreeps/config/index.js';
+import * as Badge from 'xxscreeps/engine/db/user/badge.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { insertControlledRoom } from 'xxscreeps/mods/classic/controller/model.js';
+import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { catalog, loadCatalog } from './catalog.js';
+import { activateBadge, activateCreep, activateInRoom, deactivate, deactivateStranded, grant, listDecoratedRooms, listForRoom, listForUser, listGlobal, ownedDefinition, revoke } from './model.js';
+import { conflicts, isOnWorldMap, isPlacedInRoom, parsePlacement } from './placement.js';
+
+const alice = '100';
+const shard = 'shard0';
+const roomName = 'W10N10';
+const otherRoomName = 'W10N9';
+
+/** The `active` payload of a floor landscape activation request. */
+const floorPlacement = (active: Record<string, unknown> = {}) => ({ shard, room: roomName, ...active });
+
+/**
+ * Drives one activation the way the backend does: resolve ownership, parse the payload, dispatch
+ * on the definition's type. The backend slice owns this glue once it exists; until then the tests
+ * carry it, since the model deliberately offers no single entry point to shoehorn every kind into.
+ */
+async function activate(db: Database, shardRef: Shard, userId: string, itemId: string, active: Record<string, unknown>) {
+	const definition = await ownedDefinition(db, userId, itemId);
+	if (definition === undefined) {
+		return { error: 'not owned' };
+	}
+	const placement = parsePlacement(definition, active);
+	if ('error' in placement) {
+		return placement;
+	}
+	if (isPlacedInRoom(definition.type)) {
+		if (placement.shard !== shardRef.name) {
+			return { error: 'unknown shard' };
+		}
+		return activateInRoom(db, shardRef, userId, itemId, definition, placement.room!, placement.props);
+	} else if (definition.type === 'creep') {
+		return activateCreep(db, userId, itemId, definition, placement.props);
+	} else {
+		return activateBadge(db, userId, itemId, placement.props);
+	}
+}
+
+/** Toggle implicit ownership for one test, restoring whatever the config said. */
+function withGrantAll(grantAll: boolean) {
+	const decorations = config.decorations ??= {};
+	const previous = decorations.grantAll;
+	decorations.grantAll = grantAll;
+	return {
+		[Symbol.dispose]() {
+			if (previous === undefined) {
+				delete decorations.grantAll;
+			} else {
+				decorations.grantAll = previous;
+			}
+		},
+	};
+}
 
 /**
  * A pack the loader can read without touching the disk. Only packs referencing an asset that must
@@ -458,6 +517,353 @@ describe('mods/meta/decorations', () => {
 						`'${definition.id}' draws both foregrounds from one texture`);
 				}
 			}
+		});
+	});
+
+	describe('ownership', () => {
+		test('granted decorations show up, revoked ones do not', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			const { db } = testShard;
+			const [ definition ] = catalog.definitions.values();
+
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+			const itemId = await grant(db, alice, definition!.id);
+			const owned = await listForUser(db, alice);
+			assert.strictEqual(owned.length, 1);
+			assert.strictEqual(owned[0]?.id, itemId);
+			assert.strictEqual(owned[0].definition.id, definition!.id);
+
+			assert.strictEqual(await revoke(db, alice, itemId), true);
+			assert.strictEqual(await revoke(db, alice, itemId), false);
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+		});
+
+		// The client sorts the inventory by age and does not check first, so an item without one takes
+		// the page down. Implicit ownership has no moment to report, so it reports the epoch.
+		test('every owned item carries the moment it was granted', async () => {
+			await using testShard = await instantiateTestShard();
+			const { db } = testShard;
+			{
+				using grantAll = withGrantAll(true);
+				const owned = await listForUser(db, alice);
+				assert.ok(owned.length > 0);
+				assert.ok(owned.every(item => item.createdAt === 0), 'implicit ownership ties on the epoch');
+			}
+			using grantAll = withGrantAll(false);
+			const [ definition ] = catalog.definitions.values();
+			await grant(db, alice, definition!.id);
+			const owned = await listForUser(db, alice);
+			assert.strictEqual(owned.length, 1);
+			assert.ok(owned[0]!.createdAt > 0, 'a stored grant reports when it was made');
+		});
+
+		test('granting something the catalog does not have is an error', async () => {
+			await using testShard = await instantiateTestShard();
+			await assert.rejects(grant(testShard.db, alice, 'no-such-decoration'), /No such decoration/);
+		});
+
+		test('grantAll hands out the whole catalog, keyed by decoration id', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const owned = await listForUser(testShard.db, alice);
+			assert.strictEqual(owned.length, catalog.definitions.size);
+			for (const item of owned) {
+				assert.strictEqual(item.id, item.definition.id);
+			}
+		});
+
+		test('removing a user drops their decorations', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			const { db } = testShard;
+			const [ definition ] = catalog.definitions.values();
+
+			await grant(db, alice, definition!.id);
+			await User.remove(db, alice);
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+		});
+	});
+
+	describe('placement', () => {
+		const floor = catalog.definitions.get('xx-floor-plain')!;
+		const wall = catalog.definitions.get('xx-wall-plain')!;
+		const room = catalog.definitions.get('xx-room-neon')!;
+
+		test('property values are checked against the definition', () => {
+			assert.ok('error' in parsePlacement(floor, { shard, room: roomName, nope: 1 }));
+			assert.ok('error' in parsePlacement(floor, { shard, room: roomName, floorBackgroundColor: 'red' }));
+			assert.ok('error' in parsePlacement(floor, { shard, room: roomName, floorBackgroundBrightness: 99 }));
+			assert.ok('error' in parsePlacement(floor, { floorBackgroundColor: '#123456' }), 'a room is required');
+		});
+
+		// The client offers a free text field unless the pack labels the property its own way, so a
+		// value the renderer's animation table has no entry for has to lose here rather than there.
+		test('an animation outside the renderer\'s table is rejected', async () => {
+			const loaded = await loadCatalog([ source({
+				name: 'test',
+				themes: [ theme ],
+				decorations: [ { ...graffiti, props: { ...graffiti.props, animation: { type: 'string', default: '' } } } ],
+			}) ]);
+			const definition = loaded.definitions.get('test-graffiti')!;
+			assert.ok('error' in parsePlacement(definition, { shard, room: roomName, animation: 'wiggle' }));
+			assert.ok(!('error' in parsePlacement(definition, { shard, room: roomName, animation: 'neon' })));
+			assert.ok(!('error' in parsePlacement(definition, { shard, room: roomName, animation: '' })), 'none is a value');
+		});
+
+		test('numbers and booleans are accepted in their string spelling', () => {
+			const placement = parsePlacement(floor, { shard, room: roomName, floorBackgroundBrightness: '0.5', world: 'true' });
+			assert.ok(!('error' in placement));
+			assert.strictEqual(placement.props.floorBackgroundBrightness, 0.5);
+			assert.strictEqual(placement.props.world, true);
+		});
+
+		test('properties the client leaves out fall back to the definition seed', () => {
+			const placement = parsePlacement(floor, { shard, room: roomName });
+			assert.ok(!('error' in placement));
+			assert.strictEqual(placement.props.floorBackgroundColor, floor.props.floorBackgroundColor!.default);
+		});
+
+		// The official client sends readonly properties back like any other, so a value here cannot be
+		// rejected — but readonly promises the definition owns the value, so it cannot win either.
+		test('a readonly property keeps its seed no matter what the client sends', () => {
+			const placement = parsePlacement(floor, { shard, room: roomName, floorForegroundColor: '#ff0000' });
+			assert.ok(!('error' in placement));
+			assert.strictEqual(placement.props.floorForegroundColor, floor.props.floorForegroundColor!.default);
+		});
+
+		test('a creep decoration names no room, since it follows its owner', () => {
+			const creep = { ...floor, id: 'test-creep', type: 'creep' as const };
+			const placement = parsePlacement(creep, {});
+			assert.ok(!('error' in placement));
+			assert.strictEqual(placement.room, undefined);
+			assert.strictEqual(placement.shard, undefined);
+		});
+
+		test('a badge names no room either, since it is worn rather than placed', () => {
+			const placement = parsePlacement(catalog.definitions.get('xx-chevrons')!, {});
+			assert.ok(!('error' in placement));
+			assert.strictEqual(placement.room, undefined);
+		});
+
+		test('a landscape collides with both halves it paints', () => {
+			assert.ok(conflicts(room, floor));
+			assert.ok(conflicts(room, wall));
+			assert.ok(!conflicts(floor, wall));
+			assert.ok(conflicts(floor, floor));
+		});
+
+		test('renderer overrides only argue over the same kind of object', () => {
+			const controller = { ...floor, id: 'test-controller', type: 'metadata' as const, objectType: 'controller' };
+			const spawn = { ...controller, id: 'test-spawn', objectType: 'spawn' };
+			assert.ok(conflicts(controller, { ...controller, id: 'test-other' }));
+			assert.ok(!conflicts(controller, spawn));
+			assert.ok(!conflicts(controller, floor));
+		});
+	});
+
+	describe('activation', () => {
+		/** Placing needs a room the player holds, which the test shard does not hand out. */
+		async function ownRoom(testShard: Awaited<ReturnType<typeof instantiateTestShard>>, room = roomName) {
+			await insertControlledRoom(testShard.shard, alice, room);
+		}
+
+		test('an owned decoration can be placed and shows up in the room', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			assert.strictEqual(await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement()), undefined);
+			const placed = await listForRoom(db, shard, roomName);
+			assert.strictEqual(placed.length, 1);
+			assert.strictEqual(placed[0]?.id, 'xx-floor-plain');
+			assert.strictEqual(placed[0].userId, alice);
+			assert.strictEqual(placed[0].active.room, roomName);
+			// And the room now counts as decorated, which is what the world map filters by.
+			assert.ok((await listDecoratedRooms(db, shard)).has(roomName));
+			assert.ok(!(await listDecoratedRooms(db, shard)).has(otherRoomName));
+
+			const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-floor-plain');
+			assert.strictEqual(item?.active?.room, roomName);
+			assert.ok(item.activatedAt !== undefined);
+		});
+
+		test('placing in a room the player does not hold is refused', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const result = await activate(testShard.db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			assert.deepStrictEqual(result, { error: 'room not controlled' });
+		});
+
+		test('an unknown room is refused', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			await ownRoom(testShard);
+			const result = await activate(testShard.db, testShard.shard, alice, 'xx-floor-plain', floorPlacement({ room: 'W99N99' }));
+			assert.deepStrictEqual(result, { error: 'unknown room' });
+		});
+
+		test('a decoration the player does not own is refused', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			await ownRoom(testShard);
+			const result = await activate(testShard.db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			assert.deepStrictEqual(result, { error: 'not owned' });
+		});
+
+		test('a landscape refuses a room that already has a floor', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			const result = await activate(db, testShard.shard, alice, 'xx-room-neon', floorPlacement());
+			assert.deepStrictEqual(result, { error: 'already decorated' });
+		});
+
+		test('re-activating moves the decoration instead of duplicating it', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+			await ownRoom(testShard, otherRoomName);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement({ room: otherRoomName }));
+
+			assert.deepStrictEqual(await listForRoom(db, shard, roomName), []);
+			assert.strictEqual((await listForRoom(db, shard, otherRoomName)).length, 1);
+		});
+
+		test('deactivating takes it back off the map', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			await deactivate(db, alice, [ 'xx-floor-plain' ]);
+			assert.deepStrictEqual(await listForRoom(db, shard, roomName), []);
+			const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-floor-plain');
+			assert.strictEqual(item?.active, undefined);
+			// And the room stops counting as decorated: the zset entry went with the placement, so the
+			// set is exact rather than a filter over history.
+			assert.ok(!(await listDecoratedRooms(db, shard)).has(roomName));
+		});
+
+		test('a revoke that finds no grant leaves the placement alone', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			// Implicit ownership has no grant to take away, so this fails — without undoing the placement.
+			assert.strictEqual(await revoke(db, alice, 'xx-floor-plain'), false);
+			assert.strictEqual((await listForRoom(db, shard, roomName)).length, 1);
+		});
+
+		// A placement made under implicit ownership has no stored grant behind it. Turning `grantAll`
+		// off strands it — nothing lists it, so nothing can deactivate it — which is what the cleanup
+		// sweep is for.
+		test('turning grantAll off strands a placement until cleanup', async () => {
+			await using testShard = await instantiateTestShard();
+			const { db } = testShard;
+			await ownRoom(testShard);
+			{
+				using grantAll = withGrantAll(true);
+				await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+				// Nothing is stranded while ownership is implicit.
+				assert.deepStrictEqual(await deactivateStranded(db, alice), []);
+			}
+			using grantAll = withGrantAll(false);
+			assert.deepStrictEqual(await listForRoom(db, shard, roomName), [], 'the placement is invisible');
+			assert.deepStrictEqual(await deactivateStranded(db, alice), [ 'xx-floor-plain' ]);
+			assert.deepStrictEqual(await deactivateStranded(db, alice), []);
+			{
+				// Taken down rather than lying in wait: implicit ownership lists the item unplaced again.
+				using grantAllAgain = withGrantAll(true);
+				const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-floor-plain');
+				assert.strictEqual(item?.active, undefined);
+			}
+		});
+
+		test('cleanup leaves a placement with a stored grant alone', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			const itemId = await grant(db, alice, 'xx-floor-plain');
+			await activate(db, testShard.shard, alice, itemId, floorPlacement());
+			assert.deepStrictEqual(await deactivateStranded(db, alice), []);
+			assert.strictEqual((await listForRoom(db, shard, roomName)).length, 1);
+		});
+
+		test('removing a user takes their placements with them', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			await User.remove(db, alice);
+			assert.deepStrictEqual(await listForRoom(db, shard, roomName), []);
+		});
+
+		// The symbol only reaches `/api/user/badge` while the decoration granting it is active — that
+		// route stores a badge naming paths of its own, and takes the paths from the grant rather than
+		// from the request.
+		test('an active badge is a symbol its owner may wear', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			const symbol = catalog.definitions.get('xx-chevrons')!.badge!;
+			const worn = { color1: '#111111', color2: '#222222', color3: '#333333', flip: false, type: symbol };
+
+			await assert.rejects(Badge.validate(db, alice, { ...worn }), /not granted/);
+			assert.strictEqual(await activate(db, testShard.shard, alice, 'xx-chevrons', {}), undefined);
+			assert.deepStrictEqual(await Badge.validate(db, alice, { ...worn }), worn);
+
+			// And a symbol nobody granted stays out, however well-formed the request looks.
+			await assert.rejects(
+				Badge.validate(db, alice, { ...worn, type: { path1: 'M 0 0 H 1 Z', path2: '' } }), /not granted/);
+
+			await deactivate(db, alice, [ 'xx-chevrons' ]);
+			await assert.rejects(Badge.validate(db, alice, { ...worn }), /not granted/);
+		});
+
+		// It decorates an account rather than a room, so no room view has anything to draw for it —
+		// unlike the creep decorations, which every room reports alongside what stands in it.
+		test('a badge is reported to nobody but its owner', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			await activate(db, testShard.shard, alice, 'xx-chevrons', {});
+			assert.deepStrictEqual(await listForRoom(db, shard, roomName), []);
+			assert.deepStrictEqual(await listGlobal(db), []);
+			const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-chevrons');
+			assert.ok(item?.active !== undefined);
+		});
+
+		test('the world-map flag survives the round trip through storage', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const { db } = testShard;
+			await ownRoom(testShard);
+
+			// The bundled pack seeds `world` on, so a defaulted placement is map-visible.
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement());
+			const [ shown ] = await listForRoom(db, shard, roomName);
+			assert.strictEqual(isOnWorldMap(shown!.active), true);
+
+			await activate(db, testShard.shard, alice, 'xx-floor-plain', floorPlacement({ world: false }));
+			const [ hidden ] = await listForRoom(db, shard, roomName);
+			assert.strictEqual(isOnWorldMap(hidden!.active), false);
 		});
 	});
 });
