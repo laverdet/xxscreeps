@@ -1,16 +1,7 @@
 import type { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 
-hooks.register('route', {
-	path: '/api/game/room-decorations',
-
-	execute() {
-		return {
-			ok: 1,
-			decorations: [],
-		};
-	},
-});
+// The `/api/game/room-decorations` endpoint lives in the `decorations` mod.
 
 interface RoomStatusRequest {
 	room: string;

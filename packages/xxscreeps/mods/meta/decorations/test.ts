@@ -1,6 +1,4 @@
 import type { DecorationPack, PackSource } from './catalog.js';
-import type { Database } from 'xxscreeps/engine/db/index.js';
-import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -11,9 +9,10 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { insertControlledRoom } from 'xxscreeps/mods/classic/controller/model.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import { activate, placementToWire } from './backend.js';
 import { catalog, loadCatalog } from './catalog.js';
-import { activateBadge, activateCreep, activateInRoom, deactivate, deactivateStranded, grant, listDecoratedRooms, listForRoom, listForUser, listGlobal, ownedDefinition, revoke } from './model.js';
-import { conflicts, isOnWorldMap, isPlacedInRoom, parsePlacement } from './placement.js';
+import { deactivate, deactivateStranded, grant, listDecoratedRooms, listForRoom, listForUser, listGlobal, revoke } from './model.js';
+import { conflicts, isOnWorldMap, parsePlacement } from './placement.js';
 
 const alice = '100';
 const shard = 'shard0';
@@ -22,32 +21,6 @@ const otherRoomName = 'W10N9';
 
 /** The `active` payload of a floor landscape activation request. */
 const floorPlacement = (active: Record<string, unknown> = {}) => ({ shard, room: roomName, ...active });
-
-/**
- * Drives one activation the way the backend does: resolve ownership, parse the payload, dispatch
- * on the definition's type. The backend slice owns this glue once it exists; until then the tests
- * carry it, since the model deliberately offers no single entry point to shoehorn every kind into.
- */
-async function activate(db: Database, shardRef: Shard, userId: string, itemId: string, active: Record<string, unknown>) {
-	const definition = await ownedDefinition(db, userId, itemId);
-	if (definition === undefined) {
-		return { error: 'not owned' };
-	}
-	const placement = parsePlacement(definition, active);
-	if ('error' in placement) {
-		return placement;
-	}
-	if (isPlacedInRoom(definition.type)) {
-		if (placement.shard !== shardRef.name) {
-			return { error: 'unknown shard' };
-		}
-		return activateInRoom(db, shardRef, userId, itemId, definition, placement.room!, placement.props);
-	} else if (definition.type === 'creep') {
-		return activateCreep(db, userId, itemId, definition, placement.props);
-	} else {
-		return activateBadge(db, userId, itemId, placement.props);
-	}
-}
 
 /** Toggle implicit ownership for one test, restoring whatever the config said. */
 function withGrantAll(grantAll: boolean) {
@@ -630,6 +603,26 @@ describe('mods/meta/decorations', () => {
 			const placement = parsePlacement(floor, { shard, room: roomName, floorForegroundColor: '#ff0000' });
 			assert.ok(!('error' in placement));
 			assert.strictEqual(placement.props.floorForegroundColor, floor.props.floorForegroundColor!.default);
+		});
+
+		test('what the client sends round-trips back in the same shape', () => {
+			const sent = { shard, room: roomName, world: false, floorBackgroundColor: '#abcdef' };
+			const placement = parsePlacement(floor, sent);
+			assert.ok(!('error' in placement));
+			// Flat in, flat out: the id and the target sit next to the property values, never wrapping
+			// them. The room view flattens this bag and matches socket updates against its `_id`, so
+			// the id has to be inside it.
+			const wire = placementToWire('item-1', placement);
+			assert.strictEqual(wire._id, 'item-1');
+			assert.strictEqual(wire.shard, shard);
+			assert.strictEqual(wire.room, roomName);
+			assert.strictEqual(wire.world, false);
+			assert.strictEqual(wire.floorBackgroundColor, '#abcdef');
+			assert.ok(!('props' in wire));
+			// And it parses again unchanged once the activate route strips the wire-only `_id`, which
+			// is the trip the client's edit-and-resend makes.
+			const { _id, ...resent } = wire;
+			assert.deepStrictEqual(parsePlacement(floor, resent), placement);
 		});
 
 		test('a creep decoration names no room, since it follows its owner', () => {
