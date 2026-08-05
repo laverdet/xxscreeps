@@ -37,6 +37,14 @@ export function removeReservedRoom(shard: Shard, userId: string, roomName: strin
 	return shard.scratch.sRem(reservedRoomsKey(userId), [ roomName ]);
 }
 
+export function isRoomControlled(shard: Shard, userId: string, roomName: string): Promise<boolean> {
+	return shard.scratch.sIsMember(controlledRoomsKey(userId), roomName);
+}
+
+export function isRoomReserved(shard: Shard, userId: string, roomName: string): Promise<boolean> {
+	return shard.scratch.sIsMember(reservedRoomsKey(userId), roomName);
+}
+
 export async function incrementGlobalControlLevel(shard: Shard, userId: string, upgradePower: number) {
 	const gcl = await shard.db.data.hincrBy(User.infoKey(userId), 'gcl', upgradePower);
 	await globalControlChannel(shard, userId).publish({ type: 'gcl', gcl });
