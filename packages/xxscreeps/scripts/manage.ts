@@ -21,7 +21,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
-import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { mappedPrimitiveComparator, primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 import { Game, GameState, runAsUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
@@ -38,6 +38,9 @@ import 'xxscreeps/mods/meta/messages/model.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { catalog } from 'xxscreeps/mods/meta/decorations/catalog.js';
+// Also a side-effect import: registers the `User.remove` hook for owned decorations.
+import * as Decorations from 'xxscreeps/mods/meta/decorations/model.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import * as C from 'xxscreeps:mods/constants';
 
@@ -174,6 +177,79 @@ async function userBranch(who: string, branch: string) {
 	await save();
 	await Code.userCodeChannel(db, id).publish({ type: 'switch', branch });
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
+}
+
+// Decorations a user owns. `grantAll` (the default) hands out the whole catalog, in which case
+// `list` reports that implicit ownership; grants are still written and surface once it's off.
+function decorationCatalog() {
+	const definitions = [ ...catalog.definitions.values() ].sort(mappedPrimitiveComparator(definition => definition.id));
+	if (definitions.length === 0) {
+		out('(no decorations; no pack is loaded)');
+		return;
+	}
+	const idWidth = Math.max(...Fn.map(definitions, definition => definition.id.length));
+	out(`${'id'.padEnd(idWidth)}  ${'type'.padEnd(15)}  ${'theme'.padEnd(12)}  name`);
+	for (const definition of definitions) {
+		out(`${definition.id.padEnd(idWidth)}  ${definition.type.padEnd(15)}  ${definition.theme.padEnd(12)}  ${definition.name}`);
+	}
+}
+
+async function decorationList(who: string) {
+	const id = await resolveUserId(who);
+	const items = await Decorations.listForUser(db, id);
+	if (items.length === 0) {
+		out('(none)');
+		return;
+	}
+	if (Decorations.grantAll()) {
+		out('Everyone owns the whole catalog while \'decorations.grantAll\' is on; these items have no stored grant.');
+	}
+	const idWidth = Math.max(...Fn.map(items, item => item.id.length));
+	out(`${'item'.padEnd(idWidth)}  ${'decoration'.padEnd(20)}  name`);
+	for (const item of items) {
+		out(`${item.id.padEnd(idWidth)}  ${item.definition.id.padEnd(20)}  ${item.definition.name}`);
+	}
+}
+
+async function decorationGrant(who: string, definitionId: string) {
+	const id = await resolveUserId(who);
+	const itemId = await Decorations.grant(db, id, definitionId);
+	await save();
+	out(`Granted '${definitionId}' to ${who} (${id}) as ${itemId}.`);
+}
+
+async function decorationRevoke(who: string, itemId: string) {
+	const id = await resolveUserId(who);
+	if (!await Decorations.revoke(db, id, itemId)) {
+		// `list` reports implicit ownership under `grantAll`, whose ids name a decoration rather
+		// than a stored grant. Revoking one is not a thing you can do; turning `grantAll` off is.
+		throw new Error(Decorations.grantAll()
+			? `User ${who} has no stored grant ${itemId}; ownership is implicit while 'decorations.grantAll' is on`
+			: `User ${who} does not own item ${itemId}`);
+	}
+	await save();
+	out(`Revoked ${itemId} from ${who} (${id}).`);
+}
+
+// Placements made while `decorations.grantAll` was on have no stored grant; turning the flag off
+// strands them — invisible to everyone, held in the store, unreachable from the client. This takes
+// them off the map. With no user given, every user is swept.
+async function decorationCleanup(who: string | undefined) {
+	if (Decorations.grantAll()) {
+		out('Nothing is stranded while \'decorations.grantAll\' is on; ownership is implicit.');
+		return;
+	}
+	const ids = who === undefined ? await db.data.sMembers('users') : [ await resolveUserId(who) ];
+	const counts = await Fn.mapAwait(ids, async id => {
+		const removed = await Decorations.deactivateStranded(db, id);
+		if (removed.length > 0) {
+			out(`Deactivated for ${id}: ${removed.join(', ')}`);
+		}
+		return removed.length;
+	});
+	await save();
+	const total = Fn.accumulate(counts);
+	out(total === 0 ? 'No stranded placements.' : `Deactivated ${total} stranded placements.`);
 }
 
 // Modules are keyed by filename (`main.js`, ...) — the same shape the backend saves for players.
@@ -351,6 +427,11 @@ function usage(): never {
   user badge    <name|id> <json|file>
   user password <name|id> <password>
   user branch   <name|id> <branch>
+  decoration catalog
+  decoration list    <name|id>
+  decoration grant   <name|id> <decorationId>
+  decoration revoke  <name|id> <itemId>
+  decoration cleanup [name|id]
   bot  add    <name> <codeDir> [branch] [--spawn <room> [x,y]]
   bot  update <name|id> <codeDir> [branch]
   bot  remove <name|id>
@@ -376,6 +457,11 @@ try {
 		case 'user badge': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBadge(rest[0], rest[1]); break;
 		case 'user password': if (rest[0] === undefined || rest[1] === undefined) usage(); await userPassword(rest[0], rest[1]); break;
 		case 'user branch': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBranch(rest[0], rest[1]); break;
+		case 'decoration catalog': decorationCatalog(); break;
+		case 'decoration list': if (rest[0] === undefined) usage(); await decorationList(rest[0]); break;
+		case 'decoration grant': if (rest[0] === undefined || rest[1] === undefined) usage(); await decorationGrant(rest[0], rest[1]); break;
+		case 'decoration revoke': if (rest[0] === undefined || rest[1] === undefined) usage(); await decorationRevoke(rest[0], rest[1]); break;
+		case 'decoration cleanup': await decorationCleanup(rest[0]); break;
 		case 'bot add': {
 			const spawnIndex = rest.indexOf('--spawn');
 			const args = spawnIndex === -1 ? rest : rest.slice(0, spawnIndex);

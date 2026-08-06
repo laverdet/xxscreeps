@@ -3,8 +3,31 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { config } from 'xxscreeps/config/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { catalog, loadCatalog } from './catalog.js';
+import { grant, listForUser, revoke } from './model.js';
+import { conflicts } from './placement.js';
+
+const alice = '100';
+
+/** Toggle implicit ownership for one test, restoring whatever the config said. */
+function withGrantAll(grantAll: boolean) {
+	const decorations = config.decorations ??= {};
+	const previous = decorations.grantAll;
+	decorations.grantAll = grantAll;
+	return {
+		[Symbol.dispose]() {
+			if (previous === undefined) {
+				delete decorations.grantAll;
+			} else {
+				decorations.grantAll = previous;
+			}
+		},
+	};
+}
 
 /**
  * The bundled pack's directory. Fixtures name their artwork out of it: every asset a pack
@@ -454,6 +477,92 @@ describe('mods/meta/decorations', () => {
 						`'${definition.id}' draws both foregrounds from one texture`);
 				}
 			}
+		});
+	});
+
+	describe('ownership', () => {
+		test('granted decorations show up, revoked ones do not', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			const { db } = testShard;
+			const [ definition ] = catalog.definitions.values();
+
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+			const itemId = await grant(db, alice, definition!.id);
+			const owned = await listForUser(db, alice);
+			assert.strictEqual(owned.length, 1);
+			assert.strictEqual(owned[0]?.id, itemId);
+			assert.strictEqual(owned[0].definition.id, definition!.id);
+
+			assert.strictEqual(await revoke(db, alice, itemId), true);
+			assert.strictEqual(await revoke(db, alice, itemId), false);
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+		});
+
+		// The client sorts the inventory by age and does not check first, so an item without one takes
+		// the page down. Implicit ownership has no moment to report, so it reports the epoch.
+		test('every owned item carries the moment it was granted', async () => {
+			await using testShard = await instantiateTestShard();
+			const { db } = testShard;
+			{
+				using grantAll = withGrantAll(true);
+				const owned = await listForUser(db, alice);
+				assert.ok(owned.length > 0);
+				assert.ok(owned.every(item => item.createdAt === 0), 'implicit ownership ties on the epoch');
+			}
+			using grantAll = withGrantAll(false);
+			const [ definition ] = catalog.definitions.values();
+			await grant(db, alice, definition!.id);
+			const owned = await listForUser(db, alice);
+			assert.strictEqual(owned.length, 1);
+			assert.ok(owned[0]!.createdAt > 0, 'a stored grant reports when it was made');
+		});
+
+		test('granting something the catalog does not have is an error', async () => {
+			await using testShard = await instantiateTestShard();
+			await assert.rejects(grant(testShard.db, alice, 'no-such-decoration'), /No such decoration/);
+		});
+
+		test('grantAll hands out the whole catalog, keyed by decoration id', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(true);
+			const owned = await listForUser(testShard.db, alice);
+			assert.strictEqual(owned.length, catalog.definitions.size);
+			for (const item of owned) {
+				assert.strictEqual(item.id, item.definition.id);
+			}
+		});
+
+		test('removing a user drops their decorations', async () => {
+			await using testShard = await instantiateTestShard();
+			using grantAll = withGrantAll(false);
+			const { db } = testShard;
+			const [ definition ] = catalog.definitions.values();
+
+			await grant(db, alice, definition!.id);
+			await User.remove(db, alice);
+			assert.deepStrictEqual(await listForUser(db, alice), []);
+		});
+	});
+
+	describe('placement', () => {
+		const floor = catalog.definitions.get('xx-floor-plain')!;
+		const wall = catalog.definitions.get('xx-wall-plain')!;
+		const room = catalog.definitions.get('xx-room-neon')!;
+
+		test('a landscape collides with both halves it paints', () => {
+			assert.ok(conflicts(room, floor));
+			assert.ok(conflicts(room, wall));
+			assert.ok(!conflicts(floor, wall));
+			assert.ok(conflicts(floor, floor));
+		});
+
+		test('renderer overrides only argue over the same kind of object', () => {
+			const controller = { ...floor, id: 'test-controller', type: 'metadata' as const, objectType: 'controller' };
+			const spawn = { ...controller, id: 'test-spawn', objectType: 'spawn' };
+			assert.ok(conflicts(controller, { ...controller, id: 'test-other' }));
+			assert.ok(!conflicts(controller, spawn));
+			assert.ok(!conflicts(controller, floor));
 		});
 	});
 });
