@@ -86,9 +86,9 @@ export interface DecorationPreview {
 /**
  * A decoration as the catalog holds it. The asset-bearing fields — `graphics[].url`, `preview`,
  * `foregroundUrl`, `floorForegroundUrl`, `resources` — are authored in the pack as asset
- * references: a relative path fragment naming a bundled asset, or an external url taken as-is.
- * Loading rewrites them to the public urls they are served from. The field names are the client's
- * wire shape, which is why they say `url` in both lifetimes.
+ * references: a relative path fragment naming a file the pack ships. Loading rewrites them to the
+ * public urls they are served from. The field names are the client's wire shape, which is why they
+ * say `url` in both lifetimes.
  */
 export interface DecorationDefinition {
 	id: string;
@@ -322,9 +322,6 @@ const generatedVersion = (body: string) => createHash('sha1').update(body).diges
 /** The catalog-owned washes are static, so their public urls are minted once. */
 const washUrls = new Map(washes.map(({ key, body }) => [ key, publicAssetUrl(key, generatedVersion(body)) ]));
 
-/** Urls a pack may reference without shipping the file: other origins, and data urls. */
-const isExternalUrl = (value: string) => /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(value);
-
 async function loadPack({ body, directory }: PackSource) {
 	const raw: unknown = jsYaml.load(body);
 	if (!validatePack(raw)) {
@@ -333,15 +330,14 @@ async function loadPack({ body, directory }: PackSource) {
 	const pack = raw;
 	const assets = new Map<string, DecorationAsset>();
 
-	// Relative references name a file shipped beside the `pack.yaml`. They are checked here and
-	// rewritten to the url the asset route serves them from.
+	// Every asset a decoration names is a file shipped beside the `pack.yaml`, resolved relative to
+	// it. They are checked here and rewritten to the url the asset route serves them from. A
+	// reference to anywhere else is refused: hosting artwork on a bucket or a CDN is a build step
+	// which uploads the files and rewrites the pack it publishes, not a thing the loader does.
 	const resolveAsset = async (value: string) => {
-		if (isExternalUrl(value)) {
-			return value;
-		}
 		const file = new URL(value, directory);
 		if (!file.href.startsWith(directory.href)) {
-			throw new Error(`Asset '${value}' of decoration pack '${pack.name}' escapes the pack directory`);
+			throw new Error(`Asset '${value}' of decoration pack '${pack.name}' is not a file the pack ships`);
 		}
 		if (assetContentType(file.pathname) === undefined) {
 			throw new Error(`Asset '${value}' of decoration pack '${pack.name}' has an unsupported file type`);

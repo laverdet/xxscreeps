@@ -39,11 +39,21 @@ function withGrantAll(grantAll: boolean) {
 }
 
 /**
- * A pack the loader can read without touching the disk — yaml is a superset of JSON, so a
- * stringified literal is a valid `pack.yaml`. Only packs referencing an asset that must actually
- * exist need a directory holding one — see {@link withAssetFile}.
+ * The bundled pack's directory. Fixtures name their artwork out of it: every asset a pack
+ * references is a file it ships, so a fixture needs a directory which really holds one, and this
+ * one holds art of every kind the loader accepts.
  */
-const source = (pack: DecorationPack, directory = new URL('in-memory/', import.meta.url)): PackSource =>
+const packDirectory = new URL('.', import.meta.resolve('xxscreeps/mods/meta/decorations/pack/pack.yaml'));
+
+/** A file the bundled pack ships, for fixtures which only need the reference to resolve. */
+const artUrl = 'art/tag.svg';
+
+/**
+ * A pack the loader can read without writing a `pack.yaml` — yaml is a superset of JSON, so a
+ * stringified literal is a valid one. Packs referencing an asset of their own need a directory
+ * shipping it — see {@link withAssetFile}.
+ */
+const source = (pack: DecorationPack, directory = packDirectory): PackSource =>
 	({ directory, body: JSON.stringify(pack) });
 
 /** The path half of a resolved asset url; the `?v=` cache-bust varies with content and mtime. */
@@ -86,7 +96,7 @@ const graffiti = {
 	type: 'wallGraffiti' as const,
 	name: 'Test Graffiti',
 	theme: theme.id,
-	graphics: [ { url: 'https://example.com/a.png' } ],
+	graphics: [ { url: artUrl } ],
 	props: {
 		x: { type: 'range' as const, default: 10 },
 		y: { type: 'range' as const, default: 10 },
@@ -125,7 +135,7 @@ describe('mods/meta/decorations', () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),
-				decorations: byId({ ...landscape, graphics: [ { url: 'https://example.com/a.png', color: 'nope' } ] }),
+				decorations: byId({ ...landscape, graphics: [ { url: artUrl, color: 'nope' } ] }),
 			}) ]), /unknown property 'nope'/);
 		});
 
@@ -135,7 +145,7 @@ describe('mods/meta/decorations', () => {
 				themes: byId(theme),
 				decorations: byId({
 					...graffiti,
-					graphics: [ { url: 'https://example.com/a.png', color: 'tint' } ],
+					graphics: [ { url: artUrl, color: 'tint' } ],
 					props: { ...graffiti.props, tint: { type: 'color' }, brightness: { type: 'range', default: 1 } },
 				}),
 			}) ]), /seeds no default for 'tint'/);
@@ -147,7 +157,7 @@ describe('mods/meta/decorations', () => {
 				themes: byId(theme),
 				decorations: byId({
 					...graffiti,
-					graphics: [ { url: 'https://example.com/a.png', color: 'tint' } ],
+					graphics: [ { url: artUrl, color: 'tint' } ],
 					props: { ...graffiti.props, tint: { type: 'color', default: '#ffffff' } },
 				}),
 			}) ]), /declares no 'brightness' property/);
@@ -177,7 +187,7 @@ describe('mods/meta/decorations', () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),
-				decorations: byId({ ...landscape, type: 'object', graphics: [ { url: 'https://example.com/a.png' } ] }),
+				decorations: byId({ ...landscape, type: 'object', graphics: [ { url: artUrl } ] }),
 			}) ]), /declares no 'objectType'/);
 		});
 
@@ -266,16 +276,6 @@ describe('mods/meta/decorations', () => {
 			assert.ok(loaded.assets.has('test/art/floor.svg'));
 		});
 
-		test('external urls are left alone', async () => {
-			const loaded = await loadCatalog([ source({
-				name: 'test',
-				themes: byId(theme),
-				decorations: byId(withForeground('https://example.com/floor.png')),
-			}) ]);
-			assert.strictEqual(loaded.definitions.get('test-floor')?.floorForegroundUrl, 'https://example.com/floor.png');
-			assert.ok(![ ...loaded.assets.values() ].some(asset => asset.kind === 'file'));
-		});
-
 		test('a missing asset is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
@@ -284,13 +284,21 @@ describe('mods/meta/decorations', () => {
 			}) ]), /does not exist/);
 		});
 
-		test('an asset outside the pack directory is fatal', async () => {
-			await assert.rejects(loadCatalog([ source({
-				name: 'test',
-				themes: byId(theme),
-				decorations: byId(withForeground('../floor.svg')),
-			}) ]), /escapes the pack directory/);
-		});
+		// Artwork hosted elsewhere is a build step which uploads the files and publishes a pack naming
+		// them, so nothing the loader accepts may point off the pack directory.
+		for (const [ what, url ] of [
+			[ 'a parent directory', '../floor.svg' ],
+			[ 'another origin', 'https://example.com/floor.png' ],
+			[ 'a data url', 'data:image/svg+xml,<svg/>' ],
+		] as const) {
+			test(`an asset in ${what} is fatal`, async () => {
+				await assert.rejects(loadCatalog([ source({
+					name: 'test',
+					themes: byId(theme),
+					decorations: byId(withForeground(url)),
+				}) ]), /is not a file the pack ships/);
+			});
+		}
 
 		test('an asset the client cannot render is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
@@ -437,7 +445,7 @@ describe('mods/meta/decorations', () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),
-				decorations: byId({ ...landscape, floorForegroundUrl: 'https://example.com/floor.png' }),
+				decorations: byId({ ...landscape, floorForegroundUrl: artUrl }),
 			}) ]), /declares no 'floorForegroundColor' property/);
 		});
 
