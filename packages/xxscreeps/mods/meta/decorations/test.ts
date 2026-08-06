@@ -11,7 +11,7 @@ import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { activate, placementToWire } from './backend.js';
 import { catalog, loadCatalog } from './catalog.js';
-import { deactivate, deactivateStranded, grant, listDecoratedRooms, listForRoom, listForUser, listGlobal, revoke } from './model.js';
+import { deactivate, deactivateStranded, grant, listForRoom, listForUser, listGlobal, revoke } from './model.js';
 import { conflicts, isOnWorldMap, parsePlacement } from './placement.js';
 
 const alice = '100';
@@ -39,11 +39,19 @@ function withGrantAll(grantAll: boolean) {
 }
 
 /**
- * A pack the loader can read without touching the disk. Only packs referencing an asset that must
- * actually exist need a directory holding one — see {@link withAssetFile}.
+ * A pack the loader can read without touching the disk — yaml is a superset of JSON, so a
+ * stringified literal is a valid `pack.yaml`. Only packs referencing an asset that must actually
+ * exist need a directory holding one — see {@link withAssetFile}.
  */
 const source = (pack: DecorationPack, directory = new URL('in-memory/', import.meta.url)): PackSource =>
 	({ directory, body: JSON.stringify(pack) });
+
+/** The path half of a resolved asset url; the `?v=` cache-bust varies with content and mtime. */
+const assetPath = (url: string | undefined) => url?.split('?')[0];
+
+/** Fixtures declare their id inline; a pack keys its entries by it. */
+const byId = <Type extends { id: string }>(...items: readonly Type[]): Record<string, Omit<Type, 'id'>> =>
+	Object.fromEntries(items.map(({ id, ...rest }) => [ id, rest ]));
 
 /** A directory holding one file, for the single case where the loader stats a real asset. */
 async function withAssetFile(name: string, content: string) {
@@ -110,38 +118,38 @@ describe('mods/meta/decorations', () => {
 
 		test('an unknown theme is fatal', async () => {
 			await assert.rejects(
-				loadCatalog([ source({ name: 'test', themes: [], decorations: [ landscape ] }) ]), /unknown theme/);
+				loadCatalog([ source({ name: 'test', themes: {}, decorations: byId(landscape) }) ]), /unknown theme/);
 		});
 
 		test('a graphic referencing an unknown property is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, graphics: [ { url: 'https://example.com/a.png', color: 'nope' } ] } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, graphics: [ { url: 'https://example.com/a.png', color: 'nope' } ] }),
 			}) ]), /unknown property 'nope'/);
 		});
 
 		test('a graphic referencing a property the pack does not seed is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ {
+				themes: byId(theme),
+				decorations: byId({
 					...graffiti,
 					graphics: [ { url: 'https://example.com/a.png', color: 'tint' } ],
 					props: { ...graffiti.props, tint: { type: 'color' }, brightness: { type: 'range', default: 1 } },
-				} ],
+				}),
 			}) ]), /seeds no default for 'tint'/);
 		});
 
 		test('a graphic naming a colour needs the brightness dimming it', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ {
+				themes: byId(theme),
+				decorations: byId({
 					...graffiti,
 					graphics: [ { url: 'https://example.com/a.png', color: 'tint' } ],
 					props: { ...graffiti.props, tint: { type: 'color', default: '#ffffff' } },
-				} ],
+				}),
 			}) ]), /declares no 'brightness' property/);
 		});
 
@@ -149,51 +157,51 @@ describe('mods/meta/decorations', () => {
 			const { width, ...props } = graffiti.props;
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...graffiti, props } ],
+				themes: byId(theme),
+				decorations: byId({ ...graffiti, props }),
 			}) ]), /declares no 'width' property/);
 		});
 
 		test('an animation the renderer has no entry for is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ {
+				themes: byId(theme),
+				decorations: byId({
 					...graffiti,
 					props: { ...graffiti.props, animation: { type: 'string', label: 'Animation', default: 'wiggle' } },
-				} ],
+				}),
 			}) ]), /seeds 'animation' with 'wiggle'/);
 		});
 
 		test('an object overlay without an object type is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, type: 'object', graphics: [ { url: 'https://example.com/a.png' } ] } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, type: 'object', graphics: [ { url: 'https://example.com/a.png' } ] }),
 			}) ]), /declares no 'objectType'/);
 		});
 
 		test('a type drawn from its graphics may not omit them', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, type: 'wallGraffiti' } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, type: 'wallGraffiti' }),
 			}) ]), /declares no 'graphics'/);
 		});
 
 		test('a property the renderer dereferences may not be missing', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, props: { floorBackgroundColor: { type: 'color', default: '#123456' } } } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, props: { floorBackgroundColor: { type: 'color', default: '#123456' } } }),
 			}) ]), /declares no 'roadsColor' property/);
 		});
 
 		test('a property the renderer dereferences may not go unseeded', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, props: { ...landscape.props, roadsColor: { type: 'color' } } } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, props: { ...landscape.props, roadsColor: { type: 'color' } } }),
 			}) ]), /seeds no default for 'roadsColor'/);
 		});
 
@@ -201,88 +209,68 @@ describe('mods/meta/decorations', () => {
 			await using directory = await withAssetFile('art/controller.svg', '<svg xmlns="http://www.w3.org/2000/svg" />');
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ {
+				themes: byId(theme),
+				decorations: byId({
 					...landscape,
 					type: 'metadata',
 					objectType: 'controller',
 					resources: { controller: 'art/controller.svg' },
 					metadata: { actions: [] },
-				} ],
+				}),
 			}, directory.url) ]);
 			assert.strictEqual(
-				loaded.definitions.get('test-floor')?.resources?.controller, '/assets/decorations/test/art/controller.svg');
+				assetPath(loaded.definitions.get('test-floor')?.resources?.controller), '/assets/decorations/test/art/controller.svg');
 		});
 
 		test('a badge granting no symbol is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, type: 'badge' } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, type: 'badge' }),
 			}) ]), /declares no 'badge'/);
 		});
 
 		test('a renderer override without the metadata to install is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, type: 'metadata', objectType: 'controller', resources: {} } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, type: 'metadata', objectType: 'controller', resources: {} }),
 			}) ]), /declares no 'metadata'/);
 		});
 
 		test('a malformed pack is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, type: 'somethingElse' as never } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, type: 'somethingElse' as never }),
 			}) ]), /Invalid decoration pack/);
 		});
 
 		test('two packs may not share an id', async () => {
 			await assert.rejects(loadCatalog([
-				source({ name: 'first', themes: [ theme ], decorations: [ landscape ] }),
-				source({ name: 'second', themes: [], decorations: [ landscape ] }),
+				source({ name: 'first', themes: byId(theme), decorations: byId(landscape) }),
+				source({ name: 'second', themes: {}, decorations: byId(landscape) }),
 			]), /Duplicate decoration/);
 		});
 
 		test('assets are checked and rewritten to their public url', async () => {
 			await using directory = await withAssetFile('art/floor.svg', '<svg xmlns="http://www.w3.org/2000/svg" />');
 			const loaded = await loadCatalog([ source(
-				{ name: 'test', themes: [ theme ], decorations: [ withForeground('art/floor.svg') ] },
+				{ name: 'test', themes: byId(theme), decorations: byId(withForeground('art/floor.svg')) },
 				directory.url,
 			) ]);
-			assert.strictEqual(loaded.definitions.get('test-floor')?.floorForegroundUrl, '/assets/decorations/test/art/floor.svg');
+			const url = loaded.definitions.get('test-floor')?.floorForegroundUrl;
+			assert.strictEqual(assetPath(url), '/assets/decorations/test/art/floor.svg');
+			// The route serves these as immutable, so the url must carry a cache-bust.
+			assert.match(url!, /\?v=/);
 			assert.ok(loaded.assets.has('test/art/floor.svg'));
-		});
-
-		// Artwork carried in the pack.json is served from the same url a file beside it would be, so a
-		// decoration cannot tell which of the two it got.
-		test('artwork the pack carries itself is served like a file', async () => {
-			const body = '<svg xmlns="http://www.w3.org/2000/svg" />';
-			const loaded = await loadCatalog([ source({
-				name: 'test',
-				assets: { 'art/floor.svg': body },
-				themes: [ theme ],
-				decorations: [ withForeground('art/floor.svg') ],
-			}) ]);
-			assert.strictEqual(loaded.definitions.get('test-floor')?.floorForegroundUrl, '/assets/decorations/test/art/floor.svg');
-			assert.deepStrictEqual(loaded.assets.get('test/art/floor.svg'), { kind: 'generated', body });
-		});
-
-		test('carrying artwork the asset route cannot serve is fatal', async () => {
-			await assert.rejects(loadCatalog([ source({
-				name: 'test',
-				assets: { 'art/floor.txt': 'nope' },
-				themes: [ theme ],
-				decorations: [ landscape ],
-			}) ]), /unsupported file type/);
 		});
 
 		test('external urls are left alone', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ withForeground('https://example.com/floor.png') ],
+				themes: byId(theme),
+				decorations: byId(withForeground('https://example.com/floor.png')),
 			}) ]);
 			assert.strictEqual(loaded.definitions.get('test-floor')?.floorForegroundUrl, 'https://example.com/floor.png');
 			assert.ok(![ ...loaded.assets.values() ].some(asset => asset.kind === 'file'));
@@ -291,46 +279,46 @@ describe('mods/meta/decorations', () => {
 		test('a missing asset is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ withForeground('art/floor.svg') ],
+				themes: byId(theme),
+				decorations: byId(withForeground('art/floor.svg')),
 			}) ]), /does not exist/);
 		});
 
 		test('an asset outside the pack directory is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ withForeground('../floor.svg') ],
+				themes: byId(theme),
+				decorations: byId(withForeground('../floor.svg')),
 			}) ]), /escapes the pack directory/);
 		});
 
 		test('an asset the client cannot render is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ withForeground('art/floor.txt') ],
+				themes: byId(theme),
+				decorations: byId(withForeground('art/floor.txt')),
 			}) ]), /unsupported file type/);
 		});
 
 		test('a colour property seeded with something else is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, props: { floorBackgroundColor: { type: 'color', default: 'red' } } } ],
-			}) ]), /not a '#rrggbb' colour/);
+				themes: byId(theme),
+				decorations: byId({ ...landscape, props: { floorBackgroundColor: { type: 'color', default: 'red' } } }),
+			}) ]), /must match pattern/);
 		});
 	});
 
 	describe('previews', () => {
 		/** Whether a url the catalog handed the client is one the asset route will answer. */
-		const served = (url: string) => catalog.assets.has(url.replace('/assets/decorations/', ''));
+		const served = (url: string) => catalog.assets.has(assetPath(url)!.replace('/assets/decorations/', ''));
 
 		test('a landscape without artwork gets one drawn from its colours', async () => {
-			const loaded = await loadCatalog([ source({ name: 'test', themes: [ theme ], decorations: [ landscape ] }) ]);
-			const url = '/assets/decorations/_preview/test/test-floor.svg';
-			assert.deepStrictEqual(loaded.definitions.get('test-floor')?.preview, {
-				original: url, '128x128': url, '256x256': url,
-			});
+			const loaded = await loadCatalog([ source({ name: 'test', themes: byId(theme), decorations: byId(landscape) }) ]);
+			const preview = loaded.definitions.get('test-floor')?.preview;
+			const url = preview?.original;
+			assert.strictEqual(assetPath(url), '/assets/decorations/_preview/test/test-floor.svg');
+			assert.deepStrictEqual(preview, { original: url, '128x128': url, '256x256': url });
 			const asset = loaded.assets.get('_preview/test/test-floor.svg');
 			assert.strictEqual(asset?.kind, 'generated');
 			assert.match(asset.body, /^<svg /);
@@ -341,17 +329,17 @@ describe('mods/meta/decorations', () => {
 		test('a preview the pack declares wins', async () => {
 			await using directory = await withAssetFile('art/tile.png', 'png');
 			const loaded = await loadCatalog([ source(
-				{ name: 'test', themes: [ theme ], decorations: [ { ...landscape, preview: { '128x128': 'art/tile.png' } } ] },
+				{ name: 'test', themes: byId(theme), decorations: byId({ ...landscape, preview: { '128x128': 'art/tile.png' } }) },
 				directory.url,
 			) ]);
-			assert.deepStrictEqual(loaded.definitions.get('test-floor')?.preview, {
-				'128x128': '/assets/decorations/test/art/tile.png',
-			});
+			const preview = loaded.definitions.get('test-floor')?.preview;
+			assert.deepStrictEqual(Object.keys(preview!), [ '128x128' ]);
+			assert.strictEqual(assetPath(preview!['128x128']), '/assets/decorations/test/art/tile.png');
 			assert.ok(!loaded.assets.has('_preview/test/test-floor.svg'));
 		});
 
 		test('a type carrying its own artwork gets none', async () => {
-			const loaded = await loadCatalog([ source({ name: 'test', themes: [ theme ], decorations: [ graffiti ] }) ]);
+			const loaded = await loadCatalog([ source({ name: 'test', themes: byId(theme), decorations: byId(graffiti) }) ]);
 			assert.strictEqual(loaded.definitions.get('test-graffiti')?.preview, undefined);
 			assert.ok(!loaded.assets.has('_preview/test/test-graffiti.svg'));
 		});
@@ -361,11 +349,11 @@ describe('mods/meta/decorations', () => {
 		test('a badge gets one drawn from the symbol it grants', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, id: 'test-badge', type: 'badge', badge: { path1: 'M 0 0 H 100 Z', path2: '' } } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, id: 'test-badge', type: 'badge', badge: { path1: 'M 0 0 H 100 Z', path2: '' } }),
 			}) ]);
 			assert.strictEqual(
-				loaded.definitions.get('test-badge')?.preview?.['128x128'], '/assets/decorations/_preview/test/test-badge.svg');
+				assetPath(loaded.definitions.get('test-badge')?.preview?.['128x128']), '/assets/decorations/_preview/test/test-badge.svg');
 			const asset = loaded.assets.get('_preview/test/test-badge.svg');
 			assert.strictEqual(asset?.kind, 'generated');
 			assert.match(asset.body, /M 0 0 H 100 Z/);
@@ -374,8 +362,8 @@ describe('mods/meta/decorations', () => {
 		test('a landscape whose colours are not colours gets none', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, props: { ...landscape.props, floorBackgroundColor: { type: 'display', default: 'nope' } } } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, props: { ...landscape.props, floorBackgroundColor: { type: 'display', default: 'nope' } } }),
 			}) ]);
 			assert.strictEqual(loaded.definitions.get('test-floor')?.preview, undefined);
 			assert.ok(!loaded.assets.has('_preview/test/test-floor.svg'));
@@ -433,12 +421,12 @@ describe('mods/meta/decorations', () => {
 
 	describe('foregrounds', () => {
 		test('a landscape without artwork gets one it can draw without showing anything', async () => {
-			const loaded = await loadCatalog([ source({ name: 'test', themes: [ theme ], decorations: [ landscape ] }) ]);
+			const loaded = await loadCatalog([ source({ name: 'test', themes: byId(theme), decorations: byId(landscape) }) ]);
 			const definition = loaded.definitions.get('test-floor');
-			assert.strictEqual(definition?.floorForegroundUrl, '/assets/decorations/_texture/floor-wash.svg');
+			assert.strictEqual(assetPath(definition?.floorForegroundUrl), '/assets/decorations/_texture/floor-wash.svg');
 			assert.strictEqual(loaded.assets.get('_texture/floor-wash.svg')?.kind, 'generated');
 			// Tinted white and faded out, so the room looks exactly as it did without a layer at all.
-			assert.strictEqual(definition.props.floorForegroundColor?.default, '#ffffff');
+			assert.strictEqual(definition?.props.floorForegroundColor?.default, '#ffffff');
 			// And it is not a knob the pack chose, so the editor does not offer it.
 			assert.deepStrictEqual(definition.props.floorForegroundAlpha, {
 				type: 'range', readonly: true, min: 0, max: 1, step: 0.01, default: 0,
@@ -448,8 +436,8 @@ describe('mods/meta/decorations', () => {
 		test('a pack naming its own artwork owns the properties tinting it', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...landscape, floorForegroundUrl: 'https://example.com/floor.png' } ],
+				themes: byId(theme),
+				decorations: byId({ ...landscape, floorForegroundUrl: 'https://example.com/floor.png' }),
 			}) ]), /declares no 'floorForegroundColor' property/);
 		});
 
@@ -459,8 +447,8 @@ describe('mods/meta/decorations', () => {
 		test('a room landscape gets both halves, each with its own texture', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ {
+				themes: byId(theme),
+				decorations: byId({
 					...landscape,
 					type: 'landscape',
 					props: {
@@ -468,11 +456,11 @@ describe('mods/meta/decorations', () => {
 						backgroundColor: { type: 'color', default: '#111111' },
 						strokeColor: { type: 'color', default: '#222222' },
 					},
-				} ],
+				}),
 			}) ]);
 			const definition = loaded.definitions.get('test-floor');
-			assert.strictEqual(definition?.floorForegroundUrl, '/assets/decorations/_texture/floor-wash.svg');
-			assert.strictEqual(definition.foregroundUrl, '/assets/decorations/_texture/wall-wash.svg');
+			assert.strictEqual(assetPath(definition?.floorForegroundUrl), '/assets/decorations/_texture/floor-wash.svg');
+			assert.strictEqual(assetPath(definition?.foregroundUrl), '/assets/decorations/_texture/wall-wash.svg');
 		});
 
 		test('every landscape in the bundled pack hands the renderer a foreground', () => {
@@ -575,8 +563,8 @@ describe('mods/meta/decorations', () => {
 		test('an animation outside the renderer\'s table is rejected', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
-				themes: [ theme ],
-				decorations: [ { ...graffiti, props: { ...graffiti.props, animation: { type: 'string', default: '' } } } ],
+				themes: byId(theme),
+				decorations: byId({ ...graffiti, props: { ...graffiti.props, animation: { type: 'string', default: '' } } }),
 			}) ]);
 			const definition = loaded.definitions.get('test-graffiti')!;
 			assert.ok('error' in parsePlacement(definition, { shard, room: roomName, animation: 'wiggle' }));
@@ -673,9 +661,7 @@ describe('mods/meta/decorations', () => {
 			assert.strictEqual(placed[0]?.id, 'xx-floor-plain');
 			assert.strictEqual(placed[0].userId, alice);
 			assert.strictEqual(placed[0].active.room, roomName);
-			// And the room now counts as decorated, which is what the world map filters by.
-			assert.ok((await listDecoratedRooms(db, shard)).has(roomName));
-			assert.ok(!(await listDecoratedRooms(db, shard)).has(otherRoomName));
+			assert.deepStrictEqual(await listForRoom(db, shard, otherRoomName), []);
 
 			const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-floor-plain');
 			assert.strictEqual(item?.active?.room, roomName);
@@ -741,9 +727,6 @@ describe('mods/meta/decorations', () => {
 			assert.deepStrictEqual(await listForRoom(db, shard, roomName), []);
 			const [ item ] = (await listForUser(db, alice)).filter(each => each.id === 'xx-floor-plain');
 			assert.strictEqual(item?.active, undefined);
-			// And the room stops counting as decorated: the zset entry went with the placement, so the
-			// set is exact rather than a filter over history.
-			assert.ok(!(await listDecoratedRooms(db, shard)).has(roomName));
 		});
 
 		test('a revoke that finds no grant leaves the placement alone', async () => {

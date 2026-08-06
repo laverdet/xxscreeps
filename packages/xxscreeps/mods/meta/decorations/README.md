@@ -9,32 +9,31 @@ them. Everything is account state in `db.data`, with `active.shard` naming the t
 
 ## Decoration packs
 
-A pack is a `pack.json` plus, optionally, the images it references:
+A pack is a `pack.yaml` plus, optionally, the images it references:
 
 ```
 my-pack/
-  pack.json
+  pack.yaml
   art/wall.png
 ```
 
-```json
-{
-  "name": "my-pack",
-  "themes": [ { "id": "my-theme", "name": "My Theme", "color": "#8f8f8f" } ],
-  "decorations": [ {
-    "id": "my-walls",
-    "type": "wallLandscape",
-    "name": "My Walls",
-    "theme": "my-theme",
-    "rarity": 2,
-    "foregroundUrl": "art/wall.png",
-    "props": {
-      "backgroundColor": { "type": "color", "label": "Wall", "default": "#111111" },
-      "world": { "type": "boolean", "label": "Show on the world map", "default": true }
-    }
-  } ]
-}
+```yaml
+name: my-pack
+themes:
+  my-theme: { name: My Theme, color: '#8f8f8f' }
+decorations:
+  my-walls:
+    type: wallLandscape
+    name: My Walls
+    theme: my-theme
+    rarity: 2
+    foregroundUrl: art/wall.png
+    props:
+      backgroundColor: { type: color, label: Wall, default: '#111111' }
+      world: { type: boolean, label: Show on the world map, default: true }
 ```
+
+Themes and decorations are keyed by their id, so a pack cannot declare one twice.
 
 - `type` is one of `floorLandscape`, `wallLandscape`, `landscape` (both at once), `wallGraffiti`,
   `creep`, `object` (graphics drawn over a kind of game object), `metadata` (a replacement for how
@@ -44,22 +43,17 @@ my-pack/
   names are the ones the client reads: `floorBackgroundColor`, `swampColor`, `roadsColor`,
   `backgroundColor`, `strokeColor`, `strokeWidth`, … A `world` property controls whether the
   decoration also shows on the world map.
-- `graphics[]` entries reference properties by *name*: `{ "url": "art/x.png", "color": "myColor" }`
+- `graphics[]` entries reference properties by *name*: `{ url: art/x.png, color: myColor }`
   tints the image with whatever the player picked for `myColor`. Referenced properties have to seed a
   default — see below.
 - `layout` holds the placement constraints (`proportional`, `minWidth`, `maxWidth`, `minHeight`,
   `maxHeight`).
-- `assets` lets a pack carry its artwork in the `pack.json` instead of beside it, keyed by the path
-  the decorations reference: `"assets": { "art/x.svg": "<svg …>…</svg>" }`. It is served from the
-  same url a file would be, so a decoration cannot tell which of the two it got, and anything
-  textual works — the bundled pack draws its overlays this way, because the build ships `.json` and
-  nothing else.
 - Asset references are either external urls (`https://…`, `data:…`, `/…`) or paths inside the pack.
   Pack-local files are checked when the server starts and served from
   `/assets/decorations/<pack>/<path>`. That url is rooted at `/`, so it means the same thing whatever
   route the client happens to be showing — a client routing through the path would otherwise resolve
   a document-relative url against wherever it stands, turning an overlay texture into
-  `/room/shard0/assets/…`. Set `decorations.assetBaseUrl` when the backend is not at the root of the
+  `/room/shard0/assets/…`. Set `backend.assetBaseUrl` when the backend is not at the root of the
   origin the client is served from; it is prepended verbatim, so it takes an origin
   (`https://screeps.example.com`) or the path a proxy mounts the backend under
   (`/(http://localhost:21025)` for the steamless client).
@@ -226,8 +220,9 @@ decorations:
   grantAll: true
   # Placing a decoration requires controlling or reserving the room. Default: true
   requireRoomOwnership: true
-  # Extra packs, as a path to a pack.json or the directory holding one
+  # Extra packs, as a path to a pack.yaml or the directory holding one
   packs: [ ./my-pack ]
+backend:
   # Only needed when the backend is not at the root of the origin serving the client. An origin of
   # its own, or the path a proxy mounts it under — e.g. "/(http://localhost:21025)" for steamless
   assetBaseUrl: https://screeps.example.com

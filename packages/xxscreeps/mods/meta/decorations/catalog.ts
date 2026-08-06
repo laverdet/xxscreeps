@@ -1,16 +1,19 @@
 import type { BadgeSymbol } from 'xxscreeps/engine/db/user/badge.js';
+import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Ajv } from 'ajv';
+import jsYaml from 'js-yaml';
 import { config } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeRelativeFragment } from 'xxscreeps/utility/url.js';
 import { renderPreview } from './preview.js';
 import { completeDefinition, washes } from './renderer.js';
 
 // The catalog is the set of decorations this server offers. It is static data, not user data:
 // definitions are authored in *decoration packs* and loaded once at startup. A pack is a
-// `pack.json` plus, optionally, the image files it references — see `pack/pack.json` for the
+// `pack.yaml` plus, optionally, the image files it references — see `pack/pack.yaml` for the
 // bundled one.
 //
 // Anything wrong with a pack (unknown type, missing asset, dangling theme or prop reference,
@@ -80,6 +83,13 @@ export interface DecorationPreview {
 	'256x256'?: string;
 }
 
+/**
+ * A decoration as the catalog holds it. The asset-bearing fields — `graphics[].url`, `preview`,
+ * `foregroundUrl`, `floorForegroundUrl`, `resources` — are authored in the pack as asset
+ * references: a relative path fragment naming a bundled asset, or an external url taken as-is.
+ * Loading rewrites them to the public urls they are served from. The field names are the client's
+ * wire shape, which is why they say `url` in both lifetimes.
+ */
 export interface DecorationDefinition {
 	id: string;
 	type: DecorationType;
@@ -109,17 +119,16 @@ export interface DecorationDefinition {
 	badge?: BadgeSymbol;
 }
 
+/**
+ * A pack as authored: themes and decorations are keyed by their id rather than carrying one, and
+ * the asset-bearing fields still hold references instead of public urls. {@link loadPack} turns
+ * this into the resolved shapes the rest of the server consumes.
+ */
 export interface DecorationPack {
 	/** Slug identifying the pack; appears in the public url of its assets. */
 	name: string;
-	/**
-	 * Artwork carried in the pack itself rather than shipped beside it, keyed by the path the
-	 * decorations reference. Anything textual — an svg — can be written here instead of put in a
-	 * file, and it is served from the same url a file would be.
-	 */
-	assets?: Record<string, string>;
-	themes: DecorationTheme[];
-	decorations: DecorationDefinition[];
+	themes: Record<string, Omit<DecorationTheme, 'id'>>;
+	decorations: Record<string, Omit<DecorationDefinition, 'id'>>;
 }
 
 /** A file a pack ships. */
@@ -145,7 +154,7 @@ export interface Catalog {
 }
 
 /**
- * A pack's `pack.json`, already read. Reading is kept out of {@link loadCatalog} so that validating
+ * A pack's `pack.yaml`, already read. Reading is kept out of {@link loadCatalog} so that validating
  * a pack needs nothing on disk; only the assets a pack references are resolved against `directory`.
  */
 export interface PackSource {
@@ -167,33 +176,38 @@ const propSchema = {
 	},
 	required: [ 'type' ],
 	additionalProperties: false,
+	// The client and the generated previews read colour defaults straight out as colours, so the
+	// format is enforced here rather than wherever one of them trips over it.
+	anyOf: [
+		{ properties: { type: { const: 'color' }, default: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } },
+		{ properties: { type: { enum: [ 'boolean', 'display', 'range', 'string' ] } } },
+	],
 };
 
 const packSchema = {
 	type: 'object',
 	properties: {
 		name: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]*$' },
-		assets: { type: 'object', additionalProperties: { type: 'string' } },
 		themes: {
-			type: 'array',
-			items: {
+			type: 'object',
+			propertyNames: { minLength: 1 },
+			additionalProperties: {
 				type: 'object',
 				properties: {
-					id: { type: 'string', minLength: 1 },
 					name: { type: 'string', minLength: 1 },
 					color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' },
 					hidden: { type: 'boolean' },
 				},
-				required: [ 'id', 'name' ],
+				required: [ 'name' ],
 				additionalProperties: false,
 			},
 		},
 		decorations: {
-			type: 'array',
-			items: {
+			type: 'object',
+			propertyNames: { minLength: 1 },
+			additionalProperties: {
 				type: 'object',
 				properties: {
-					id: { type: 'string', minLength: 1 },
 					type: { enum: [ 'floorLandscape', 'wallLandscape', 'landscape', 'wallGraffiti', 'creep', 'object', 'metadata', 'badge' ] },
 					name: { type: 'string', minLength: 1 },
 					theme: { type: 'string', minLength: 1 },
@@ -255,7 +269,7 @@ const packSchema = {
 						additionalProperties: false,
 					},
 				},
-				required: [ 'id', 'type', 'name', 'theme', 'props' ],
+				required: [ 'type', 'name', 'theme', 'props' ],
 				additionalProperties: false,
 			},
 		},
@@ -290,42 +304,40 @@ export function assetContentType(file: string) {
  *
  * That leaves the deployments where the backend is not at the root of the origin the client is
  * served from — another origin, or a proxy mounting it under a path prefix, as the steamless client
- * does with `/(http://host:21025)/`. Those set `assetBaseUrl`, which is prepended verbatim and so
- * takes a path just as well as an origin.
+ * does with `/(http://host:21025)/`. Those set `backend.assetBaseUrl`, which is prepended verbatim
+ * and so takes a path just as well as an origin.
  */
-const assetUrlPrefix = `${config.decorations?.assetBaseUrl ?? ''}/assets/decorations`;
+const assetUrlPrefix = `${config.backend.assetBaseUrl ?? ''}/assets/decorations`;
+
+/**
+ * Public url of an asset key. `version` busts the browser cache: the asset route serves every
+ * response as immutable, so the url must change whenever the content can — the file's modification
+ * time for files, a content hash for bodies generated at load.
+ */
+const publicAssetUrl = (key: string, version: string) => `${assetUrlPrefix}/${key}?v=${version}`;
+
+/** Version token of an asset generated at load, derived from nothing but its content. */
+const generatedVersion = (body: string) => createHash('sha1').update(body).digest('base64url').slice(0, 8);
+
+/** The catalog-owned washes are static, so their public urls are minted once. */
+const washUrls = new Map(washes.map(({ key, body }) => [ key, publicAssetUrl(key, generatedVersion(body)) ]));
 
 /** Urls a pack may reference without shipping the file: other origins, and data urls. */
 const isExternalUrl = (value: string) => /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(value);
 
 async function loadPack({ body, directory }: PackSource) {
-	const raw: unknown = JSON.parse(body);
+	const raw: unknown = jsYaml.load(body);
 	if (!validatePack(raw)) {
 		throw new Error(`Invalid decoration pack '${directory.pathname}': ${ajv.errorsText(validatePack.errors)}`);
 	}
 	const pack = raw;
 	const assets = new Map<string, DecorationAsset>();
 
-	// Every asset a pack carries in `pack.json` rather than beside it, whether a decoration ends up
-	// referencing it or not — a path nobody can serve is a mistake worth reporting at startup.
-	for (const assetPath of Object.keys(pack.assets ?? {})) {
-		if (assetContentType(assetPath) === undefined) {
-			throw new Error(`Asset '${assetPath}' of decoration pack '${pack.name}' has an unsupported file type`);
-		}
-	}
-
-	// Relative references name something inside the pack — carried in `assets`, or a file beside the
-	// `pack.json`. Either way they are checked here and rewritten to the url the asset route serves
-	// them from, so a decoration cannot tell which of the two it got.
+	// Relative references name a file shipped beside the `pack.yaml`. They are checked here and
+	// rewritten to the url the asset route serves them from.
 	const resolveAsset = async (value: string) => {
 		if (isExternalUrl(value)) {
 			return value;
-		}
-		const carried = pack.assets?.[value];
-		if (carried !== undefined) {
-			const key = `${pack.name}/${value}`;
-			assets.set(key, { kind: 'generated', body: carried });
-			return `${assetUrlPrefix}/${key}`;
 		}
 		const file = new URL(value, directory);
 		if (!file.href.startsWith(directory.href)) {
@@ -334,14 +346,18 @@ async function loadPack({ body, directory }: PackSource) {
 		if (assetContentType(file.pathname) === undefined) {
 			throw new Error(`Asset '${value}' of decoration pack '${pack.name}' has an unsupported file type`);
 		}
-		try {
-			await fs.stat(file);
-		} catch (cause) {
-			throw new Error(`Asset '${value}' of decoration pack '${pack.name}' does not exist`, { cause });
-		}
-		const key = `${pack.name}/${decodeURIComponent(file.href.slice(directory.href.length))}`;
+		const stats = await async function() {
+			try {
+				return await fs.stat(file);
+			} catch (cause) {
+				throw new Error(`Asset '${value}' of decoration pack '${pack.name}' does not exist`, { cause });
+			}
+		}();
+		// koa-router decodes the route's captured param, so catalog keys live in decoded space — this
+		// decode is what lets a filename needing percent-encoding match its own request.
+		const key = `${pack.name}/${decodeURIComponent(makeRelativeFragment(directory, file).slice(2))}`;
 		assets.set(key, { kind: 'file', file });
-		return `${assetUrlPrefix}/${key}`;
+		return publicAssetUrl(key, Math.round(stats.mtimeMs).toString(36));
 	};
 
 	const resolveResources = async (resources: Record<string, string>) => Object.fromEntries(
@@ -353,15 +369,8 @@ async function loadPack({ body, directory }: PackSource) {
 		...preview['256x256'] !== undefined && { '256x256': await resolveAsset(preview['256x256']) },
 	});
 
-	const definitions = await Fn.mapAwait(pack.decorations, async (definition): Promise<DecorationDefinition> => {
-		// The client and the generated previews both read these straight out as colours, so the
-		// format is checked here rather than wherever one of them trips over it.
-		for (const [ name, prop ] of Object.entries(definition.props)) {
-			if (prop.type === 'color' && prop.default !== undefined && !/^#[0-9a-fA-F]{6}$/.test(String(prop.default))) {
-				throw new Error(`Decoration '${definition.id}' seeds colour property '${name}' with '${prop.default}', which is not a '#rrggbb' colour`);
-			}
-		}
-
+	const definitions = await Fn.mapAwait(Object.entries(pack.decorations), async ([ id, authored ]): Promise<DecorationDefinition> => {
+		const definition = { id, ...authored };
 		// A landscape carries no artwork, so its preview is drawn from its colours. The key sits
 		// outside every pack's namespace: a file's key starts with the pack name, which the schema
 		// constrains to `^[a-z0-9][a-z0-9-]*$`, so no pack can reference or shadow one of these.
@@ -376,7 +385,7 @@ async function loadPack({ body, directory }: PackSource) {
 			const key = `_preview/${pack.name}/${definition.id}.svg`;
 			assets.set(key, { kind: 'generated', body: drawing });
 			// One svg scales to every size the client asks for.
-			const url = `${assetUrlPrefix}/${key}`;
+			const url = publicAssetUrl(key, generatedVersion(drawing));
 			return { original: url, '128x128': url, '256x256': url };
 		}();
 
@@ -391,10 +400,13 @@ async function loadPack({ body, directory }: PackSource) {
 			...definition.graphics !== undefined && {
 				graphics: await Fn.mapAwait(definition.graphics, async graphic => ({ ...graphic, url: await resolveAsset(graphic.url) })),
 			},
-		}, key => `${assetUrlPrefix}/${key}`);
+		}, key => washUrls.get(key) ?? function(): never {
+			throw new Error(`Unknown catalog asset '${key}'`);
+		}());
 	});
 
-	return { name: pack.name, themes: pack.themes, definitions, assets };
+	const themes = Object.entries(pack.themes).map(([ id, theme ]): DecorationTheme => ({ id, ...theme }));
+	return { name: pack.name, themes, definitions, assets };
 }
 
 export async function loadCatalog(sources: Iterable<PackSource>): Promise<Catalog> {
@@ -413,6 +425,8 @@ export async function loadCatalog(sources: Iterable<PackSource>): Promise<Catalo
 			throw new Error(`Duplicate decoration pack name '${pack.name}'`);
 		}
 		packNames.add(pack.name);
+		// The object shape keeps a single pack from declaring an id twice; these checks guard
+		// collisions across packs.
 		for (const theme of pack.themes) {
 			if (themes.has(theme.id)) {
 				throw new Error(`Duplicate decoration theme '${theme.id}'`);
@@ -444,7 +458,7 @@ export async function loadCatalog(sources: Iterable<PackSource>): Promise<Catalo
 const readPackSource = async (url: URL): Promise<PackSource> =>
 	({ directory: new URL('.', url), body: await fs.readFile(url, 'utf8') });
 
-/** A pack path from the config may point at a `pack.json` or at the directory holding one. */
+/** A pack path from the config may point at a `pack.yaml` or at the directory holding one. */
 async function resolvePackSource(value: string) {
 	const url = pathToFileURL(path.resolve(value));
 	const stat = await async function() {
@@ -454,11 +468,15 @@ async function resolvePackSource(value: string) {
 			throw new Error(`Decoration pack '${value}' does not exist`, { cause });
 		}
 	}();
-	return readPackSource(stat.isDirectory() ? new URL('pack.json', `${url.href}/`) : url);
+	return readPackSource(stat.isDirectory() ? new URL('pack.yaml', `${url.href}/`) : url);
 }
 
 const packSources = [
-	...config.decorations?.builtin ?? true ? [ await readPackSource(new URL('pack/pack.json', import.meta.url)) ] : [],
+	// The bundled pack lives in the source tree — the build only carries TypeScript and JSON into
+	// `dist`, so it is resolved through the package's export map rather than `import.meta.url`.
+	...config.decorations?.builtin ?? true
+		? [ await readPackSource(new URL(import.meta.resolve('xxscreeps/mods/meta/decorations/pack/pack.yaml'))) ]
+		: [],
 	...await Fn.mapAwait(config.decorations?.packs ?? [], resolvePackSource),
 ];
 

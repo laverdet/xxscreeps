@@ -1,13 +1,5 @@
 export interface DecorationsSettings {
 	/**
-	 * Prefix put in front of decoration asset urls, which are otherwise rooted at `/`. Needed when
-	 * the backend does not sit at the root of the origin the client is served from: an origin of its
-	 * own, e.g. "https://screeps.example.com", or the path a proxy mounts it under, e.g.
-	 * "/(http://localhost:21025)" for the steamless client. Prepended verbatim, so it takes either.
-	 */
-	assetBaseUrl?: string;
-
-	/**
 	 * Whether to load the decoration pack bundled with the server.
 	 * @default true
 	 */
@@ -21,7 +13,7 @@ export interface DecorationsSettings {
 	grantAll?: boolean;
 
 	/**
-	 * Additional decoration packs to load. Each entry is a path to a `pack.json`, or to the
+	 * Additional decoration packs to load. Each entry is a path to a `pack.yaml`, or to the
 	 * directory holding one.
 	 */
 	packs?: string[];
