@@ -139,10 +139,15 @@ const propFieldPrefix = 'prop/';
 /** Hash fields hold strings; the definition tells {@link decodeProps} what each one was. */
 export const encodeProps = (props: Record<string, PropValue>): Record<string, string> =>
 	Object.fromEntries(Object.entries(props).map(([ name, value ]) =>
-		[ `${propFieldPrefix}${name}`, typeof value === 'boolean' ? value ? '1' : '0' : String(value) ]));
+		[ `${propFieldPrefix}${name}`, String(typeof value === 'boolean' ? Number(value) : value) ]));
 
-const decodeProp = (prop: DecorationProp, value: string): PropValue =>
-	prop.type === 'boolean' ? value === '1' : prop.type === 'range' ? Number(value) : value;
+const decodeProp = (prop: DecorationProp, value: string): PropValue => {
+	switch (prop.type) {
+		case 'boolean': return value === '1';
+		case 'range': return Number(value);
+		case 'color': case 'display': case 'string': return value;
+	}
+};
 
 /** Fields naming a property the definition no longer declares are dropped, the way a pack edit leaves them. */
 export const decodeProps = (definition: DecorationDefinition, fields: Record<string, string>) => Fn.pipe(

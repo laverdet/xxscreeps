@@ -53,11 +53,10 @@ export const grantAll = () => config.decorations?.grantAll ?? true;
  * Announces that what is placed in a room changed, so open room sockets re-read it. Creep
  * decorations show up in every room, so they get their own channel that all of them watch.
  */
-const decorationChannel = (db: Database, name: string) => new Channel<DecorationUpdate>(db.pubsub, name);
-const roomChannelName = (shardName: string, room: string) => `decorations/${shardName}/${room}`;
 export const getRoomDecorationChannel = (db: Database, shardName: string, room: string) =>
-	decorationChannel(db, roomChannelName(shardName, room));
-export const getGlobalDecorationChannel = (db: Database) => decorationChannel(db, globalIndexKey);
+	new Channel<DecorationUpdate>(db.pubsub, `decorations/${shardName}/${room}`);
+export const getGlobalDecorationChannel = (db: Database) =>
+	new Channel<DecorationUpdate>(db.pubsub, globalIndexKey);
 
 export interface DecorationUpdate {
 	type: 'updated';
@@ -304,13 +303,15 @@ export async function activateInRoom(
 	} else if (blocked(await listForRoom(db, shard.name, room), userId, itemId, definition)) {
 		return { error: 'already decorated' };
 	}
-	// Moving an item out of its old room has to happen before the new placement is indexed,
-	// otherwise a move within one room would drop the entry it just wrote.
+	// The old placement is taken down first for everything the zAdd below cannot do: the old room
+	// may sit on another shard's zset, its viewers are told through its own channel, and the hash
+	// is deleted rather than merged over. First, not after — a move within one room writes the same
+	// zset member, so a deactivate running later would drop the entry it just wrote.
 	await deactivate(db, userId, [ itemId ]);
 	await Promise.all([
 		writePlacement(db, userId, itemId, props, { shard: shard.name }),
 		db.data.zAdd(shardIndexKey(shard.name), [ [ parseRoomNameToId(room), indexMember(userId, itemId) ] ]),
-		announce(db, roomChannelName(shard.name, room)),
+		announce(getRoomDecorationChannel(db, shard.name, room)),
 	]);
 	await settleConflicts(db, userId, await listForRoom(db, shard.name, room));
 	return undefined;
@@ -330,7 +331,7 @@ export async function activateCreep(
 	await Promise.all([
 		writePlacement(db, userId, itemId, props, {}),
 		db.data.sAdd(globalIndexKey, [ indexMember(userId, itemId) ]),
-		announce(db, globalIndexKey),
+		announce(getGlobalDecorationChannel(db)),
 	]);
 	await settleConflicts(db, userId, await listGlobal(db));
 	return undefined;
@@ -353,7 +354,7 @@ export async function activateBadge(
 /**
  * Tell open room sockets to re-read. Fired alongside the write, since reads are not synchronized.
  */
-const announce = (db: Database, channel: string) => decorationChannel(db, channel).publish({ type: 'updated' });
+const announce = (channel: Channel<DecorationUpdate>) => channel.publish({ type: 'updated' });
 
 /**
  * Take items off the map. Unknown or already-unplaced ids are left alone. Which index held an item
@@ -369,17 +370,21 @@ export async function deactivate(db: Database, userId: string, itemIds: Iterable
 		}
 		const member = indexMember(userId, itemId);
 		const channel = await async function() {
-			if (fields.shard !== undefined) {
-				const score = await db.data.zScore(shardIndexKey(fields.shard), member);
-				await db.data.zRem(shardIndexKey(fields.shard), [ member ]);
-				return score === null ? undefined : roomChannelName(fields.shard, makeRoomNameFromId(score));
+			if (fields.shard === undefined) {
+				const removed = await db.data.sRem(globalIndexKey, [ member ]);
+				return removed > 0 ? getGlobalDecorationChannel(db) : undefined;
+			} else {
+				const [ score ] = await Promise.all([
+					db.data.zScore(shardIndexKey(fields.shard), member),
+					db.data.zRem(shardIndexKey(fields.shard), [ member ]),
+				]);
+				return score === null ? undefined : getRoomDecorationChannel(db, fields.shard, makeRoomNameFromId(score));
 			}
-			return await db.data.sRem(globalIndexKey, [ member ]) > 0 ? globalIndexKey : undefined;
 		}();
 		await Promise.all([
 			db.data.del(activeKey(userId, itemId)),
 			db.data.sRem(activeIndexKey(userId), [ itemId ]),
-			channel === undefined ? undefined : announce(db, channel),
+			channel === undefined ? undefined : announce(channel),
 		]);
 	});
 }
