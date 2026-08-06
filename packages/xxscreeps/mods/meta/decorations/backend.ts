@@ -1,16 +1,18 @@
-import type { DecorationDefinition } from './catalog.js';
+import type { DecorationDefinition, DecorationProp } from './catalog.js';
 import type { PlacedDecoration } from './model.js';
-import type { Placement, PropValue } from './placement.js';
+import type { Placement, PlacementError, PropValue } from './placement.js';
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import * as fs from 'node:fs/promises';
-import makeEtag from 'etag';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { acquireWith } from 'xxscreeps/utility/async.js';
+import { disposableToEffect } from 'xxscreeps/utility/utility.js';
 import { assetContentType, catalog } from './catalog.js';
-import { activateBadge, activateCreep, activateInRoom, deactivate, getGlobalDecorationChannel, getRoomDecorationChannel, listDecoratedRooms, listForRoom, listForUser, listGlobal, ownedDefinition } from './model.js';
-import { isOnWorldMap, isPlacedInRoom, parsePlacement } from './placement.js';
+import { activateBadge, activateCreep, activateInRoom, deactivate, getGlobalDecorationChannel, getRoomDecorationChannel, listForRoom, listForUser, listGlobal, ownedDefinition } from './model.js';
+import { isOnWorldMap, isPlacedInRoom } from './placement.js';
+import { enumeratedProps } from './renderer.js';
 
 // `_id` is the official client's spelling, a Mongo-ism of the original server. It is wire shape and
 // nothing else, so it lives in this file alone: stripped from what the client sends, put back on
@@ -56,7 +58,7 @@ hooks.register('route', {
 			list: items.map(item => ({
 				_id: item.id,
 				createdAt: new Date(item.createdAt).toISOString(),
-				...item.activatedAt !== undefined && { activatedAt: new Date(item.activatedAt).toISOString() },
+				activatedAt: item.activatedAt === undefined ? undefined : new Date(item.activatedAt).toISOString(),
 				// `null` is how the client spells "owned, not placed".
 				active: item.active === undefined ? null : placementToWire(item.id, item.active),
 				decoration: toClientDefinition(item.definition),
@@ -87,6 +89,108 @@ const activateSchema: JSONSchemaType<ActivateRequest> = {
 	},
 	required: [ '_id', 'active' ],
 };
+
+/** An accepted property value. */
+interface ParsedProp {
+	value: PropValue;
+}
+
+/** Longest free-form string a property may hold; lists arrive `!SEP!`-joined into one of these. */
+const maxStringLength = 1024;
+
+const isColor = (value: string) => /^#[0-9a-fA-F]{6}$/.test(value);
+
+/**
+ * One property value as the client sent it. Numbers and booleans are accepted in their string
+ * spelling too — the client round-trips placed values through form state and sends back whatever
+ * that left behind.
+ */
+function parseProp(name: string, prop: DecorationProp, value: unknown): ParsedProp | PlacementError {
+	switch (prop.type) {
+		case 'boolean': {
+			if (typeof value === 'boolean') {
+				return { value };
+			}
+			return value === 'true' || value === '1' ? { value: true } :
+				value === 'false' || value === '0' ? { value: false } :
+				{ error: `'${name}' is not a boolean` };
+		}
+
+		case 'range': {
+			// `Number` reads `null` and `[]` as zero, so anything but a number or its string
+			// spelling is rejected before the conversion rather than after it.
+			const number = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN;
+			if (!Number.isFinite(number)) {
+				return { error: `'${name}' is not a number` };
+			} else if (prop.min !== undefined && number < prop.min) {
+				return { error: `'${name}' is below its minimum of ${prop.min}` };
+			} else if (prop.max !== undefined && number > prop.max) {
+				return { error: `'${name}' is above its maximum of ${prop.max}` };
+			}
+			return { value: number };
+		}
+
+		case 'color':
+			return typeof value === 'string' && isColor(value)
+				? { value }
+				: { error: `'${name}' is not a '#rrggbb' colour` };
+
+		case 'display':
+		case 'string':
+			return typeof value === 'string' && value.length <= maxStringLength
+				? { value }
+				: { error: `'${name}' is not a string of at most ${maxStringLength} characters` };
+	}
+}
+
+/**
+ * The `active` payload of an activation request, checked against what the definition declares.
+ * Properties the client left out fall back to the definition's seed, so a placement always carries
+ * a complete set and later readers never have to consult the defaults again. Wire-only baggage —
+ * the `_id` the client sends back with an edited placement — is stripped before the payload gets
+ * here.
+ */
+export function parsePlacement(definition: DecorationDefinition, active: Record<string, unknown>): Placement | PlacementError {
+	const { shard, room, ...rest } = active;
+	// The spread copied only the request's own keys, so what the definition's properties leave
+	// unclaimed is exactly what the request named and the definition does not declare.
+	const unclaimed = new Set(Object.keys(rest));
+	const props: Record<string, PropValue> = {};
+	for (const [ name, prop ] of Object.entries(definition.props)) {
+		const sent = unclaimed.delete(name);
+		// The official client sends readonly properties along with everything else — its editor hides
+		// them but its payload builder does not — so a value here is not an error. It does not win
+		// either: readonly means the definition owns the value, and the seed fills it in, the same
+		// way it covers a property the client left out.
+		if (!sent || prop.readonly) {
+			if (prop.default !== undefined) {
+				props[name] = prop.default;
+			}
+			continue;
+		}
+		const parsed = parseProp(name, prop, rest[name]);
+		if ('error' in parsed) {
+			return parsed;
+		}
+		// The renderer indexes a table by some of these, so they are closed sets rather than the free
+		// strings the client's editor offers when a pack labels the property its own way.
+		const values = Object.hasOwn(enumeratedProps, name) ? enumeratedProps[name] : undefined;
+		if (values !== undefined && !values.includes(String(parsed.value))) {
+			return { error: `'${name}' is not one of ${values.map(value => `'${value}'`).join(', ')}` };
+		}
+		props[name] = parsed.value;
+	}
+	const [ unknown ] = unclaimed;
+	if (unknown !== undefined) {
+		return { error: `'${definition.id}' has no property '${unknown}'` };
+	}
+	if (!isPlacedInRoom(definition.type)) {
+		return { props };
+	} else if (typeof shard !== 'string' || typeof room !== 'string') {
+		return { error: `'${definition.id}' must be placed in a room` };
+	}
+	return { shard, room, props };
+}
 
 /**
  * The activation request, parsed apart and dispatched to whichever kind of placement the definition
@@ -165,7 +269,6 @@ hooks.register('route', {
 // that map, so there is nothing to sanitize.
 interface CachedAsset {
 	body: Buffer;
-	etag: string;
 	type: string;
 }
 const assetCache = new Map<string, CachedAsset>();
@@ -183,7 +286,6 @@ hooks.register('route', {
 			const body = source.kind === 'file' ? await fs.readFile(source.file) : Buffer.from(source.body);
 			const entry = {
 				body,
-				etag: makeEtag(body),
 				type: assetContentType(key) ?? function(): never {
 					throw new Error(`Decoration asset '${key}' has an unsupported file type`);
 				}(),
@@ -194,8 +296,9 @@ hooks.register('route', {
 		if (asset === undefined) {
 			return;
 		}
-		context.set('Cache-Control', 'public');
-		context.set('ETag', asset.etag);
+		// The url carries a version, so the response never needs revalidating: a changed asset shows
+		// up under a new url instead.
+		context.set('Cache-Control', 'public, max-age=31536000, immutable');
 		context.set('Content-Type', asset.type);
 		// These end up as WebGL textures, and the browser refuses to upload a cross-origin image it
 		// was not allowed to read — pixi asks for one anonymously as soon as the url is not the
@@ -247,16 +350,15 @@ hooks.register('roomSocket', async (shard, userId, roomName) => {
 	// this watches their channel too.
 	let stale = true;
 	const markStale = () => { stale = true; };
-	const [ unlistenRoom, unlistenGlobal ] = await Promise.all([
+	using disposable = new DisposableStack();
+	await acquireWith(
+		fn => disposable.defer(fn),
 		getRoomDecorationChannel(shard.db, shard.name, roomName).listen(markStale),
 		getGlobalDecorationChannel(shard.db).listen(markStale),
-	]);
+	);
 
 	return [
-		() => {
-			unlistenRoom();
-			unlistenGlobal();
-		},
+		disposableToEffect(disposable.move()),
 		async () => {
 			if (!stale) {
 				return {};
@@ -272,38 +374,34 @@ hooks.register('roomSocket', async (shard, userId, roomName) => {
 });
 
 /** Whether any loaded decoration can stand in a room at all. A badge-only catalog leaves the map
- * with nothing to show, so the per-room index reads below are skipped outright. */
+ * with nothing to show, so the hook below is skipped outright. */
 const hasRoomDecorations = Fn.some(catalog.definitions.values(), definition => isPlacedInRoom(definition.type));
 
 // Creep decorations are deliberately absent: they belong to a creep rather than to a room, so there
 // is no room for the map to draw them in.
-hooks.register('mapStats', async (context, { rooms, response, userIds }) => {
-	if (!hasRoomDecorations) {
-		return;
-	}
-	// One read of the shard's zset tells which of the requested rooms hold anything — almost always
-	// few to none — instead of asking after every room one by one.
-	const decorated = await listDecoratedRooms(context.db, context.shard.name);
-	const decorations: Record<string, unknown> = {};
-	await Fn.mapAwait(Fn.filter(rooms, ({ room }) => decorated.has(room.name)), async ({ room, stats }) => {
-		const items = await listForRoom(context.db, context.shard.name, room.name);
-		// The map only shows what its owner published to it.
-		const visible = items.filter(item => isOnWorldMap(item.active));
-		if (visible.length === 0) {
-			return;
-		}
-		stats.decorations = visible.map(item => {
-			userIds.add(item.userId);
-			// The client looks the definition up in the dictionary below rather than inline, so the
-			// same decoration placed in fifty rooms is described once.
-			decorations[item.definition.id] = mapDecoration(item.definition);
-			return { _id: item.id, user: item.userId, decoration: item.definition.id, active: placementToWire(item.id, item.active) };
+if (hasRoomDecorations) {
+	hooks.register('mapStats', async (context, { rooms, response, userIds }) => {
+		const decorations: Record<string, unknown> = {};
+		await Fn.mapAwait(rooms, async ({ room, stats }) => {
+			const items = await listForRoom(context.db, context.shard.name, room.name);
+			// The map only shows what its owner published to it.
+			const visible = items.filter(item => isOnWorldMap(item.active));
+			if (visible.length === 0) {
+				return;
+			}
+			stats.decorations = visible.map(item => {
+				userIds.add(item.userId);
+				// The client looks the definition up in the dictionary below rather than inline, so the
+				// same decoration placed in fifty rooms is described once.
+				decorations[item.definition.id] = mapDecoration(item.definition);
+				return { _id: item.id, user: item.userId, decoration: item.definition.id, active: placementToWire(item.id, item.active) };
+			});
 		});
+		if (Object.keys(decorations).length > 0) {
+			response.decorations = decorations;
+		}
 	});
-	if (Object.keys(decorations).length > 0) {
-		response.decorations = decorations;
-	}
-});
+}
 
 /** The reduced shape the map renderer needs; it never draws the editable properties. */
 const mapDecoration = (definition: DecorationDefinition) => ({

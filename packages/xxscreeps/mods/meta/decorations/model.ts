@@ -208,14 +208,6 @@ export async function listForRoom(db: Database, shardName: string, room: string)
 export const listGlobal = async (db: Database) =>
 	resolveIndexMembers(db, await db.data.sMembers(globalIndexKey), {});
 
-/**
- * The rooms of `shardName` with something standing in them, off one read of the zset — which is
- * what lets the world map skip almost every room it is asked about. A member still owes a
- * {@link listForRoom} read for what exactly stands there.
- */
-export const listDecoratedRooms = async (db: Database, shardName: string) =>
-	new Set(Fn.map(await db.data.zRangeWithScores(shardIndexKey(shardName), 0, -1), ([ score ]) => makeRoomNameFromId(score)));
-
 /** Give `userId` a decoration from the catalog. Returns the id of the new inventory item. */
 export async function grant(db: Database, userId: string, definitionId: string) {
 	if (!catalog.definitions.has(definitionId)) {

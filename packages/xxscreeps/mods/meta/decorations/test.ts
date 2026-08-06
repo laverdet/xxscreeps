@@ -9,10 +9,10 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { insertControlledRoom } from 'xxscreeps/mods/classic/controller/model.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
-import { activate, placementToWire } from './backend.js';
+import { activate, parsePlacement, placementToWire } from './backend.js';
 import { catalog, loadCatalog } from './catalog.js';
 import { deactivate, deactivateStranded, grant, listForRoom, listForUser, listGlobal, revoke } from './model.js';
-import { conflicts, isOnWorldMap, parsePlacement } from './placement.js';
+import { conflicts, isOnWorldMap } from './placement.js';
 
 const alice = '100';
 const shard = 'shard0';
