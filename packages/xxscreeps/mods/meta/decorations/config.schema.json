@@ -1,0 +1,36 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+        "decorations": {
+            "description": "Room decoration settings",
+            "properties": {
+                "assetBaseUrl": {
+                    "description": "Prefix put in front of decoration asset urls, which are otherwise rooted at `/`. Needed when the backend does not sit at the root of the origin the client is served from: an origin of its own, e.g. \"https://screeps.example.com\", or the path a proxy mounts it under. Prepended verbatim, so it takes either.",
+                    "type": "string"
+                },
+                "builtin": {
+                    "description": "Whether to load the decoration pack bundled with the server.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "grantAll": {
+                    "description": "Whether every user owns the whole decoration catalog. With this off, decorations must be handed out explicitly with `xxscreeps manage decoration grant`.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "packs": {
+                    "description": "Additional decoration packs to load. Each entry is a path to a `pack.json`, or to the directory holding one.",
+                    "items": { "type": "string" },
+                    "type": "array"
+                },
+                "requireRoomOwnership": {
+                    "description": "Whether placing a decoration requires the player to control or reserve the room.",
+                    "type": "boolean",
+                    "default": true
+                }
+            },
+            "type": "object"
+        }
+    },
+    "type": "object"
+}

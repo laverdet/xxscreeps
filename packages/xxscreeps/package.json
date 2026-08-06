@@ -16,6 +16,7 @@
   "exports": {
     "./*": "./dist/*",
     "./*.mjs": "./*.mjs",
+    "./*.yaml": "./*.yaml",
     "./loader": "./dist/config/mods.js"
   },
   "dependencies": {
