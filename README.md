@@ -168,7 +168,7 @@ await using shard = await Shard.connect(db, 'shard0');
 await generateRoom(shard, 'W12N5');
 await generateRoom(shard, 'W11N5', { terrainType: 3, swampType: 2 });
 await generateRoom(shard, 'W10N5', { sources: 1, mineral: 'H' });
-await generateSector(shard, 'W20N20');
+await generateSector(shard, 'W20N20', { seed: 1234 });
 await Promise.all([ db.save(), shard.save() ]);
 ```
 
@@ -201,6 +201,17 @@ their boundary rings and a partially built sector can be re-entered. The same
 options apply to the sector's normal rooms. Also available as
 `npx xxscreeps generate-sector W20N20`, taking the same flags as
 `generate-room`.
+
+`seed` fixes every random value a room draws, so the same seed rebuilds the same
+terrain, objects, and object ids. Each room draws from its own stream, keyed by
+the seed together with the room's coordinates, so what a room rolls for itself
+doesn't depend on how many rooms preceded it — sharing one stream across a run
+would instead give two rooms at the same offset into it identical contents, ids
+included. Shared borders are still authored by whichever side is generated
+first, so generating the same rooms in a different order still yields a
+different world. Highway wall masses are sampled from world coordinates rather
+than the seed, so they repeat across worlds; their exits and swamp follow the
+seed like any other room's.
 
 ## Docker
 

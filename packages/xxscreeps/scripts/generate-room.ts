@@ -31,6 +31,11 @@ function parseMineralType(value: string | undefined) {
 // The room-shape flags shared between `generate-room` and `generate-sector`.
 export const roomOptionArguments = [ 'terrain-type', 'swamp-type', 'sources', 'mineral' ] as const;
 
+// Every random value generation draws comes from the seed, so the same seed rebuilds the same rooms.
+export function parseSeed(value: string | undefined) {
+	return parseOptionalInteger(value, 'seed', 0, 0xffffffff);
+}
+
 export function parseRoomOptions(argv: Partial<Record<typeof roomOptionArguments[number], string>>): GenerateRoomOptions {
 	const terrainType = parseOptionalInteger(argv['terrain-type'], 'terrain-type', 1, 28);
 	const swampType = parseOptionalInteger(argv['swamp-type'], 'swamp-type', 0, 14);
@@ -47,16 +52,17 @@ export function parseRoomOptions(argv: Partial<Record<typeof roomOptionArguments
 async function main() {
 	const argv = checkArguments({
 		argv: true,
-		string: [ 'shard', ...roomOptionArguments ] as const,
+		string: [ 'shard', 'seed', ...roomOptionArguments ] as const,
 	});
 	const roomName = argv.argv[0];
 	if (roomName === undefined) {
-		console.log('Usage: xxscreeps generate-room <room> [--shard shard] [--terrain-type 1-28] [--swamp-type 0-14] [--sources 1-4] [--mineral H|O|Z|K|U|L|X]');
+		console.log('Usage: xxscreeps generate-room <room> [--shard shard] [--seed 0-4294967295] [--terrain-type 1-28] [--swamp-type 0-14] [--sources 1-4] [--mineral H|O|Z|K|U|L|X]');
 		process.exitCode = 1;
 		return;
 	}
 
-	const options = parseRoomOptions(argv);
+	const seed = parseSeed(argv.seed);
+	const options = { ...parseRoomOptions(argv), ...seed !== undefined && { seed } };
 	await using db = await Database.connect();
 	await using shard = await Shard.connect(db, argv.shard ?? config.shards[0]!.name);
 	const room = await generateRoom(shard, roomName, options);
