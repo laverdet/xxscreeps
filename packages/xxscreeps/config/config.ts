@@ -19,6 +19,15 @@ export interface BackendConfig {
 	allowEmailRegistration?: boolean;
 
 	/**
+	 * Prefix put in front of urls the backend mints for assets it serves, which are otherwise rooted
+	 * at `/`. Needed when the backend does not sit at the root of the origin the client is served
+	 * from: an origin of its own, e.g. "https://screeps.example.com", or the path a proxy mounts it
+	 * under, e.g. "/(http://localhost:21025)" for the steamless client. Prepended verbatim, so it
+	 * takes either.
+	 */
+	assetBaseUrl?: string;
+
+	/**
 	 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
 	 * to all interfaces: "*:port". Port is 21025, if not specified.
 	 * @default *
