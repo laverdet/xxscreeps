@@ -6,29 +6,10 @@ import './code.js';
 import './profile.js';
 import './world.js';
 
-// Private messaging endpoints (incl. `/api/user/messages/unread-count`) live in the `messages` mod.
+// Private messaging endpoints (incl. `/api/user/messages/unread-count`) live in the `messages` mod,
+// the `/api/user/decorations/*` endpoints in the `decorations` mod.
 const endpoints = [ ...badge ];
 export default endpoints;
-
-hooks.register('route', {
-	path: '/api/user/decorations/themes',
-	execute() {
-		return {
-			ok: 1,
-			list: [],
-		};
-	},
-});
-
-hooks.register('route', {
-	path: '/api/user/decorations/inventory',
-	execute() {
-		return {
-			ok: 1,
-			list: [],
-		};
-	},
-});
 
 hooks.register('route', {
 	path: '/api/user/tutorial-done',
