@@ -1,5 +1,11 @@
 # @xxscreeps/pathfinder
 
+## 0.4.4
+
+### Patch Changes
+
+- 47dc2ff: fix use-after-free of multi-goal storage in search
+
 ## 0.1.0
 
 ### Minor Changes
