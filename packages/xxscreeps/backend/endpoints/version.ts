@@ -1,4 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import type { ServerData } from 'xxscreeps/backend/symbols.js';
 import { hooks } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 
@@ -10,7 +11,7 @@ export const VersionEndpoint: Endpoint = {
 	path: '/api/version',
 
 	execute() {
-		const serverData: Record<string, unknown> = {
+		const serverData: ServerData = {
 			features: [
 				{ name: 'auth', version: 1 },
 				{ name: 'official-like', version: 1 },
