@@ -58,7 +58,7 @@ Themes and decorations are keyed by their id, so a pack cannot declare one twice
   (`https://screeps.example.com`) or the path a proxy mounts the backend under
   (`/(http://localhost:21025)` for the steamless client).
 - `preview` is what the client's inventory shows, as `original`, `128x128` and `256x256`. A landscape
-  that declares none gets an svg drawn from its own colours, so a colour-only pack needs no image
+  that declares none gets an svg drawn from its own colors, so a color-only pack needs no image
   files at all, and a badge is drawn from the symbol it grants for the same reason. Declaring a
   `preview` replaces the drawing. Types with artwork of their own — `wallGraffiti`, `creep`, `object`
   — are never drawn for; give them a `preview`. Note that the
@@ -66,7 +66,7 @@ Themes and decorations are keyed by their id, so a pack cannot declare one twice
   Angular allows, never as `data:image/svg+xml`. Pack-local files and http urls are always fine.
 
 Anything wrong with a pack — an unknown type, a missing asset, a dangling theme or property
-reference, a duplicate id, a colour property seeded with something that is not `#rrggbb` — fails the
+reference, a duplicate id, a color property seeded with something that is not `#rrggbb` — fails the
 server at startup rather than handing the client something it cannot render.
 
 ## What the renderer requires
@@ -100,13 +100,13 @@ definition declares.
 On top of the table, a graphic's `color`, `alpha` and `visible` name properties rather than carrying
 values, and the renderer looks those up on the placement — so each of them has to exist *and* seed a
 default. A graphic naming a `color` also needs a `brightness` property: tinting is one computation
-over both, and half of it yields no colour at all.
+over both, and half of it yields no color at all.
 
 Landscapes also carry a foreground layer — an overlay texture stretched across the floor
 (`floorForegroundUrl`) or the walls (`foregroundUrl`), tinted by `…ForegroundColor`,
 `…ForegroundBrightness` and `…ForegroundAlpha`. Declare one and the pack owns it, properties
 included. Declare none and the catalog stands in with a flat white square at alpha zero, so a
-colour-only pack still hands the renderer something to draw and looks exactly as it did before.
+color-only pack still hands the renderer something to draw and looks exactly as it did before.
 
 The two halves must never point at the same url, which is why the stand-in is two identical squares
 rather than one. The room view draws the floor foreground in `processors/terrain.js` and the wall

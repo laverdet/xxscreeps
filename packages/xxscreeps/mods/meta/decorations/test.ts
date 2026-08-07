@@ -51,7 +51,7 @@ const landscape = {
 	type: 'floorLandscape' as const,
 	name: 'Test Floor',
 	theme: theme.id,
-	// Both colours are ones the renderer dereferences, so a floor landscape may not omit either.
+	// Both colors are ones the renderer dereferences, so a floor landscape may not omit either.
 	props: {
 		floorBackgroundColor: { type: 'color' as const, default: '#123456' },
 		roadsColor: { type: 'color' as const, default: '#654321' },
@@ -119,7 +119,7 @@ describe('mods/meta/decorations', () => {
 			}) ]), /seeds no default for 'tint'/);
 		});
 
-		test('a graphic naming a colour needs the brightness dimming it', async () => {
+		test('a graphic naming a color needs the brightness dimming it', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),
@@ -276,7 +276,7 @@ describe('mods/meta/decorations', () => {
 			}) ]), /unsupported file type/);
 		});
 
-		test('a colour property seeded with something else is fatal', async () => {
+		test('a color property seeded with something else is fatal', async () => {
 			await assert.rejects(loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),
@@ -289,7 +289,7 @@ describe('mods/meta/decorations', () => {
 		/** Whether a url the catalog handed the client is one the asset route will answer. */
 		const served = (url: string) => catalog.assets.has(assetPath(url)!.replace('/assets/decorations/', ''));
 
-		test('a landscape without artwork gets one drawn from its colours', async () => {
+		test('a landscape without artwork gets one drawn from its colors', async () => {
 			const loaded = await loadCatalog([ source({ name: 'test', themes: byId(theme), decorations: byId(landscape) }) ]);
 			const preview = loaded.definitions.get('test-floor')?.preview;
 			const url = preview?.original;
@@ -298,7 +298,7 @@ describe('mods/meta/decorations', () => {
 			const asset = loaded.assets.get('_preview/test/test-floor.svg');
 			assert.strictEqual(asset?.kind, 'generated');
 			assert.match(asset.body, /^<svg /);
-			// The floor colour the pack seeds, undimmed, is what the drawing fills with.
+			// The floor color the pack seeds, undimmed, is what the drawing fills with.
 			assert.match(asset.body, /#123456/);
 		});
 
@@ -320,7 +320,7 @@ describe('mods/meta/decorations', () => {
 			assert.ok(!loaded.assets.has('_preview/test/test-graffiti.svg'));
 		});
 
-		// A badge carries no artwork either: the player picks all three colours in the badge editor, so
+		// A badge carries no artwork either: the player picks all three colors in the badge editor, so
 		// the drawing stands in with the catalog's own and a badge pack ships no image files at all.
 		test('a badge gets one drawn from the symbol it grants', async () => {
 			const loaded = await loadCatalog([ source({
@@ -335,7 +335,7 @@ describe('mods/meta/decorations', () => {
 			assert.match(asset.body, /M 0 0 H 100 Z/);
 		});
 
-		test('a landscape whose colours are not colours gets none', async () => {
+		test('a landscape whose colors are not colors gets none', async () => {
 			const loaded = await loadCatalog([ source({
 				name: 'test',
 				themes: byId(theme),

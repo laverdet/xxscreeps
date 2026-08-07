@@ -8,7 +8,7 @@ import type { DecorationDefinition, DecorationProp, DecorationType } from './cat
 // The lists come from the renderer's own source: `processors/terrain.js` and `processors/road.js`
 // draw the landscapes, `decorations.js` the wall overlay and the graffiti,
 // `processors/creepDecoration.js` and `processors/objectDecoration.js` the rest. Only the reads that
-// actually throw are listed. A colour that merely ends up in an svg attribute renders wrong rather
+// actually throw are listed. A color that merely ends up in an svg attribute renders wrong rather
 // than not at all, which is the pack author's problem and not an invariant of ours.
 
 /**
@@ -94,8 +94,8 @@ const washBody = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" wi
 
 /**
  * The foreground a landscape gets when its pack ships no artwork for one. A flat white square: the
- * layer is tinted and faded by the placement, so white is whatever colour the properties below ask
- * for, and the alpha they seed is zero — a colour-only pack looks exactly as it did before the
+ * layer is tinted and faded by the placement, so white is whatever color the properties below ask
+ * for, and the alpha they seed is zero — a color-only pack looks exactly as it did before the
  * renderer had a layer to draw.
  *
  * One square per layer rather than one shared between them, even though they are the same hundred
@@ -133,7 +133,7 @@ function requireProp(definition: DecorationDefinition, name: string) {
 
 /**
  * A graphic names the properties tinting it rather than carrying values, and the renderer looks
- * those up on the placement. `decorations.js` reads the colour without checking that it is there,
+ * those up on the placement. `decorations.js` reads the color without checking that it is there,
  * so a reference the definition does not seed takes the room view down with it.
  */
 function requireGraphicProps(definition: DecorationDefinition) {
@@ -151,7 +151,7 @@ function requireGraphicProps(definition: DecorationDefinition) {
 			}
 		}
 	}
-	// Tinting is one computation over both: whatever colour the player picked, dimmed by whatever
+	// Tinting is one computation over both: whatever color the player picked, dimmed by whatever
 	// brightness they picked. A graphic naming the one needs the other.
 	if (graphics.some(graphic => graphic.color !== undefined)) {
 		requireProp(definition, 'brightness');

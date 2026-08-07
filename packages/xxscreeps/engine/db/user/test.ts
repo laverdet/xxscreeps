@@ -7,7 +7,7 @@ describe('engine/db/user', () => {
 	test('Badge.generateRandom produces a schema-valid badge', async () => {
 		await using testShard = await instantiateTestShard();
 		const { db } = testShard;
-		// A colour channel below 0x100000 renders as fewer than six hex digits; without
+		// A color channel below 0x100000 renders as fewer than six hex digits; without
 		// zero-padding that fails the `^#[a-f0-9]{6}$` schema (~1/16 per channel), so loop
 		// enough times to surface it. validate() throws on a malformed badge.
 		for (let index = 0; index < 256; ++index) {

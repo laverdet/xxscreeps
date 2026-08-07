@@ -10,7 +10,7 @@ decorations:
     name: Plain Floor
     theme: xx-basic
     rarity: 1
-    groupDescription: Recolours the floor, the swamps and the roads of a room.
+    groupDescription: Recolors the floor, the swamps and the roads of a room.
     props:
       floorBackgroundColor: { type: color, label: Floor, default: '#2b2b2b' }
       floorBackgroundBrightness: { type: range, label: Floor brightness, min: 0.2, max: 1, step: 0.01, default: 1 }
@@ -26,7 +26,7 @@ decorations:
     name: Plain Walls
     theme: xx-basic
     rarity: 1
-    groupDescription: Recolours the walls of a room.
+    groupDescription: Recolors the walls of a room.
     props:
       backgroundColor: { type: color, label: Wall, default: '#111111' }
       backgroundBrightness: { type: range, label: Wall brightness, min: 0.2, max: 1, step: 0.01, default: 1 }
@@ -41,7 +41,7 @@ decorations:
     name: Neon Floor
     theme: xx-neon
     rarity: 2
-    groupDescription: A floor that leans into the colour picker.
+    groupDescription: A floor that leans into the color picker.
     props:
       floorBackgroundColor: { type: color, label: Floor, default: '#1b0f2b' }
       floorBackgroundBrightness: { type: range, label: Floor brightness, min: 0.2, max: 1, step: 0.01, default: 1 }
@@ -171,7 +171,7 @@ decorations:
     name: Chevrons
     theme: xx-basic
     rarity: 3
-    groupDescription: A symbol for your account badge. Activate it, then pick it in the badge editor — the colours are yours to choose there.
+    groupDescription: A symbol for your account badge. Activate it, then pick it in the badge editor — the colors are yours to choose there.
     badge:
       path1: M 50 8 L 96 54 L 78 54 L 50 26 L 22 54 L 4 54 Z
       path2: M 50 46 L 96 92 L 78 92 L 50 64 L 22 92 L 4 92 Z

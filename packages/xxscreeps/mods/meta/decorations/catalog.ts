@@ -67,7 +67,7 @@ export interface DecorationLayout {
 
 /**
  * One image of a decoration. `color`, `alpha` and `visible` hold the *name* of a property, not a
- * value — the placed state supplies the value, which is how one graphic serves every colour a
+ * value — the placed state supplies the value, which is how one graphic serves every color a
  * player picks.
  */
 export interface DecorationGraphic {
@@ -95,7 +95,7 @@ export interface DecorationDefinition {
 	type: DecorationType;
 	name: string;
 	theme: string;
-	/** 1–5. Drives the colour of the client's rarity indicator. */
+	/** 1–5. Drives the color of the client's rarity indicator. */
 	rarity?: number;
 	groupDescription?: string;
 	props: Record<string, DecorationProp>;
@@ -176,7 +176,7 @@ const propSchema = {
 	},
 	required: [ 'type' ],
 	additionalProperties: false,
-	// The client and the generated previews read colour defaults straight out as colours, so the
+	// The client and the generated previews read color defaults straight out as colors, so the
 	// format is enforced here rather than wherever one of them trips over it.
 	anyOf: [
 		{ properties: { type: { const: 'color' }, default: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } },
@@ -258,7 +258,7 @@ const packSchema = {
 					metadata: { type: 'object' },
 					// Both halves of a symbol, even when the second draws nothing: the client hands the
 					// pair back as it received it, and the badge it asks for has to be one the server
-					// recognises. `path2` may be empty, which is how a one-colour symbol is spelled.
+					// recognises. `path2` may be empty, which is how a one-color symbol is spelled.
 					badge: {
 						type: 'object',
 						properties: {
@@ -367,7 +367,7 @@ async function loadPack({ body, directory }: PackSource) {
 
 	const definitions = await Fn.mapAwait(Object.entries(pack.decorations), async ([ id, authored ]): Promise<DecorationDefinition> => {
 		const definition = { id, ...authored };
-		// A landscape carries no artwork, so its preview is drawn from its colours. The key sits
+		// A landscape carries no artwork, so its preview is drawn from its colors. The key sits
 		// outside every pack's namespace: a file's key starts with the pack name, which the schema
 		// constrains to `^[a-z0-9][a-z0-9-]*$`, so no pack can reference or shadow one of these.
 		const preview = await async function() {

@@ -1,7 +1,7 @@
 import type { DecorationDefinition, DecorationType } from './catalog.js';
 import type { BadgeSymbol } from 'xxscreeps/engine/db/user/badge.js';
 
-// A landscape decoration is pure colour: its entire appearance comes from the properties a player
+// A landscape decoration is pure color: its entire appearance comes from the properties a player
 // picks, so there is no artwork a pack could ship as its inventory preview. The catalog draws one
 // from the property defaults instead and serves it like any other asset. A badge is drawn for the
 // same reason, from the paths it grants. Types that do have artwork — `wallGraffiti`, `creep`,
@@ -16,16 +16,21 @@ const wallThickness = 22;
 /**
  * Border widths run 0–60, the range the room renderer works in. Previews are 128 units across, so a
  * border at the top of that range lands at 10 units — heavy enough to read, thin enough to leave the
- * colour it borders visible.
+ * color it borders visible.
  */
 const widthScale = 10 / 60;
 
 /** What each landscape type paints. Types with artwork of their own are absent. */
-const parts: Partial<Record<DecorationType, { walls: boolean; floor: boolean }>> = {
+const parts: Partial<Record<DecorationType, LandscapeDecorationConfig>> = {
 	floorLandscape: { walls: false, floor: true },
 	wallLandscape: { walls: true, floor: false },
 	landscape: { walls: true, floor: true },
 };
+
+interface LandscapeDecorationConfig {
+	floor: boolean;
+	walls: boolean;
+}
 
 interface Rect {
 	x: number;
@@ -43,7 +48,7 @@ const inset = ({ x, y, width, height }: Rect, amount: number): Rect =>
 const box = ({ x, y, width, height }: Rect) =>
 	`x="${round(x)}" y="${round(y)}" width="${round(width)}" height="${round(height)}"`;
 
-/** A rectangle outline centred on `rect`. Nothing is drawn without both a colour and a width. */
+/** A rectangle outline centred on `rect`. Nothing is drawn without both a color and a width. */
 function border(rect: Rect, color: string | undefined, width: number) {
 	if (color === undefined || width <= 0) {
 		return [];
@@ -59,7 +64,7 @@ function ring(outer: Rect, inner: Rect) {
 }
 
 /**
- * A `#rrggbb` colour scaled by a brightness factor, the way the renderer dims a landscape colour.
+ * A `#rrggbb` color scaled by a brightness factor, the way the renderer dims a landscape color.
  * The pack schema guarantees the format, so there is nothing to fall back to.
  */
 function dim(color: string, brightness: number) {
@@ -70,7 +75,7 @@ function dim(color: string, brightness: number) {
 	return `#${channels.join('')}`;
 }
 
-/** Default of a colour property, or `undefined` when the pack seeds none. */
+/** Default of a color property, or `undefined` when the pack seeds none. */
 function colorOf(definition: DecorationDefinition, name: string) {
 	const prop = definition.props[name];
 	return prop?.type === 'color' && typeof prop.default === 'string' ? prop.default : undefined;
@@ -82,7 +87,7 @@ function numberOf(definition: DecorationDefinition, name: string, fallback: numb
 	return prop?.type === 'range' && typeof prop.default === 'number' ? prop.default : fallback;
 }
 
-/** A colour property dimmed by the brightness property that accompanies it. */
+/** A color property dimmed by the brightness property that accompanies it. */
 function shadeOf(definition: DecorationDefinition, name: string, brightness: string) {
 	const color = colorOf(definition, name);
 	return color === undefined ? undefined : dim(color, numberOf(definition, brightness, 1));
@@ -119,7 +124,7 @@ function floor(definition: DecorationDefinition, rect: Rect) {
 /**
  * The walls of a room, drawn as the band between `outer` and `inner`. Walls frame a room rather than
  * fill it, so a wall landscape reads as an outline — and its border stays legible even when the wall
- * colour itself is nearly black, which the plainer packs tend to pick.
+ * color itself is nearly black, which the plainer packs tend to pick.
  */
 function walls(definition: DecorationDefinition, outer: Rect, inner: Rect) {
 	const background = shadeOf(definition, 'backgroundColor', 'backgroundBrightness');
@@ -137,7 +142,7 @@ function walls(definition: DecorationDefinition, outer: Rect, inner: Rect) {
 }
 
 /**
- * The colours a symbol is previewed in. A badge decoration carries no colours of its own — the
+ * The colors a symbol is previewed in. A badge decoration carries no colors of its own — the
  * player picks all three in the badge editor, over whichever symbol they chose — so the drawing
  * stands in with the disc, the symbol and its second half in the catalog's own greys.
  */
@@ -154,14 +159,14 @@ function symbol({ path1, path2 }: BadgeSymbol) {
 		'<g clip-path="url(#clip)">' +
 		`<rect width="100" height="100" fill="${disc}"/>` +
 		`<path d="${path1}" fill="${first}"/>` +
-		// The second half is optional; a one-colour symbol spells it as an empty path.
+		// The second half is optional; a one-color symbol spells it as an empty path.
 		(path2 === '' ? '' : `<path d="${path2}" fill="${second}"/>`) +
 		'</g></svg>';
 }
 
 /**
  * An svg standing in for a decoration that ships no artwork, or `undefined` when the definition is
- * neither a badge nor a landscape, or does not carry the colours a drawing needs.
+ * neither a badge nor a landscape, or does not carry the colors a drawing needs.
  */
 export function renderPreview(definition: DecorationDefinition) {
 	if (definition.badge !== undefined) {
