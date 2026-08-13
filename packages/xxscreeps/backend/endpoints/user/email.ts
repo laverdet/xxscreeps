@@ -1,5 +1,5 @@
 import type { JSONSchemaType } from 'ajv';
-import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
+import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { mailer } from 'xxscreeps/backend/mail.js';
 import { config } from 'xxscreeps/config/index.js';
@@ -65,6 +65,31 @@ hooks.register('route', {
 		const { pending, refusal } = await setAndVerifyEmail(context.db, userId, email);
 		return { ok: 1, pending, ...refusal !== undefined && { error: refusal.reason } };
 	}),
+});
+
+// Ask for the confirmation mail again — one can be lost, junked, or simply expire, and without this
+// the only way out of a pending address is setting it all over again.
+hooks.register('route', {
+	method: 'post',
+	path: '/api/user/email/resend',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (userId === undefined) {
+			return { error: 'not authenticated' };
+		}
+		if (await User.pendingEmailForUser(context.db, userId) === null) {
+			// Nothing to confirm: no address at all, or it is confirmed already.
+			return { ok: 1, pending: false };
+		}
+		const refusal = await sendPendingEmailVerification(context.db, userId);
+		if (refusal !== undefined) {
+			// A mailer declining is the user's answer, not an error of ours: it carries why, and when
+			// to come back if that is only for now.
+			return { error: refusal.reason, ...refusal.retryInSeconds !== undefined && { retryInSeconds: refusal.retryInSeconds } };
+		}
+		return { ok: 1, pending: true };
+	},
 });
 
 // Holding addresses pending is a promise that someone will ask the user to confirm them, and the
