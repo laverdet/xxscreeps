@@ -1,6 +1,7 @@
 import type { JSONSchemaType } from 'ajv';
-import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
+import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { mailer } from 'xxscreeps/backend/mail.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
@@ -61,7 +62,20 @@ hooks.register('route', {
 		if (owner !== null && owner !== userId) {
 			return { error: 'exists' };
 		}
-		const { pending } = await User.setEmail(context.db, userId, email, holdsPendingEmail());
-		return { ok: 1, pending };
+		const { pending, refusal } = await setAndVerifyEmail(context.db, userId, email);
+		return { ok: 1, pending, ...refusal !== undefined && { error: refusal.reason } };
 	}),
+});
+
+// Holding addresses pending is a promise that someone will ask the user to confirm them, and the
+// backend can't keep it alone. Say so once rather than leaving registrations quietly stranded.
+hooks.register('backendReady', () => {
+	if (holdsPendingEmail()) {
+		if (!mailer.registered) {
+			console.error('`backend.autoVerifyEmail` is off but no mod delivers mail — addresses will be held pending with no confirmation link to open');
+		}
+		if (config.backend.publicUrl === undefined) {
+			console.error('`backend.autoVerifyEmail` is off but `backend.publicUrl` is not set — there is no address to root a confirmation link at');
+		}
+	}
 });

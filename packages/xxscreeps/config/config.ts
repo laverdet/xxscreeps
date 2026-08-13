@@ -13,6 +13,8 @@ export interface BackendConfig {
 
 	/**
 	 * Whether to allow users sign up without steam with only their email address.
+	 * Note: xxscreeps itself does not send a confirmation mail; install a mod which does and set
+	 * `autoVerifyEmail: false` to require one.
 	 * @default false
 	 */
 	allowEmailRegistration?: boolean;
@@ -28,8 +30,10 @@ export interface BackendConfig {
 
 	/**
 	 * Whether email addresses are trusted immediately on registration/change, rather than held
-	 * pending until the user confirms them. Note that an address held pending is not yet a sign-in
-	 * identity — until it is confirmed the user signs in by username.
+	 * pending until the user opens a confirmation link. Turning this off needs `publicUrl` set and a
+	 * mod which delivers mail; without either, addresses are held pending with no way to confirm
+	 * them. Note that an address held pending is not yet a sign-in identity — until it is confirmed
+	 * the user signs in by username.
 	 * @default true
 	 */
 	autoVerifyEmail?: boolean;
@@ -62,6 +66,14 @@ export interface BackendConfig {
 	 * do anything with the client ip.
 	 */
 	proxy?: BackendProxyConfig;
+
+	/**
+	 * Where this server is reachable from a browser, e.g. "https://screeps.example.com". Links the
+	 * backend mails out are rooted here. It cannot be taken from the request which triggers the mail:
+	 * that origin is the `Host` header, so a forged one would have us mail a link pointing somewhere
+	 * else entirely.
+	 */
+	publicUrl?: string;
 
 	/**
 	 * Secret used for session authentication. If not specified a new secret will be generated each

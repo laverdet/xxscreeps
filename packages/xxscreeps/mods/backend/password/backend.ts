@@ -1,6 +1,6 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { holdsPendingEmail } from 'xxscreeps/backend/auth/email.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -137,7 +137,10 @@ hooks.register('route', {
 			const newUserId = Id.generateId(12);
 			await User.create(context.db, newUserId, username);
 			await setPassword(context.db, newUserId, password);
-			await User.setEmail(context.db, newUserId, email, holdsPendingEmail());
+			// Establishes the address, and mails the confirmation link when this server holds one
+			// pending rather than trusting it outright.
+			const { refusal } = await setAndVerifyEmail(context.db, newUserId, email);
+			reportUnsentVerification(newUserId, refusal);
 			return { ok: 1 };
 		} else {
 			context.status = 500;

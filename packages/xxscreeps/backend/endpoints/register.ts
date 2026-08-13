@@ -1,6 +1,6 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import { holdsPendingEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
+import { reportUnsentVerification, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
@@ -97,9 +97,8 @@ const SetUsernameEndpoint: Endpoint = {
 		// Register. The address is established after the user exists, since holding one pending writes
 		// it against their record.
 		await User.create(context.db, newUserId, username, [ { provider, id: providerId } ]);
-		if (email != null) {
-			await User.setEmail(context.db, newUserId, email, holdsPendingEmail());
-		}
+		const mail = email == null ? undefined : await setAndVerifyEmail(context.db, newUserId, email);
+		reportUnsentVerification(newUserId, mail?.refusal);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;
 		context.state.provider = undefined;
