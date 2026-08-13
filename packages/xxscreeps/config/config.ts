@@ -13,7 +13,6 @@ export interface BackendConfig {
 
 	/**
 	 * Whether to allow users sign up without steam with only their email address.
-	 * Note: there is currently no confirmation mail send to the user to verify the address.
 	 * @default false
 	 */
 	allowEmailRegistration?: boolean;
@@ -26,6 +25,14 @@ export interface BackendConfig {
 	 * takes either.
 	 */
 	assetBaseUrl?: string;
+
+	/**
+	 * Whether email addresses are trusted immediately on registration/change, rather than held
+	 * pending until the user confirms them. Note that an address held pending is not yet a sign-in
+	 * identity — until it is confirmed the user signs in by username.
+	 * @default true
+	 */
+	autoVerifyEmail?: boolean;
 
 	/**
 	 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
