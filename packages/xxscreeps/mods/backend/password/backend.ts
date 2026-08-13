@@ -144,16 +144,13 @@ hooks.register('route', {
 	}),
 });
 
-// Add password flag and email to user info payload
+// Add password flag to user info payload. The address itself is reported by the profile endpoint —
+// the `email` provider is core state, not a password concern.
 hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
 		const password = await db.data.hGet(infoKey(userId), 'password');
 		if (password !== null) {
 			userInfo.password = true;
-		}
-		const email = await User.providerIdForUser(db, 'email', userId);
-		if (email !== null) {
-			userInfo.email = email;
 		}
 	}
 });

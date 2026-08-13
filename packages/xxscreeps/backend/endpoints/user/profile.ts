@@ -20,7 +20,7 @@ hooks.register('route', {
 			// Real user
 			const { userId } = context.state;
 			const info = {};
-			const [ user ] = await Promise.all([
+			const [ user, providers ] = await Promise.all([
 				User.loadBackendUserInfo(context.db, userId),
 				User.findProvidersForUser(context.db, userId),
 				Promise.all(sendUserInfo(context.db, userId, info, true)),
@@ -29,6 +29,9 @@ hooks.register('route', {
 				ok: 1,
 				_id: userId,
 				cpu: 100,
+				// The address is the `email` provider, which is core state — a user has one whether or
+				// not the mod which lets them sign in with it is installed.
+				...providers.email !== undefined && { email: providers.email },
 				...user,
 			});
 
