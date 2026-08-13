@@ -1,4 +1,5 @@
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import { checkEmailVerificationToken } from './email.js';
 import { checkSignedToken, checkToken, makeSignedToken, makeToken } from './token.js';
 
 describe('auth tokens', () => {
@@ -26,5 +27,12 @@ describe('auth tokens', () => {
 	test('garbage is refused rather than thrown at', async () => {
 		assert.strictEqual(await checkToken('not-a-token'), undefined);
 		assert.strictEqual(await checkSignedToken('greeting', ''), undefined);
+	});
+});
+
+describe('email verification links', () => {
+	// The round trip through a real mailed link is exercised in `backend/test.ts`.
+	test('a login token is not a verification link', async () => {
+		assert.strictEqual(await checkEmailVerificationToken(await makeToken('100')), undefined);
 	});
 });

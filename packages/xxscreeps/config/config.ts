@@ -42,6 +42,21 @@ export interface BackendConfig {
 	bind?: string;
 
 	/**
+	 * Where the backend sends a user's browser after they open an address confirmation link. The
+	 * outcome is appended as `emailVerified=1` or `emailVerified=0`, so the destination can report
+	 * it. Defaults to the server root, which is the client on a stock install; point it elsewhere
+	 * when the client is served from another origin.
+	 * @default /
+	 */
+	emailVerifyRedirect?: string;
+
+	/**
+	 * How long an address confirmation link stays valid, in hours.
+	 * @default 24
+	 */
+	emailVerifyTtlHours?: number;
+
+	/**
 	 * Reverse proxy configuration. TODO: mTLS, otherwise publicly-accessible backends on the public
 	 * internet can receive forged requests. This isn't a big deal for us at the moment since we don't
 	 * do anything with the client ip.
