@@ -202,6 +202,15 @@ options apply to the sector's normal rooms. Also available as
 `npx xxscreeps generate-sector W20N20`, taking the same flags as
 `generate-room`.
 
+`sealWorldBoundary` walls off the world's outer boundary, where the outermost
+rooms still carry the exits they rolled toward neighbors that were never
+generated. Each such room is rebuilt with its outward borders walled off and
+its inward ones inherited, which re-rolls its terrain and objects — so run it
+once the world's extent is final and before players are placed; a boundary room
+holding a player's objects is refused. Also available as
+`npx xxscreeps seal-world`, taking the `generate-room` flags plus `--dry-run`
+to list the rooms it would rebuild.
+
 ## Docker
 
 If you want to run xxscreeps in Docker, you can do this:

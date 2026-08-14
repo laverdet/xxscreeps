@@ -234,7 +234,7 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 	}
 }
 
-const isSystemUser = (userId: string) => userId.length <= 2;
+export const isSystemUser = (userId: string) => userId.length <= 2;
 export async function updateUserRoomRelationships(shard: Shard, room: Room, previous?: ReturnType<typeof flushUsers>) {
 	const checkPlayers = (current: string[], previous?: string[]) => {
 		// Filter out NPCs

@@ -9,6 +9,7 @@ const specifier = process.argv[1];
 const commands = {
 	'generate-room': './dist/scripts/generate-room.js',
 	'generate-sector': './dist/scripts/generate-sector.js',
+	'seal-world': './dist/scripts/seal-world.js',
 	backend: './dist/backend/server.js',
 	cli: './dist/cli/cli.js',
 	eval: './dist/cli/eval.js',
