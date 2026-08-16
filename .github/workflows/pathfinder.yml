@@ -82,6 +82,7 @@ jobs:
             cmake
             libboost-all-dev
             libclang-rt-22-dev
+            libstdc++-16-dev
             lld-22
             llvm-22
             ninja-build
@@ -195,6 +196,7 @@ jobs:
             ;
             if ninja -C build; then
               pnpm -C ../xxscreeps install '@xxscreeps/pathfinder@workspace:^'
+              pnpm -C ../xxscreeps install "@isolated-vm/experimental@$(jq -r .version node_modules/@isolated-vm/experimental/package.json)"
               npx xxscreeps import
               cp screeps/shard0/terrain .
               # classic v8 + isolated-vm module

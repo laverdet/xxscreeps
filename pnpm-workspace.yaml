@@ -10,6 +10,8 @@ allowBuilds:
   ivm-inspect: true
 
 minimumReleaseAgeExclude:
+  - '@auto_js/*'
+  - '@isolated-vm/*'
   - '@xxscreeps/pathfinder-darwin-arm64@0.4.3'
   - '@xxscreeps/pathfinder-darwin-x64@0.4.3'
   - '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.3'

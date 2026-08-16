@@ -132,18 +132,18 @@ class resource_recursion_stack {
 			auto after = util::scope_exit{[ & ] { --index_; }};
 			return util::template_switch(
 				index,
-				util::sequence<sizeof...(Type)>,
+				util::sequence_cw<sizeof...(Type)>,
 				util::overloaded{
 					[ & ] -> decltype(auto) { return callback(); },
-					[ & ]<std::size_t Index>(std::integral_constant<std::size_t, Index> /*index*/) -> decltype(auto) {
-						return callback(std::get<Index>(resources_));
+					[ & ](auto index) -> decltype(auto) {
+						return callback(std::get<index>(resources_));
 					},
 				}
 			);
 		}
 
 	private:
-		int index_ = 0;
+		unsigned index_ = 0;
 		std::tuple<Type...> resources_;
 };
 

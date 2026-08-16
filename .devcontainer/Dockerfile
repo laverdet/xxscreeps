@@ -37,6 +37,10 @@ RUN <<DONE
 		yq \
 	;
 
+	# Symlink clang binaries
+	for name in /usr/bin/clang*-$LLVM_VERSION; do ln -s "$name" "${name%-$LLVM_VERSION}"; done
+	for name in /usr/bin/llvm-$LLVM_VERSION; do ln -s "$name" "${name%-$LLVM_VERSION}"; done
+
 	# By the way if you are reading this you can automatically import dotfiles. So like, I have all my
 	# local aliases, gitignore, bash_profile, and so on setup in the Docker container.
 	# https://code.visualstudio.com/docs/devcontainers/containers#_personalizing-with-dotfile-repositories
