@@ -126,7 +126,7 @@ struct instance_state {
 		using open_closed_type = open_closed_t<search_capacity>;
 
 		using node_projection = decltype([](const heap_node& node) { return node.score; });
-		using heap_type = heap_t<heap_node, std::greater<>, node_projection, search_capacity / 8>;
+		using heap_type = bucket_heap_t<heap_node, node_projection, search_capacity / 8>;
 
 		room_scope_table room_table;
 		std::array<pos_index_t, search_capacity> parents;
