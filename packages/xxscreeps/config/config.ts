@@ -145,7 +145,7 @@ export interface LauncherConfig {
 export interface ProcessorConfig {
 	/**
 	 * Total number of processor tasks to run at a time. The default is the number of CPU cores
-	 * (including hyper-threaded) + 1
+	 * available to this process (including hyper-threaded, respecting CPU affinity) + 1
 	 */
 	concurrency?: number;
 
@@ -170,8 +170,8 @@ export interface RunnerConfig {
 	cpu?: RunnerCPUConfig;
 
 	/**
-	 * Total number of run tasks to run at a time. The default is the number of CPU cores (including
-	 * hyper-threaded) + 1
+	 * Total number of run tasks to run at a time. The default is the number of CPU cores available to
+	 * this process (including hyper-threaded, respecting CPU affinity) + 1
 	 */
 	concurrency?: number;
 
@@ -289,11 +289,11 @@ export const defaults = {
 		respawnTimeout: 0,
 	},
 	processor: {
-		concurrency: os.cpus().length + 1,
+		concurrency: os.availableParallelism() + 1,
 		intentAbandonTimeout: 5000,
 	},
 	runner: {
-		concurrency: os.cpus().length + 1,
+		concurrency: os.availableParallelism() + 1,
 		cpu: {
 			bucket: 10000,
 			memoryLimit: 256,
