@@ -136,6 +136,9 @@ importers:
       '@isolated-vm/experimental':
         specifier: ^0.0.10
         version: 0.0.10
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.31
+        version: 0.3.31
       '@loaderkit/resolve':
         specifier: ^1.0.6
         version: 1.0.6
