@@ -1,5 +1,6 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -134,8 +135,12 @@ hooks.register('route', {
 		}
 		if (allowEmailRegistration) {
 			const newUserId = Id.generateId(12);
-			await User.create(context.db, newUserId, username, [ { provider: 'email', id: email } ]);
+			await User.create(context.db, newUserId, username);
 			await setPassword(context.db, newUserId, password);
+			// Establishes the address, and mails the confirmation link when this server holds one
+			// pending rather than trusting it outright.
+			const { refusal } = await setAndVerifyEmail(context.db, newUserId, email);
+			reportUnsentVerification(newUserId, refusal);
 			return { ok: 1 };
 		} else {
 			context.status = 500;
@@ -144,16 +149,13 @@ hooks.register('route', {
 	}),
 });
 
-// Add password flag and email to user info payload
+// Add password flag to user info payload. The address itself is reported by the profile endpoint —
+// the `email` provider is core state, not a password concern.
 hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
 		const password = await db.data.hGet(infoKey(userId), 'password');
 		if (password !== null) {
 			userInfo.password = true;
-		}
-		const email = await User.providerIdForUser(db, 'email', userId);
-		if (email !== null) {
-			userInfo.email = email;
 		}
 	}
 });

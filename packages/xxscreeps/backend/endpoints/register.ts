@@ -1,11 +1,8 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import { reportUnsentVerification, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-
-function validateEmail(email: string) {
-	return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
-}
 
 interface CheckEmailRequest {
 	email: string;
@@ -97,12 +94,11 @@ const SetUsernameEndpoint: Endpoint = {
 			return { error: 'invalid' };
 		}
 
-		// Register
-		const providers = [ { provider, id: providerId } ];
-		if (email != null) {
-			providers.push({ provider: 'email', id: email });
-		}
-		await User.create(context.db, newUserId, username, providers);
+		// Register. The address is established after the user exists, since holding one pending writes
+		// it against their record.
+		await User.create(context.db, newUserId, username, [ { provider, id: providerId } ]);
+		const mail = email == null ? undefined : await setAndVerifyEmail(context.db, newUserId, email);
+		reportUnsentVerification(newUserId, mail?.refusal);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;
 		context.state.provider = undefined;

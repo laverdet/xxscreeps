@@ -45,10 +45,22 @@ async function decrypt(data: string) {
 	return Consumers.buffer(cipher);
 }
 
+// Purpose tag separator. Login payloads are a user id or a `new:...` triplet, neither of which can
+// contain a nul byte, so the tag is what keeps the two token kinds apart in one key space.
+const kPurposeSeparator = '\0';
+
+function makeStringToken(payload: string, expiresInSeconds: number) {
+	const expires = Math.floor(Date.now() / 1000) + expiresInSeconds;
+	const buffer = Buffer.alloc(4 + Buffer.byteLength(payload, 'utf8'));
+	buffer.writeInt32LE(-expires);
+	buffer.write(payload, 4, 'utf8');
+	return encrypt(buffer);
+}
+
 export function makeToken(id: string) {
-	const expires = Math.floor(Date.now() / 1000) + kTokenExpiry;
 	if (/^[a-f0-9]+$/.test(id)) {
 		// Hex only id
+		const expires = Math.floor(Date.now() / 1000) + kTokenExpiry;
 		const buffer = Buffer.alloc(5 + (id.length + 1 >>> 1), 0);
 		const odd = id.length % 2;
 		buffer.writeInt32LE(expires);
@@ -57,15 +69,11 @@ export function makeToken(id: string) {
 		return encrypt(buffer);
 	} else {
 		// Any string
-		const payload = Buffer.from(id, 'utf8');
-		const buffer = Buffer.alloc(4 + payload.length);
-		buffer.writeInt32LE(-expires);
-		buffer.set(payload, 4);
-		return encrypt(buffer);
+		return makeStringToken(id, kTokenExpiry);
 	}
 }
 
-export async function checkToken(token?: string) {
+async function readToken(token?: string) {
 	const buffer = await decrypt(token ?? '');
 	if (!buffer) {
 		return;
@@ -82,4 +90,30 @@ export async function checkToken(token?: string) {
 		// Any string
 		return buffer.toString('utf8', 4);
 	}
+}
+
+export async function checkToken(token?: string) {
+	const value = await readToken(token);
+	// Purpose-tagged tokens share the signing key but must never authenticate a request.
+	return value?.includes(kPurposeSeparator) ? undefined : value;
+}
+
+/**
+ * Mint a token which carries `payload` for a named `purpose` other than authentication — e.g. the
+ * address confirmation link mailed to a user. Signed with the same key as login tokens, so links
+ * survive a restart and work across backend replicas without shared storage, but tagged with the
+ * purpose so the two can never be exchanged for one another.
+ */
+export function makeSignedToken(purpose: string, payload: string, expiresInSeconds: number) {
+	return makeStringToken(`${purpose}${kPurposeSeparator}${payload}`, expiresInSeconds);
+}
+
+/**
+ * Read back a token minted by `makeSignedToken`, or `undefined` if it's invalid, expired, or was
+ * minted for another purpose.
+ */
+export async function checkSignedToken(purpose: string, token?: string) {
+	const value = await readToken(token);
+	const prefix = `${purpose}${kPurposeSeparator}`;
+	return value?.startsWith(prefix) ? value.slice(prefix.length) : undefined;
 }
