@@ -76,8 +76,7 @@ export function createRuin(structure: Structure, decay?: number) {
 	}
 	ruin.destroyTime = Game.time;
 
-	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType] ?? C.RUIN_DECAY);
-	ruin['#decayTime'] = Game.time + decayTimeout;
+	ruin['#decayTime'] = Game.time + (decay ?? structure['#ruinDecay']());
 	ruin['#structure'] = {
 		id: structure.id,
 		hitsMax: structure.hitsMax ?? 0,

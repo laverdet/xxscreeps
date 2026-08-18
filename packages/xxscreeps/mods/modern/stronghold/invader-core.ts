@@ -2,18 +2,21 @@ import type { RoomObject, RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscreeps/game/object.js';
-import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
+import { StructureController, resetController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
+import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { invaderCoreShape } from './schema.js';
+import { calcReward, coreAmounts, coreDensities, coreRewards, templates } from './templates.js';
 
 /**
  * This NPC structure is a control center of NPC Strongholds, and also rules all invaders in the
@@ -119,6 +122,35 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 			return;
 		}
 		super['#applyDamage'](power, type, source);
+	}
+
+	override '#destroy'(type?: number) {
+		const depositType = this['#depositType'];
+		const templateName = this['#templateName'];
+		if (depositType !== undefined && templateName !== undefined) {
+			const { rewardLevel } = templates[templateName];
+			const chain = coreRewards[depositType];
+			const rewards = Fn.map(coreDensities.slice(0, 1 + rewardLevel).entries(),
+				([ index, density ]) => [ chain[index]!, density ] as const);
+			const store = new OpenStore();
+			for (const [ resource, amount ] of calcReward(rewards, coreAmounts[rewardLevel]!)) {
+				store['#add'](resource, amount);
+			}
+			// `createRuin` runs inside the destructor below and copies the dying structure's store into
+			// the ruin, so the loot reaches the player riding a store the core never otherwise carries.
+			(this as never as Record<'store', OpenStore>).store = store;
+		}
+		if (!super['#destroy'](type)) {
+			return false;
+		}
+		const { controller } = this.room;
+		if (controller?.['#user'] === kInvaderUserId && controller.level > 0) {
+			// Damage arrives without a processor context, so the NPC's controlled-rooms index keeps this
+			// room. The stale entry is inert — nothing reads the NPC's set, and the scratch index is
+			// reseeded from room state at processor boot.
+			resetController(controller);
+		}
+		return true;
 	}
 }
 

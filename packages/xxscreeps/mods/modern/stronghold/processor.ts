@@ -30,7 +30,7 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { strongholdBehavior } from './behavior.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
-import { calcReward, templates } from './templates.js';
+import { calcReward, containerAmounts, containerRewards, templates } from './templates.js';
 
 // A room with an invader core is a stronghold; its creeps are defenders driven by the core's
 // behavior rather than the raid logic. This registration replaces the raid loop registered by
@@ -166,6 +166,16 @@ const intents = [
 	}),
 ];
 
+// A stronghold destroyed early leaves its spoils lying for as long as it would have stood, so the
+// ruin of anything carrying a collapse timer lasts until that timer would have expired.
+Structure.prototype['#ruinDecay'] = function(ruinDecay) {
+	return function(this: Structure) {
+		const decay = ruinDecay.call(this);
+		const collapseTime = this['#collapseTime'];
+		return collapseTime === 0 ? decay : Math.max(decay, collapseTime - Game.time);
+	};
+}(Structure.prototype['#ruinDecay']);
+
 // Wire up collapse for stronghold objects
 registerObjectPreTickProcessor(Structure, (structure, context) => {
 	if (optionalExpiryTime(structure['#collapseTime']) === 0) {
@@ -181,7 +191,6 @@ registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
 		const controller = core.room.controller;
 		if (controller && controller.level > 0) {
 			release(context, controller);
-			controller['#upgradeInvulnerableUntil'] = 0;
 		}
 		next();
 	}
@@ -235,7 +244,7 @@ function createPeer(type: StrongholdStructure['type'], pos: RoomPosition, reward
 		}
 		case C.STRUCTURE_CONTAINER: {
 			const container = createContainer(pos);
-			for (const [ resource, amount ] of calcReward(rewardLevel)) {
+			for (const [ resource, amount ] of calcReward(Object.entries(containerRewards), containerAmounts[rewardLevel]!, 3)) {
 				container.store['#add'](resource, amount);
 			}
 			// Reward containers are withdraw-only

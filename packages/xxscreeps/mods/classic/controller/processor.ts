@@ -1,15 +1,13 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/classic/creep/creep.js';
-import { checkActiveStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
 import * as C from 'xxscreeps:mods/constants';
-import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
+import { StructureController, checkActivateSafeMode, checkUnclaim, resetController, updateRoomStatus } from './controller.js';
 import * as CreepLib from './creep.js';
 import { controlledRoomsKey, incrementGlobalControlLevel, insertControlledRoom, insertReservedRoom, removeControlledRoom, removeReservedRoom } from './model.js';
 
@@ -26,22 +24,12 @@ export function claim(context: ProcessorContext, controller: StructureController
 }
 
 export function release(context: ProcessorContext, controller: StructureController) {
-	const { room } = controller;
-	const userId = room['#user'];
+	const userId = controller.room['#user'];
 	if (userId != null) {
 		const remove = controller.level > 0 ? removeControlledRoom : removeReservedRoom;
 		context.task(remove(context.shard, userId, controller.room.name));
 	}
-	controller['#downgradeTime'] = 0;
-	controller['#progress'] = 0;
-	controller['#reservationEndTime'] = 0;
-	controller['#safeModeCooldownTime'] = 0;
-	controller['#user'] = null;
-	// TODO: Power needs to be moved to the powercreep mod
-	controller.isPowerEnabled = false;
-	controller.safeModeAvailable = 0;
-	room['#safeModeUntil'] = 0;
-	updateRoomStatus(room, 0, null);
+	resetController(controller);
 	context.didUpdate();
 }
 
@@ -52,20 +40,6 @@ export function reserve(context: ProcessorContext, controller: StructureControll
 	}
 	controller['#reservationEndTime'] = endTime;
 	context.didUpdate();
-}
-
-/**
- * Update room owner and/or level, and notify all objects of the change
- */
-function updateRoomStatus(room: Room, level: number, userId: string | null | undefined) {
-	room['#level'] = level;
-	room['#user'] = userId ?? null;
-	// `#immediateObjects` avoids `#flushObjects` mid-Tick: that mutates `#objects` while the engine
-	// processor's Tick loop is iterating it.
-	for (const object of room['#immediateObjects']()) {
-		object['#roomStatusDidChange'](level, userId);
-	}
-	checkActiveStructures(room);
 }
 
 export type ControllerIntents = typeof intents;

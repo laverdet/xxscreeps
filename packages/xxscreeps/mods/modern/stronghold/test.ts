@@ -322,6 +322,90 @@ describe('mods/modern/stronghold', () => {
 					assert.ok(destroyed, 'damage-destroy emits EVENT_OBJECT_DESTROYED');
 				});
 			}));
+
+		const stampedThenKilled = (stamp: (core: StructureInvaderCore) => void) => simulate({
+			W1N1: room => {
+				const core = createInvaderCore(corePos, 2, 0);
+				core.hits = 1;
+				stamp(core);
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		const lootOfKilledCore = (scene: ReturnType<typeof stampedThenKilled>) => scene(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.killer!.attack(findCore(Game)), C.OK);
+			});
+			await tick();
+			return peekRoom('W1N1', room => {
+				const [ ruin ] = room.find(C.FIND_RUINS);
+				assert.ok(ruin, 'damage-destroy leaves a Ruin');
+				return Object.entries(ruin.store);
+			});
+		});
+
+		// The first four links of the metal chain, which is as far as a bunker3 core's reward level
+		// reaches, against the density each contributes toward `coreAmounts[3]`.
+		const metalDensity: Record<string, number> = {
+			[C.RESOURCE_ALLOY]: 10,
+			[C.RESOURCE_TUBE]: 220,
+			[C.RESOURCE_FIXTURES]: 1400,
+			[C.RESOURCE_FRAME]: 5100,
+		};
+
+		test('damage-destroy loots the ruin from the deposit chain', async () => {
+			const loot = await lootOfKilledCore(stampedThenKilled(core => {
+				core['#templateName'] = 'bunker3';
+				core['#depositType'] = 'metal';
+			}));
+			assert.ok(loot.length > 0, 'the ruin carries loot');
+			for (const [ resource, amount ] of loot) {
+				assert.ok(metalDensity[resource] !== undefined, `${resource} is outside the metal chain a bunker3 core reaches`);
+				assert.ok(amount > 0, `${resource} is looted in a usable amount`);
+			}
+			// Whichever resource rolls last absorbs the remainder, so the total lands within half of
+			// the largest participating density.
+			const weighted = Fn.accumulate(loot, ([ resource, amount ]) => amount * metalDensity[resource]!);
+			assert.ok(Math.abs(weighted - 60000) <= 5100 / 2, `weighted loot ${weighted} lands on the reward level's amount`);
+		});
+
+		test('damage-destroy of a core with no deposit type leaves an empty ruin', async () => {
+			const loot = await lootOfKilledCore(stampedThenKilled(core => {
+				core['#templateName'] = 'bunker3';
+			}));
+			assert.deepStrictEqual(loot, [], 'a core with no deposit type rolls no loot');
+		});
+
+		// A core that took over the room controller, then killed by damage rather than left to
+		// collapse: the controller is released to neutral all the same.
+		const ownedThenKilled = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = kInvaderUserId;
+				room.controller!['#user'] = kInvaderUserId;
+				room.controller!['#downgradeTime'] = 1000;
+				room.controller!['#upgradeInvulnerableUntil'] = 1000;
+				const core = createInvaderCore(corePos, 2, 0);
+				core.hits = 1;
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		test('damage-destroy of a controller-owning core releases the controller to neutral',
+			() => ownedThenKilled(async ({ player, tick, peekRoom }) => {
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.killer!.attack(findCore(Game)), C.OK);
+				});
+				await tick();
+				await peekRoom('W1N1', room => {
+					assert.strictEqual(findRoomCore(room), undefined, 'core should be removed');
+					assert.strictEqual(room['#user'], null, 'room ownership released');
+					assert.strictEqual(room.controller?.level, 0, 'controller downgraded to neutral');
+					assert.strictEqual(room.controller.effects, undefined, 'controller invulnerability cleared');
+				});
+			}));
 	});
 
 	describe('core spawning', () => {
@@ -584,6 +668,33 @@ describe('mods/modern/stronghold', () => {
 				assert.strictEqual(room.find(C.FIND_RUINS).length, 0, 'collapse leaves no Ruin');
 				const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 				assert.strictEqual(destroyed, undefined, 'collapse emits no EVENT_OBJECT_DESTROYED');
+			});
+		}));
+
+		// A peer killed long before the stronghold would have collapsed. Its ruin outlives `RUIN_DECAY`
+		// so the spoils of a raided stronghold stay put for as long as the stronghold itself would have.
+		const peerCollapseTime = 50000;
+		const peerKilledEarly = simulate({
+			W1N1: room => {
+				const container = createContainer(corePos);
+				container['#collapseTime'] = peerCollapseTime;
+				container.hits = 1;
+				room['#insertObject'](container);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		test('the ruin of a damage-destroyed peer decays with the stronghold', () => peerKilledEarly(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				const [ container ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER);
+				assert.ok(container, 'peer is visible to the player');
+				assert.strictEqual(Game.creeps.killer!.attack(container), C.OK);
+			});
+			await tick();
+			await peekRoom('W1N1', (room, game) => {
+				const [ ruin ] = room.find(C.FIND_RUINS);
+				assert.ok(ruin, 'damage-destroy leaves a Ruin');
+				assert.strictEqual(ruin.ticksToDecay, peerCollapseTime - game.time, 'the ruin lasts until the collapse it was carrying');
 			});
 		}));
 
