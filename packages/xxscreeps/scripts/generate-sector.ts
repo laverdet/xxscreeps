@@ -1,7 +1,7 @@
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { parseRoomOptions, roomOptionArguments } from 'xxscreeps/scripts/generate-room.js';
+import { parseRoomOptions, parseSeed, roomOptionArguments } from 'xxscreeps/scripts/generate-room.js';
 import { generateSector } from 'xxscreeps/scripts/room-gen.js';
 
 // Generates a full sector from an origin room -- the 11x11 = 121-room block including the highway
@@ -11,16 +11,17 @@ import { generateSector } from 'xxscreeps/scripts/room-gen.js';
 async function main() {
 	const argv = checkArguments({
 		argv: true,
-		string: [ 'shard', ...roomOptionArguments ] as const,
+		string: [ 'shard', 'seed', ...roomOptionArguments ] as const,
 	});
 	const origin = argv.argv[0];
 	if (origin === undefined) {
-		console.log('Usage: xxscreeps generate-sector <origin> [--shard shard] [--terrain-type 1-28] [--swamp-type 0-14] [--sources 1-4] [--mineral H|O|Z|K|U|L|X]');
+		console.log('Usage: xxscreeps generate-sector <origin> [--shard shard] [--seed 0-4294967295] [--terrain-type 1-28] [--swamp-type 0-14] [--sources 1-4] [--mineral H|O|Z|K|U|L|X]');
 		process.exitCode = 1;
 		return;
 	}
 
-	const options = parseRoomOptions(argv);
+	const seed = parseSeed(argv.seed);
+	const options = { ...parseRoomOptions(argv), ...seed !== undefined && { seed } };
 	await using db = await Database.connect();
 	await using shard = await Shard.connect(db, argv.shard ?? config.shards[0]!.name);
 	const rooms = await generateSector(shard, origin, options);
