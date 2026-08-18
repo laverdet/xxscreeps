@@ -12,6 +12,7 @@ const commands = {
 	backend: './dist/backend/server.js',
 	cli: './dist/cli/cli.js',
 	eval: './dist/cli/eval.js',
+	export: './dist/scripts/export.js',
 	import: './dist/scripts/scrape-world.js',
 	main: './dist/engine/service/main.js',
 	manage: './dist/scripts/manage.js',
