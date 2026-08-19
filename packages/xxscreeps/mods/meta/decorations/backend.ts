@@ -6,6 +6,7 @@ import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import * as fs from 'node:fs/promises';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
 import { disposableToEffect } from 'xxscreeps/utility/utility.js';
@@ -44,36 +45,45 @@ export const placementToWire = (id: string, placement: Placement): Record<string
 	_id: id,
 });
 
-hooks.register('route', {
-	path: '/api/user/decorations/inventory',
+/**
+ * Whether players have a decoration inventory here. With it off the client is never told the
+ * `inventory` feature exists and the routes which place one are not served; what already stands
+ * goes on being rendered, and taking it down stays open.
+ */
+const hasInventory = config.decorations?.inventory ?? false;
 
-	async execute(context) {
-		const { userId } = context.state;
-		if (userId === undefined) {
-			return { ok: 1, list: [] };
-		}
-		const items = await listForUser(context.db, userId);
-		return {
-			ok: 1,
-			list: items.map(item => ({
-				_id: item.id,
-				createdAt: new Date(item.createdAt).toISOString(),
-				activatedAt: item.activatedAt === undefined ? undefined : new Date(item.activatedAt).toISOString(),
-				// `null` is how the client spells "owned, not placed".
-				active: item.active === undefined ? null : placementToWire(item.id, item.active),
-				decoration: toClientDefinition(item.definition),
-			})),
-		};
-	},
-});
+if (hasInventory) {
+	hooks.register('route', {
+		path: '/api/user/decorations/inventory',
 
-hooks.register('route', {
-	path: '/api/user/decorations/themes',
+		async execute(context) {
+			const { userId } = context.state;
+			if (userId === undefined) {
+				return { ok: 1, list: [] };
+			}
+			const items = await listForUser(context.db, userId);
+			return {
+				ok: 1,
+				list: items.map(item => ({
+					_id: item.id,
+					createdAt: new Date(item.createdAt).toISOString(),
+					activatedAt: item.activatedAt === undefined ? undefined : new Date(item.activatedAt).toISOString(),
+					// `null` is how the client spells "owned, not placed".
+					active: item.active === undefined ? null : placementToWire(item.id, item.active),
+					decoration: toClientDefinition(item.definition),
+				})),
+			};
+		},
+	});
 
-	execute() {
-		return { ok: 1, list: catalog.themes.map(({ id, ...rest }) => ({ _id: id, ...rest })) };
-	},
-});
+	hooks.register('route', {
+		path: '/api/user/decorations/themes',
+
+		execute() {
+			return { ok: 1, list: catalog.themes.map(({ id, ...rest }) => ({ _id: id, ...rest })) };
+		},
+	});
+}
 
 interface ActivateRequest {
 	_id: string;
@@ -221,19 +231,21 @@ export async function activate(db: Database, shard: Shard, userId: string, itemI
 	}
 }
 
-hooks.register('route', {
-	path: '/api/user/decorations/activate',
-	method: 'post',
+if (hasInventory) {
+	hooks.register('route', {
+		path: '/api/user/decorations/activate',
+		method: 'post',
 
-	execute: makeValidatedPayloadRoute(activateSchema, async context => {
-		const { userId } = context.state;
-		if (userId === undefined) {
-			return { error: 'not authenticated' };
-		}
-		const { _id, active } = context.request.body;
-		return await activate(context.db, context.shard, userId, _id, active) ?? { ok: 1 };
-	}),
-});
+		execute: makeValidatedPayloadRoute(activateSchema, async context => {
+			const { userId } = context.state;
+			if (userId === undefined) {
+				return { error: 'not authenticated' };
+			}
+			const { _id, active } = context.request.body;
+			return await activate(context.db, context.shard, userId, _id, active) ?? { ok: 1 };
+		}),
+	});
+}
 
 interface DeactivateRequest {
 	decorations: string[];
@@ -250,6 +262,9 @@ const deactivateSchema: JSONSchemaType<DeactivateRequest> = {
 	required: [ 'decorations' ],
 };
 
+// Served whether or not there is an inventory: it only ever takes a decoration down, and what was
+// placed before the feature was turned off has to stay reachable. Implicit ownership leaves no
+// grant to revoke, so `manage decoration` cannot reach those placements either.
 hooks.register('route', {
 	path: '/api/user/decorations/deactivate',
 	method: 'post',
@@ -413,16 +428,19 @@ const mapDecoration = (definition: DecorationDefinition) => ({
 });
 
 // The client gates its inventory section on this flag, and builds the section's route and sidebar
-// entry from the menu payload riding along with it.
-hooks.register('version', serverData => {
-	serverData.features.push({
-		name: 'inventory',
-		version: 1,
-		menuData: [ {
-			section: 0,
-			after: 'World',
-			item: { id: 'menu-item-inventory', label: 'Inventory', routerLink: '/inventory', svg: 'inventory' },
-			module: 'InventoryModule',
-		} ],
+// entry from the menu payload riding along with it. The room view's decorations panel hangs off the
+// same flag.
+if (hasInventory) {
+	hooks.register('version', serverData => {
+		serverData.features.push({
+			name: 'inventory',
+			version: 1,
+			menuData: [ {
+				section: 0,
+				after: 'World',
+				item: { id: 'menu-item-inventory', label: 'Inventory', routerLink: '/inventory', svg: 'inventory' },
+				module: 'InventoryModule',
+			} ],
+		});
 	});
-});
+}
