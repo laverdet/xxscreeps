@@ -124,5 +124,29 @@ describe('mods/meta/messages', () => {
 
 			assert.throws(() => registration.register({ value: 'second' }), /already registered/);
 		});
+
+		test('overrideForTesting scopes a stand-in', () => {
+			const fallback = { value: 'default' };
+			const registration = makeProviderRegistration('test', fallback);
+			registration.register({ value: 'registered' });
+			{
+				using scoped = registration.overrideForTesting({ value: 'shadow' });
+				assert.strictEqual(registration.current.value, 'shadow');
+			}
+			assert.strictEqual(registration.current.value, 'registered');
+		});
+
+		test('overrideForTesting restores the shadowed override', () => {
+			const registration = makeProviderRegistration('test', { value: 'default' });
+			{
+				using outer = registration.overrideForTesting({ value: 'outer' });
+				{
+					using inner = registration.overrideForTesting({ value: 'inner' });
+					assert.strictEqual(registration.current.value, 'inner');
+				}
+				assert.strictEqual(registration.current.value, 'outer');
+			}
+			assert.strictEqual(registration.current.value, 'default');
+		});
 	});
 });
