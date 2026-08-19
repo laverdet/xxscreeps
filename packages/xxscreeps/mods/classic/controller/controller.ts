@@ -1,4 +1,3 @@
-import type { RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
@@ -109,16 +108,6 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 		} : undefined;
 		Object.defineProperty(this, 'sign', { value });
 		return value;
-	}
-
-	/**
-	 * Applied effects, an array of {@link RoomObjectEffect} objects.
-	 * @public
-	 * @see https://docs.screeps.com/api/#StructureController.effects
-	 */
-	@enumerable override get effects(): RoomObjectEffect[] | undefined {
-		const ticksRemaining = optionalExpiryTime(this['#upgradeInvulnerableUntil']);
-		return ticksRemaining === undefined ? undefined : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining } ];
 	}
 
 	/**

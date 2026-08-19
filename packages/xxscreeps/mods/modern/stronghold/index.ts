@@ -8,6 +8,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/classic/controller',
 		'xxscreeps/mods/classic/creep',
 		'xxscreeps/mods/classic/defense',
+		'xxscreeps/mods/modern/effects',
 		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/classic/invader',
 		'xxscreeps/mods/classic/logistics',

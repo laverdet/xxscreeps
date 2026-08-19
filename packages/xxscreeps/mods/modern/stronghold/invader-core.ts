@@ -4,7 +4,7 @@ import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
-import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscreeps/game/object.js';
+import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
@@ -31,16 +31,6 @@ import { invaderCoreShape } from './schema.js';
  * @see https://docs.screeps.com/api/#StructureInvaderCore
  */
 export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCoreShape) {
-	@enumerable override get effects(): RoomObjectEffect[] | undefined {
-		const { ticksToDeploy } = this;
-		const ticksToCollapse = optionalExpiryTime(this['#collapseTime']);
-		const effects = [
-			...ticksToDeploy === undefined ? [] : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: ticksToDeploy } ],
-			...ticksToCollapse === undefined ? [] : [ { effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: ticksToCollapse } ],
-		];
-		return effects.length === 0 ? undefined : effects;
-	}
-
 	/**
 	 * Shows the timer for a not yet deployed stronghold, undefined otherwise.
 	 * @public
@@ -59,6 +49,14 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 
 	override get '#invulnerable'() {
 		return this.ticksToDeploy !== undefined;
+	}
+
+	override *'#effects'(): Iterable<RoomObjectEffect> {
+		const { ticksToDeploy } = this;
+		if (ticksToDeploy !== undefined) {
+			yield { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: ticksToDeploy };
+		}
+		yield* super['#effects']();
 	}
 
 	// These four actions are NPC-internal — only the invader loop calls them — so they're private

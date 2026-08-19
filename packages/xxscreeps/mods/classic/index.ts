@@ -21,6 +21,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/meta/visual',
 
 		'xxscreeps/mods/modern/deposit',
+		'xxscreeps/mods/modern/effects',
 		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/modern/nuker',
 		'xxscreeps/mods/modern/observer',
