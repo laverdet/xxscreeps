@@ -1,10 +1,13 @@
-import type { Mineral } from './mineral.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { exportPayload, importPayload } from 'xxscreeps/scripts/payload.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { create as createExtractor } from './extractor.js';
+import { StructureExtractor, create as createExtractor } from './extractor.js';
+import { Mineral } from './mineral.js';
 
 describe('mods/classic/mineral', () => {
 	const depletedOutOfRange = simulate({
@@ -59,5 +62,35 @@ describe('mods/classic/mineral', () => {
 			assert.ok(mineral);
 			assert.strictEqual(creep.harvest(mineral), C.ERR_TIRED);
 		});
+	}));
+
+	const prebuiltExtractor = simulate({
+		W6N6: room => {
+			const mineral = room.find(C.FIND_MINERALS)[0]!;
+			room['#insertObject'](createExtractor(mineral.pos, null));
+		},
+		W6N1: room => {
+			const mineral = room.find(C.FIND_MINERALS)[0]!;
+			room['#insertObject'](createExtractor(mineral.pos, '100'));
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('payload round trip', () => prebuiltExtractor(async ({ shard }) => {
+		const payload = await exportPayload(shard);
+		const extractorId = payload.W6N6?.objects?.find(object => object.extractor !== undefined)?.extractor;
+		assert.ok(extractorId !== undefined);
+		const { rooms } = importPayload(payload);
+		const roomObjects = (roomName: string) =>
+			rooms.find(room => room.name === roomName)?.['#objects'] ?? [];
+		const objects = roomObjects('W6N6');
+		const extractor = Fn.find(objects, instanceOfPredicate(StructureExtractor));
+		const mineral = Fn.find(objects, instanceOfPredicate(Mineral));
+		assert.ok(extractor);
+		assert.strictEqual(extractor.id, extractorId);
+		assert.strictEqual(extractor.hits, C.EXTRACTOR_HITS);
+		assert.strictEqual(extractor['#user'], null);
+		assert.strictEqual(extractor['#posId'], mineral?.['#posId']);
+		assert.strictEqual(Fn.find(roomObjects('W6N1'), instanceOfPredicate(StructureExtractor)), undefined);
 	}));
 });
