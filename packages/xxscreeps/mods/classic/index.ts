@@ -17,6 +17,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/meta/leaderboard',
 		'xxscreeps/mods/meta/messages',
 		'xxscreeps/mods/meta/notifications',
+		'xxscreeps/mods/meta/notify-cron',
 		'xxscreeps/mods/meta/stats',
 		'xxscreeps/mods/meta/visual',
 

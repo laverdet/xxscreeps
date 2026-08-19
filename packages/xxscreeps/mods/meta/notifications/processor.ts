@@ -5,7 +5,7 @@ import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps:mods/constants';
 import { checkCreepNotifyWhenAttacked, checkStructureNotifyWhenAttacked } from './game.js';
-import { sendNotification } from './model.js';
+import { kCoalesceForever, sendNotification } from './transport.js';
 
 function describeTarget(target: Creep | Structure) {
 	interface MaybeNamedStructure extends Structure {
@@ -33,7 +33,7 @@ Creep.prototype['#sendAttackNotify'] =
 					sourceUser !== kInvaderUserId && sourceUser !== kSourceKeeperUserId
 				) {
 					const message = `Your ${label} in room ${this.room.name} is under attack!`;
-					context.task(sendNotification(context.shard, userId, 'msg', message));
+					context.task(sendNotification(context.shard, userId, 'msg', message, kCoalesceForever));
 				}
 			}
 		};

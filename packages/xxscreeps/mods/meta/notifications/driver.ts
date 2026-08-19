@@ -2,12 +2,12 @@ import type { QueuedNotification } from './notifications.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { upsertNotification } from './model.js';
+import { sendNotification } from './transport.js';
 
 /**
  * Coerce each queued entry: stringify message and truncate to 500 chars, clamp groupInterval to
- * [0, 1440] minutes (non-numeric → 0), then persist via `upsertNotification`. The save hook and
- * the test path both go through here.
+ * [0, 1440] minutes (non-numeric → 0), then hand it to the transport. The save hook and the test
+ * path both go through here.
  */
 export async function dispatchQueuedNotifications(
 	shard: Shard, userId: string, queued: Iterable<QueuedNotification>,
@@ -16,7 +16,7 @@ export async function dispatchQueuedNotifications(
 		const message = String(entry.message).slice(0, 500);
 		const groupInterval = typeof entry.groupInterval === 'number' && Number.isFinite(entry.groupInterval)
 			? Math.min(1440, Math.max(0, entry.groupInterval)) : 0;
-		return upsertNotification(shard, userId, entry.type, message, groupInterval);
+		return sendNotification(shard, userId, entry.type, message, groupInterval);
 	});
 }
 

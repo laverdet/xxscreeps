@@ -6,7 +6,7 @@ import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
-import { getAllRowsForTesting } from 'xxscreeps/mods/meta/notifications/model.js';
+import { captureNotificationsForTesting, kCoalesceForever } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 
@@ -242,9 +242,8 @@ describe('mods/classic/combat', () => {
 			},
 		});
 
-		test('attacking a structure queues an owner notification by default', () => sim(async ({ player, shard, tick }) => {
-			// Advance past the time-0 drain cadence before queuing a notification.
-			await tick(1);
+		test('attacking a structure sends an owner notification by default', () => sim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			let labId = '';
 			await player(attackerUser, Game => {
 				const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
@@ -252,24 +251,24 @@ describe('mods/classic/combat', () => {
 				assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 1);
-			assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
-			assert.strictEqual(rows[0].type, 'msg');
+			assert.strictEqual(capture.sent.length, 1);
+			assert.strictEqual(capture.sent[0]?.userId, user);
+			assert.strictEqual(capture.sent[0].message, `Your lab #${labId} in room W1N1 is under attack!`);
+			assert.strictEqual(capture.sent[0].type, 'msg');
 		}));
 
-		test('own attacks do not queue owner notifications', () => selfAttack(async ({ player, shard, tick }) => {
+		test('own attacks do not send owner notifications', () => selfAttack(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(user, Game => {
 				const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 				assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 0);
+			assert.strictEqual(capture.sent.length, 0);
 		}));
 
-		test('attacks accumulate count on a single row across attackers and ticks', () => sameTickAttack(async ({ player, shard, tick }) => {
-			await tick(1);
+		test('attacks send coalescible notifications across attackers and ticks', () => sameTickAttack(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			let labId = '';
 			await player(attackerUser, Game => {
 				const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
@@ -283,13 +282,16 @@ describe('mods/classic/combat', () => {
 				assert.strictEqual(Game.creeps.attackerA?.attack(lab), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 1, 'attacks share a single notification row');
-			assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
-			assert.strictEqual(rows[0].count, 3, '2 attackers in tick 1 + 1 attacker in tick 2');
+			assert.strictEqual(capture.sent.length, 3, '2 attackers in tick 1 + 1 attacker in tick 2');
+			for (const entry of capture.sent) {
+				assert.strictEqual(entry.message, `Your lab #${labId} in room W1N1 is under attack!`);
+				assert.strictEqual(entry.groupInterval, kCoalesceForever,
+					'attack notifications coalesce with every earlier occurrence');
+			}
 		}));
 
-		test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, shard, tick }) => {
+		test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(user, Game => {
 				const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 				assert.strictEqual(lab.notifyWhenAttacked(false), C.OK);
@@ -300,8 +302,7 @@ describe('mods/classic/combat', () => {
 				assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 0);
+			assert.strictEqual(capture.sent.length, 0);
 		}));
 
 		const dismantleSim = simulate({
@@ -313,8 +314,8 @@ describe('mods/classic/combat', () => {
 			},
 		});
 
-		test('dismantle path queues structure owner notification', () => dismantleSim(async ({ player, shard, tick }) => {
-			await tick(1);
+		test('dismantle path sends structure owner notification', () => dismantleSim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			let labId = '';
 			await player(attackerUser, Game => {
 				const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
@@ -322,9 +323,8 @@ describe('mods/classic/combat', () => {
 				assert.strictEqual(Game.creeps.wrecker?.dismantle(lab), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 1);
-			assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
+			assert.strictEqual(capture.sent.length, 1);
+			assert.strictEqual(capture.sent[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
 		}));
 	});
 
@@ -348,30 +348,31 @@ describe('mods/classic/combat', () => {
 			},
 		});
 
-		test('attacking a creep queues an owner notification by default', () => sim(async ({ player, shard, tick }) => {
-			await tick(1);
+		test('attacking a creep sends an owner notification by default', () => sim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(attackerUser, Game => {
 				const target = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 25)[0]!;
 				assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 1);
-			assert.strictEqual(rows[0]?.message, 'Your creep target in room W1N1 is under attack!');
-			assert.strictEqual(rows[0].type, 'msg');
+			assert.strictEqual(capture.sent.length, 1);
+			assert.strictEqual(capture.sent[0]?.userId, user);
+			assert.strictEqual(capture.sent[0].message, 'Your creep target in room W1N1 is under attack!');
+			assert.strictEqual(capture.sent[0].type, 'msg');
 		}));
 
-		test('own attacks do not queue owner notifications', () => selfAttack(async ({ player, shard, tick }) => {
+		test('own attacks do not send owner notifications', () => selfAttack(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(user, Game => {
 				const target = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 25)[0]!;
 				assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 0);
+			assert.strictEqual(capture.sent.length, 0);
 		}));
 
-		test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, shard, tick }) => {
+		test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(user, Game => {
 				assert.strictEqual(Game.creeps.target?.notifyWhenAttacked(false), C.OK);
 			});
@@ -381,8 +382,7 @@ describe('mods/classic/combat', () => {
 				assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, user);
-			assert.strictEqual(rows.length, 0);
+			assert.strictEqual(capture.sent.length, 0);
 		}));
 
 		const towerSim = simulate({
@@ -396,17 +396,17 @@ describe('mods/classic/combat', () => {
 			},
 		});
 
-		test('tower attack path queues target creep owner notification', () => towerSim(async ({ player, shard, tick }) => {
-			await tick(1);
+		test('tower attack path sends target creep owner notification', () => towerSim(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player(user, Game => {
 				const tower = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_TOWER)[0]!;
 				const victim = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 24)[0]!;
 				assert.strictEqual(tower.attack(victim), C.OK);
 			});
 			await tick();
-			const rows = await getAllRowsForTesting(shard, attackerUser);
-			assert.strictEqual(rows.length, 1);
-			assert.strictEqual(rows[0]?.message, 'Your creep victim in room W1N1 is under attack!');
+			assert.strictEqual(capture.sent.length, 1);
+			assert.strictEqual(capture.sent[0]?.userId, attackerUser);
+			assert.strictEqual(capture.sent[0].message, 'Your creep victim in room W1N1 is under attack!');
 		}));
 	});
 

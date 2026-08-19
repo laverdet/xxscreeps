@@ -7,7 +7,7 @@ import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/classic/creep/creep.js';
 import { checkActiveStructures } from 'xxscreeps/mods/classic/structure/structure.js';
-import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
+import { kCoalesceForever, sendNotification } from 'xxscreeps/mods/meta/notifications/transport.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
@@ -209,7 +209,7 @@ const intents = [
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
 					const message = `Your Controller in room ${controller.room.name} has been upgraded to level ${level}.`;
-					context.task(upsertNotification(context.shard, controller['#user']!, 'msg', message, 0));
+					context.task(sendNotification(context.shard, controller['#user']!, 'msg', message, kCoalesceForever));
 					updateRoomStatus(controller.room, level, controller['#user']);
 				}
 			}
@@ -275,7 +275,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			const level = controller.level - 1;
 			controller.safeModeAvailable = 0;
 			const message = `Your Controller in room ${room.name} has been downgraded to level ${level} due to absence of upgrading activity!`;
-			context.task(upsertNotification(context.shard, userId, 'msg', message, 0));
+			context.task(sendNotification(context.shard, userId, 'msg', message, kCoalesceForever));
 			if (level === 0) {
 				release(context, controller);
 			} else {
@@ -287,7 +287,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			context.didUpdate();
 		} else if (ticksToDowngrade === PRE_DOWNGRADE_WARNING_TICKS) {
 			const message = `Attention! Your Controller in room ${controller.room.name} will be downgraded to level ${controller.level - 1} in 3000 ticks (~2 hours)! Upgrade it to prevent losing of this room. <a href='http://support.screeps.com/hc/en-us/articles/203086021-Territory-control'>Learn more</a>`;
-			context.task(upsertNotification(context.shard, controller['#user']!, 'msg', message, 0));
+			context.task(sendNotification(context.shard, controller['#user']!, 'msg', message, kCoalesceForever));
 		}
 		context.wakeAt(controller['#downgradeTime']);
 	}
