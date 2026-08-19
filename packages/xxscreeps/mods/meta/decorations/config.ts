@@ -8,9 +8,18 @@ export interface DecorationsSettings {
 	/**
 	 * Whether every user owns the whole decoration catalog. With this off, decorations must be
 	 * handed out explicitly with `xxscreeps manage decoration grant`.
-	 * @default true
+	 * @default false
 	 */
 	grantAll?: boolean;
+
+	/**
+	 * Whether players have a decoration inventory. With this off the client is never told the
+	 * `inventory` feature exists, so it offers neither the inventory section nor the room view's
+	 * decorations panel, and the routes which place one are not served. Decorations already placed
+	 * are still rendered, and taking one down is still served.
+	 * @default false
+	 */
+	inventory?: boolean;
 
 	/**
 	 * Additional decoration packs to load. Each entry is a path to a `pack.yaml`, or to the

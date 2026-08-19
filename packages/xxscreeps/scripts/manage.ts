@@ -179,8 +179,8 @@ async function userBranch(who: string, branch: string) {
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
 }
 
-// Decorations a user owns. `grantAll` (the default) hands out the whole catalog, in which case
-// `list` reports that implicit ownership; grants are still written and surface once it's off.
+// Decorations a user owns. `grantAll` hands out the whole catalog instead, in which case `list`
+// reports that implicit ownership; grants are still written and surface once it's off.
 function decorationCatalog() {
 	const definitions = [ ...catalog.definitions.values() ].sort(mappedPrimitiveComparator(definition => definition.id));
 	if (definitions.length === 0) {
