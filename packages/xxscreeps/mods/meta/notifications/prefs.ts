@@ -1,4 +1,4 @@
-import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import type { Database } from 'xxscreeps/engine/db/index.js';
 
 export interface NotifyPrefs {
 	disabled: boolean;
@@ -9,9 +9,6 @@ export interface NotifyPrefs {
 }
 
 const prefsKey = (userId: string) => `user/${userId}/notifications/prefs`;
-const lastNotifyDateKey = (userId: string) => `user/${userId}/notifications/lastDate`;
-
-export const DEFAULT_INTERVAL_MIN = 60;
 
 // Prefs are a global, user-level setting (matching the original server's `db.users.notifyPrefs`),
 // so they live in the shared `db.data` store rather than per-shard. This lets `/api/auth/me`
@@ -44,13 +41,4 @@ export async function setNotifyPrefs(db: Database, userId: string, prefs: Partia
 	if (Object.keys(fields).length > 0) {
 		await db.data.hmSet(prefsKey(userId), fields);
 	}
-}
-
-export async function getLastNotifyDate(shard: Shard, userId: string): Promise<number> {
-	const value = await shard.data.get(lastNotifyDateKey(userId));
-	return value === null ? 0 : Number(value);
-}
-
-export async function setLastNotifyDate(shard: Shard, userId: string, time: number) {
-	await shard.data.set(lastNotifyDateKey(userId), String(time));
 }

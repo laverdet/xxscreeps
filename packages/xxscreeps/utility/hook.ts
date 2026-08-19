@@ -13,6 +13,12 @@ export interface ProviderRegistration<Type extends object> {
 	register: (provider: Type) => void;
 	/** The active implementation: the registered override if any, otherwise the default. */
 	readonly current: Type;
+	/**
+	 * Shadow the active implementation until the returned handle is disposed. Registration is
+	 * permanent by contract, so tests scope a stand-in with `using` instead.
+	 * @internal
+	 */
+	overrideForTesting: (provider: Type) => Disposable;
 }
 
 /**
@@ -26,6 +32,7 @@ export interface ProviderRegistration<Type extends object> {
  */
 export function makeProviderRegistration<Type extends object>(name: string, fallback: Type): ProviderRegistration<Type> {
 	let override: Type | undefined;
+	let testOverride: Type | undefined;
 	return {
 		register(provider) {
 			if (override !== undefined) {
@@ -33,8 +40,17 @@ export function makeProviderRegistration<Type extends object>(name: string, fall
 			}
 			override = provider;
 		},
+		overrideForTesting(provider) {
+			const previous = testOverride;
+			testOverride = provider;
+			return {
+				[Symbol.dispose]() {
+					testOverride = previous;
+				},
+			};
+		},
 		get current() {
-			return override ?? fallback;
+			return testOverride ?? override ?? fallback;
 		},
 	};
 }

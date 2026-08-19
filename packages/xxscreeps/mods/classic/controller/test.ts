@@ -4,8 +4,7 @@ import { create } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
-import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
-import { captureNotificationsForTesting } from 'xxscreeps/mods/meta/notifications/transports.js';
+import { captureNotificationsForTesting, kCoalesceForever } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureController } from './controller.js';
@@ -419,12 +418,12 @@ describe('mods/classic/controller', () => {
 			await player('100', Game => {
 				Game.creeps.worker?.upgradeController(Game.rooms.W3N3!.controller!);
 			});
-			// Notification is queued on the first processed tick (time=0) and drained that same tick.
 			await tick();
-			const [ row ] = capture.rows.filter(row => row.message.includes('upgraded to level'));
-			assert.ok(row, 'expected level-up notification');
-			assert.strictEqual(row.message, 'Your Controller in room W3N3 has been upgraded to level 2.');
-			assert.strictEqual(row.type, 'msg');
+			const [ entry ] = capture.sent.filter(entry => entry.message.includes('upgraded to level'));
+			assert.ok(entry, 'expected level-up notification');
+			assert.strictEqual(entry.message, 'Your Controller in room W3N3 has been upgraded to level 2.');
+			assert.strictEqual(entry.type, 'msg');
+			assert.strictEqual(entry.groupInterval, kCoalesceForever);
 		}));
 
 		// ticksToDowngrade hits exactly 3000 on the second processed tick (Game.time = 2). The
@@ -442,11 +441,10 @@ describe('mods/classic/controller', () => {
 		test('pre-downgrade warning delivered exactly once',
 			() => aboutToWarn(async ({ tick }) => {
 				using capture = captureNotificationsForTesting();
-				// Warning is queued on tick 2; the delivery worker drains it at the time=10 cadence.
+				// Warning fires on tick 2; the extra ticks prove it doesn't re-fire while the room stays active.
 				await tick(11);
-				const warnings = capture.rows.filter(row => row.message.includes('will be downgraded'));
-				const total = warnings.reduce((sum, row) => sum + row.count, 0);
-				assert.strictEqual(total, 1, 'warning should fire exactly once even when room stays active');
+				const warnings = capture.sent.filter(entry => entry.message.includes('will be downgraded'));
+				assert.strictEqual(warnings.length, 1, 'warning should fire exactly once even when room stays active');
 				const [ warning ] = warnings;
 				assert.ok(warning);
 				assert.strictEqual(warning.message,
@@ -454,6 +452,7 @@ describe('mods/classic/controller', () => {
 					'Upgrade it to prevent losing of this room. ' +
 					"<a href='http://support.screeps.com/hc/en-us/articles/203086021-Territory-control'>Learn more</a>");
 				assert.strictEqual(warning.type, 'msg');
+				assert.strictEqual(warning.groupInterval, kCoalesceForever);
 			}));
 
 		// Controller downgrades on the first processed tick (Game.time = 1).
@@ -469,30 +468,27 @@ describe('mods/classic/controller', () => {
 		test('downgrade delivers the new level', () => aboutToDowngrade(async ({ tick }) => {
 			using capture = captureNotificationsForTesting();
 			await tick();
-			const [ row ] = capture.rows.filter(row => row.message.includes('has been downgraded'));
-			assert.ok(row, 'expected downgrade notification');
-			assert.strictEqual(row.message,
+			const [ entry ] = capture.sent.filter(entry => entry.message.includes('has been downgraded'));
+			assert.ok(entry, 'expected downgrade notification');
+			assert.strictEqual(entry.message,
 				'Your Controller in room W3N3 has been downgraded to level 4 due to absence of upgrading activity!');
-			assert.strictEqual(row.type, 'msg');
+			assert.strictEqual(entry.type, 'msg');
+			assert.strictEqual(entry.groupInterval, kCoalesceForever);
 		}));
 
 		test('pre-downgrade warning re-arms after downgrade',
-			() => aboutToDowngrade(async ({ tick, poke, shard }) => {
+			() => aboutToDowngrade(async ({ tick, poke }) => {
 				using capture = captureNotificationsForTesting();
-				// Drop the per-user throttle so the re-armed warning delivers alongside the downgrade.
-				await setNotifyPrefs(shard.db, '100', { interval: 0 });
 				await tick();
 				// Re-arm: place downgradeTime back on the warn boundary for the next processed tick (Game.time = 2).
 				await poke('W3N3', undefined, (_Game, room) => {
 					room.controller!['#downgradeTime'] = 2 + 3000;
 				});
 				await tick(10);
-				const downgrades = capture.rows.filter(row => row.message.includes('has been downgraded'));
-				const warnings = capture.rows.filter(row => row.message.includes('will be downgraded'));
-				const downgradeTotal = downgrades.reduce((sum, row) => sum + row.count, 0);
-				const warningTotal = warnings.reduce((sum, row) => sum + row.count, 0);
-				assert.strictEqual(downgradeTotal, 1, 'downgrade fired once');
-				assert.strictEqual(warningTotal, 1, 'fresh warning fired exactly once after downgrade');
+				const downgrades = capture.sent.filter(entry => entry.message.includes('has been downgraded'));
+				const warnings = capture.sent.filter(entry => entry.message.includes('will be downgraded'));
+				assert.strictEqual(downgrades.length, 1, 'downgrade fired once');
+				assert.strictEqual(warnings.length, 1, 'fresh warning fired exactly once after downgrade');
 				const [ downgrade ] = downgrades;
 				const [ warning ] = warnings;
 				assert.ok(downgrade && warning);
