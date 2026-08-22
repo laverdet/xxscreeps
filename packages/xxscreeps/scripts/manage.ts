@@ -123,8 +123,11 @@ async function userCreate(name: string, email?: string) {
 	if (!User.checkUsername(name)) {
 		throw new Error(`Invalid username: ${name}`);
 	}
+	if (email !== undefined && !User.checkEmail(email)) {
+		throw new Error(`Invalid email address: ${email}`);
+	}
 	const id = Id.generateId(12);
-	await User.create(db, id, name, email === undefined ? [] : [ { provider: 'email', id: email } ]);
+	await User.create(db, id, name, email === undefined ? [] : [ { provider: User.emailProvider, id: email } ]);
 	await save();
 	out(`Created user ${name} (${id}).`);
 }
