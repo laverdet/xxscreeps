@@ -1,8 +1,14 @@
 import type { Source } from './source.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
+import { RoomPosition, iterateAllPositions } from 'xxscreeps/game/position.js';
+import { isBorder } from 'xxscreeps/game/terrain.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { exportPayload, importPayload } from 'xxscreeps/scripts/payload.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { kSourceKeeperUserId } from './game.js';
+import { StructureKeeperLair, create as createKeeperLair } from './keeper-lair.js';
 
 describe('mods/classic/source', () => {
 	const depletedOutOfRange = simulate({
@@ -54,5 +60,25 @@ describe('mods/classic/source', () => {
 			assert.ok(creep);
 			assert.strictEqual(creep.harvest(null as unknown as Source), C.ERR_NO_BODYPART);
 		});
+	}));
+
+	const guardedRoom = simulate({
+		W6N6: room => {
+			const terrain = room.getTerrain();
+			const position = Fn.find(iterateAllPositions(room.name), pos =>
+				!isBorder(pos.x, pos.y) && terrain.get(pos.x, pos.y) === C.TERRAIN_MASK_WALL);
+			assert.ok(position);
+			room['#insertObject'](createKeeperLair(position));
+		},
+	});
+
+	test('payload round trip', () => guardedRoom(async ({ shard }) => {
+		const payload = await exportPayload(shard);
+		assert.ok(payload.W6N6?.layout.some(line => line.includes('K')));
+		const { rooms } = importPayload(payload);
+		const keeperLair = Fn.find(
+			rooms.find(room => room.name === 'W6N6')?.['#objects'] ?? [],
+			instanceOfPredicate(StructureKeeperLair));
+		assert.strictEqual(keeperLair?.['#user'], kSourceKeeperUserId);
 	}));
 });

@@ -75,10 +75,12 @@ export interface PayloadCodec {
 	/** The fields this codec encodes for `object`, or undefined when it doesn't own the object. */
 	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | undefined;
 	/**
-	 * Rebuilds the object `meta` describes. The engine stamps its id and position and inserts it
-	 * into `room`, which is passed only for the room-level state an object implies.
+	 * Rebuilds the object `meta` describes, plus any companions sharing its tile. The engine
+	 * stamps every object's position and the first one's id -- companions carry ids of their
+	 * own -- and inserts them into `room`, which is passed only for the room-level state an
+	 * object implies.
 	 */
-	decode: (meta: PayloadObject, room: Room) => RoomObject;
+	decode: (meta: PayloadObject, room: Room) => RoomObject | [ RoomObject, ...RoomObject[] ];
 }
 
 export const hooks = makeHookRegistration<{

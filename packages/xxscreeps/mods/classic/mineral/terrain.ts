@@ -5,7 +5,7 @@ import { createRoomObject } from 'xxscreeps/game/object.js';
 import { iterateAllPositions, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from './constants.js';
-import { create as createExtractor } from './extractor.js';
+import { StructureExtractor, create as createExtractor } from './extractor.js';
 import { Mineral } from './mineral.js';
 
 // Mineral roll weights: H and O are twice as common as Z/K/U/L, and six times as common as X.
@@ -69,18 +69,35 @@ hooks.register('roomGenerator', {
 	},
 });
 
+// A prebuilt extractor shares its mineral's tile, so it can't own a layout marker and rides the
+// mineral's metadata instead. Only the neutral one does -- a player-built extractor stays behind
+// like every other owned structure.
 hooks.register('payload', {
 	marker: 'M',
-	encode: object => object instanceof Mineral ? {
-		density: object.density,
-		mineral: object.mineralType,
-	} : undefined,
+	encode(object) {
+		if (object instanceof Mineral) {
+			const extractor = Fn.find(object.room['#lookAt'](object.pos), candidate =>
+				candidate instanceof StructureExtractor && candidate['#user'] === null);
+			return {
+				density: object.density,
+				mineral: object.mineralType,
+				...extractor !== undefined && { extractor: extractor.id },
+			};
+		}
+	},
 	decode(meta) {
 		const mineral = new Mineral();
 		mineral.density = meta.density!;
 		mineral.mineralType = meta.mineral!;
 		mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density]!;
-		return mineral;
+		if (meta.extractor === undefined) {
+			return mineral;
+		}
+		const extractor = new StructureExtractor();
+		extractor.id = meta.extractor;
+		extractor.hits = C.EXTRACTOR_HITS;
+		extractor['#user'] = null;
+		return [ mineral, extractor ];
 	},
 });
 
@@ -93,6 +110,8 @@ declare module 'xxscreeps/scripts/symbols.js' {
 	interface PayloadObject {
 		/** Mineral density, one of the `DENSITY_*` levels. */
 		density?: number;
+		/** Id of the prebuilt neutral extractor sharing the mineral's tile. */
+		extractor?: string;
 		/** The type of mineral deposited. */
 		mineral?: ResourceType;
 	}

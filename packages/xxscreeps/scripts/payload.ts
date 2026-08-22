@@ -119,11 +119,14 @@ function importRoom(roomName: string, info: PayloadRoom) {
 				throw new Error(`Room ${roomName} holds more markers than metadata`);
 			}
 			terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-			const object = codec.decode(meta, room);
-			object.id = meta.id;
-			object.pos = new RoomPosition(xx, yy, roomName);
-			object['#posId'] = object.pos['#id'];
-			room['#insertObject'](object);
+			const decoded = codec.decode(meta, room);
+			const objects = Array.isArray(decoded) ? decoded : [ decoded ] as const;
+			objects[0].id = meta.id;
+			for (const object of objects) {
+				object.pos = new RoomPosition(xx, yy, roomName);
+				object['#posId'] = object.pos['#id'];
+				room['#insertObject'](object);
+			}
 		}
 	}
 	room['#flushObjects'](null);
