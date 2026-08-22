@@ -437,7 +437,12 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 		for (const [ dxx, dyy ] of kOrthogonal) {
 			const nxx = cxx + dxx;
 			const nyy = cyy + dyy;
-			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49) {
+			// A border tile can never be cleared, so a path through a walled one would report the
+			// throat connected while leaving it sealed; open border tiles stay traversable.
+			if (
+				nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 &&
+				!(isBorder(nxx, nyy) && grid[nyy]![nxx]!.wall)
+			) {
 				const nkey = nyy * 50 + nxx;
 				if (!prev.has(nkey)) {
 					prev.set(nkey, key);
@@ -463,6 +468,12 @@ function fillUnreachable(grid: Grid): void {
 				stack.push([ xx, yy ]);
 			}
 		}
+	}
+	// A room walled off on all four sides has no border to reach from, so every open tile reads as
+	// unreachable and filling them would leave solid rock where a sealed room's terrain belongs.
+	// `buildBaseTerrain` keeps such a room's ground for the same reason.
+	if (stack.length === 0) {
+		return;
 	}
 	while (stack.length > 0) {
 		const [ cxx, cyy ] = stack.pop()!;
@@ -572,6 +583,9 @@ const kHighwaySmoothFactor = 5;
 
 // Tiles of depth a clipped mass wins back per tile away from the lane opening bounding it.
 const kHighwayLaneClipSlope = 3;
+
+// Tiles of wall a border with no opening carries at minimum, whatever the noise field does there.
+const kHighwaySealFloor = 3;
 
 // Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge
 // (low base, high exponent), mostly shallow with a rare deep plunge. edgeNoise in [0, 1) bounds it
@@ -683,19 +697,36 @@ function genHighwayTerrain(
 		...exits.left.map(yy => [ 0, yy ] as const),
 		...exits.right.map(yy => [ 49, yy ] as const),
 	];
-	// Depth (in tiles) the mass intrudes along one border, indexed by the tile `at(ii)`: the noise
-	// wedge sampled at that tile's world position, anchored at the corners and receding toward any
-	// nearby exit. A border the lane runs along carries no mass and stays zeroed, so its term never
-	// walls a lane tile.
-	const depthAlongBorder = (active: boolean, at: (ii: number) => readonly [ number, number ]) => {
-		if (!active) {
+	// Depth (in tiles) the mass on one border intrudes, indexed by the tile `at(ii)`: the noise wedge
+	// sampled at that tile's world position, anchored at the corners and receding toward any nearby
+	// exit.
+	const depthAlongBorder = (dir: keyof ExitMap, at: (ii: number) => readonly [ number, number ]) => {
+		// Whether the lane runs out through this border. A crossing's four sides are all lane ends,
+		// but each of them carries the shallow corner masses that stop its opening from running the
+		// border's full width, so a crossing never counts as one here.
+		const laneEnd = orientation !== 'crossing' && isHighwayLaneSide(orientation, dir);
+		const sealed = exits[dir].length === 0;
+		// An open end of the lane carries no mass and stays zeroed, so its term never walls a lane
+		// tile.
+		if (laneEnd && !sealed) {
 			return new Array<number>(50).fill(0);
 		}
+		// A border with no opening at all carries a mass, and the deep lane mass rather than the
+		// shallow corner one: the lane does not continue through it, so the mass has to close the
+		// corridor rather than flank an opening.
+		const borderMass = sealed ? kHighwayLaneMass : mass;
+		// A mass flanking an opening only has to read as the side of a corridor, and the noise field
+		// leaving a stretch of it at the border line alone reads as exactly that. A sealed border is
+		// where the corridor stops instead, so a stretch left to the line reads as a line drawn across
+		// it rather than as the ground the lane runs into -- most visibly at the world's boundary,
+		// where nothing is drawn beyond. It holds a floor, receding at exits like the rest of the mass
+		// and clipped to the lane openings with it.
+		const floor = sealed ? kHighwaySealFloor : 0;
 		return Fn.pipe(
 			Fn.range(50),
 			$$ => Fn.map($$, ii => {
 				const [ bx, by ] = at(ii);
-				return edgeDepth(wox + bx, woy + by, mass) * cornerTaper(ii) *
+				return Math.max(edgeDepth(wox + bx, woy + by, borderMass) * cornerTaper(ii), floor) *
 					exitClearance(bx, by, exitPoints);
 			}),
 			$$ => [ ...$$ ]);
@@ -718,16 +749,16 @@ function genHighwayTerrain(
 			high + Math.max(0, 47 - ii) * kHighwayLaneClipSlope)),
 		$$ => [ ...$$ ]);
 	const leftDepth = clipToLanes(
-		depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]),
+		depthAlongBorder('left', ii => [ 0, ii ]),
 		laneBound(exits.top, true), laneBound(exits.bottom, true));
 	const rightDepth = clipToLanes(
-		depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]),
+		depthAlongBorder('right', ii => [ 49, ii ]),
 		laneBound(exits.top, false), laneBound(exits.bottom, false));
 	const topDepth = clipToLanes(
-		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]),
+		depthAlongBorder('top', ii => [ ii, 0 ]),
 		laneBound(exits.left, true), laneBound(exits.right, true));
 	const bottomDepth = clipToLanes(
-		depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]),
+		depthAlongBorder('bottom', ii => [ ii, 49 ]),
 		laneBound(exits.left, false), laneBound(exits.right, false));
 	const clutter = genHighwayClutter(wox, woy);
 	for (const [ yy, row ] of grid.entries()) {
@@ -861,6 +892,29 @@ function gridToTerrain(grid: Grid): TerrainWriter {
 	return terrain;
 }
 
+// The four sides of a room, in the order every border walk in this file takes them.
+const kSides = [ 'top', 'right', 'bottom', 'left' ] as const;
+
+interface RoomSide {
+	/** Room-coordinate offset of the neighbor across this side. */
+	dxx: number;
+	dyy: number;
+	/** This room's border on this side, as its `packExits` bit. */
+	exitBit: number;
+	/** The neighbor's border shared with this room, as its `packExits` bit. */
+	sharedExitBit: number;
+	/** The shared border's line within the neighbor, as `exitsArray` walks it. */
+	axis: 'x' | 'y';
+	fixed: number;
+}
+
+const kRoomSides: Record<keyof ExitMap, RoomSide> = {
+	top: { dxx: 0, dyy: -1, exitBit: 1, sharedExitBit: 4, axis: 'y', fixed: 49 },
+	right: { dxx: 1, dyy: 0, exitBit: 2, sharedExitBit: 8, axis: 'x', fixed: 0 },
+	bottom: { dxx: 0, dyy: 1, exitBit: 4, sharedExitBit: 1, axis: 'y', fixed: 0 },
+	left: { dxx: -1, dyy: 0, exitBit: 8, sharedExitBit: 2, axis: 'x', fixed: 49 },
+};
+
 // Builds a room's terrain and objects entirely in memory; performs no storage I/O. `lookupTerrain`
 // resolves an already-built neighbor's terrain so shared exits line up.
 function buildRoom(
@@ -869,33 +923,26 @@ function buildRoom(
 	lookupTerrain: (neighborName: string) => { terrain: Terrain } | undefined,
 ) {
 	const { rx, ry } = parseRoomName(roomName);
-
-	const dirs = {
-		top: { neighborName: makeRoomName(rx, ry - 1), axis: 'y' as const, fixed: 49 },
-		right: { neighborName: makeRoomName(rx + 1, ry), axis: 'x' as const, fixed: 0 },
-		bottom: { neighborName: makeRoomName(rx, ry + 1), axis: 'y' as const, fixed: 0 },
-		left: { neighborName: makeRoomName(rx - 1, ry), axis: 'x' as const, fixed: 49 },
-	};
-
 	const exits: ExitMap = { top: [], right: [], bottom: [], left: [] };
 
-	for (const dir of [ 'top', 'right', 'bottom', 'left' ] as const) {
-		const info = dirs[dir];
+	for (const dir of kSides) {
+		const side = kRoomSides[dir];
+		const neighborName = makeRoomName(rx + side.dxx, ry + side.dyy);
 		const userExits = options?.exits?.[dir];
-		const neighborTerrain = lookupTerrain(info.neighborName);
+		const neighborTerrain = lookupTerrain(neighborName);
 
 		if (userExits) {
 			if (neighborTerrain) {
-				const neighborExits = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
+				const neighborExits = [ ...exitsArray(neighborTerrain.terrain, side.axis, side.fixed) ];
 				const match = neighborExits.length === userExits.length &&
 					userExits.every(exit => neighborExits.includes(exit));
 				if (!match) {
-					throw new Error(`Exits in room ${info.neighborName} don't match`);
+					throw new Error(`Exits in room ${neighborName} don't match`);
 				}
 			}
 			exits[dir] = userExits;
 		} else if (neighborTerrain) {
-			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
+			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, side.axis, side.fixed) ];
 		} else if (options?.highway !== undefined && isHighwayLaneSide(options.highway, dir)) {
 			exits[dir] = [ ...genLaneExit(rx, ry, options.highway, dir) ];
 		} else {
@@ -975,7 +1022,15 @@ export async function generateRoom(
 	}
 
 	const terrainMap = new Map(world.terrain);
-	const { room, terrain } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName));
+	const planned = new Set([ roomName ]);
+	reopenSealedBorders(terrainMap, planned);
+	// The named room takes the caller's loadout as-is; only its seals are authored on top, and a
+	// border facing a room the world doesn't have seals whatever the caller authored for it.
+	const sealed = rollSealedSides(roomName, roomType(roomName), options?.controller !== false, terrainMap, planned);
+	const { room, terrain } = buildRoom(roomName, {
+		...options,
+		exits: { ...options?.exits, ...Fn.fromEntries(Fn.map(sealed, dir => [ dir, [] ])) },
+	}, neighborName => terrainMap.get(neighborName));
 	commitRoom(terrainMap, roomName, terrain);
 	refreshRoomMeta(terrainMap, [ roomName ]);
 	await flushRooms(shard, terrainMap, [ room ]);
@@ -1019,24 +1074,27 @@ const roomTypeTemplates: Record<RoomType, GenerateRoomOptions> = {
 	sourceKeeper: { controller: false, keeperLairs: true, sources: 3 },
 };
 
-interface SectorDir {
-	dxx: number;
-	dyy: number;
-	// The neighbor's border shared with this room, as its `packExits` bit.
-	sharedExitBit: number;
+// The generation options for one room of the sector template: the loadout of its type, a highway's
+// lane orientation, and the borders it walls off. Only a normal room takes the caller's room-shape
+// flags -- the template rooms follow the vanilla mod-10 pattern.
+function sectorRoomOptions(
+	roomName: string,
+	type: RoomType,
+	options: GenerateRoomOptions | undefined,
+	sealed: Iterable<keyof ExitMap>,
+): GenerateRoomOptions {
+	return {
+		...type === 'normal' && options,
+		...roomTypeTemplates[type],
+		...type === 'highway' && { highway: highwayOrientation(roomName) },
+		exits: Fn.fromEntries(Fn.map(sealed, dir => [ dir, [] ])),
+	};
 }
-
-const kSectorDirs: Record<keyof ExitMap, SectorDir> = {
-	top: { dxx: 0, dyy: -1, sharedExitBit: 4 },
-	right: { dxx: 1, dyy: 0, sharedExitBit: 8 },
-	bottom: { dxx: 0, dyy: 1, sharedExitBit: 1 },
-	left: { dxx: -1, dyy: 0, sharedExitBit: 2 },
-};
 
 // The live world walls off some borders where both sides carry a wall mass: a normal room seals
 // about one of its four sides on average, and a highway seals its mass sides at much the same
-// rate. A void border between two sealable sides seals with this probability; the neighbor
-// inherits the seal when it builds.
+// rate. A border between two sealable sides seals with this probability; the neighbor inherits
+// the seal when it builds.
 const kSealSideProbability = 0.3;
 
 // A highway may seal only its mass sides (the lane must run through); a normal room may seal a
@@ -1052,63 +1110,256 @@ function isSealableSide(type: RoomType, dir: keyof ExitMap, roomName: string, ne
 	return false;
 }
 
-// Builds every not-yet-existing room of one sector into the shared accumulators -- terrain into
-// `terrainMap`, names into `existing` so later rooms see them as neighbors -- and yields the new
-// rooms. The range is the inclusive 11x11 block from the origin, so the sector is bounded by its
-// full highway ring on all four sides -- the origin-corner rings plus the rings shared with the
-// next sectors. Already-existing rooms are skipped, so the shared rings are idempotent across
-// adjacent sectors and partially-built sectors can be re-entered. No storage I/O; the caller
-// flushes once.
-function *accumulateSector(
-	origin: SectorOrigin,
-	options: GenerateRoomOptions | undefined,
+// Decides which of a room's borders to wall off. A border facing a room the world doesn't have --
+// neither built nor part of the current batch -- always seals, so no step of generation opens an
+// exit onto a room that doesn't exist. A border facing an unbuilt room of the batch rolls the live
+// world's seal rate instead, and a border facing a built room is left for `buildRoom` to inherit.
+function rollSealedSides(
+	roomName: string,
+	type: RoomType,
+	hasController: boolean,
 	terrainMap: WorldTerrain,
-	existing: Set<string>,
-): Iterable<Room> {
-	for (const [ rx, ry ] of iterateRoomsInRange(origin.rx + 5 * origin.xStep, origin.ry + 5 * origin.yStep, 5)) {
-		const roomName = makeSignedRoomName(rx, ry);
-		if (existing.has(roomName)) {
-			continue;
-		}
-		const type = roomType(roomName);
-		const template = roomTypeTemplates[type];
-		const hasController = (template.controller ?? options?.controller) !== false;
-
-		// Roll seals on void borders; sides facing a built room inherit its border instead.
-		const sealed: (keyof ExitMap)[] = [];
-		let openSides = 0;
-		for (const dir of [ 'top', 'right', 'bottom', 'left' ] as const) {
-			const sectorDir = kSectorDirs[dir];
-			const neighborName = makeSignedRoomName(rx + sectorDir.dxx, ry + sectorDir.dyy);
-			const record = terrainMap.get(neighborName);
-			if (record) {
-				if ((record.exits & sectorDir.sharedExitBit) !== 0) {
-					openSides += 1;
-				}
-			} else if (isSealableSide(type, dir, roomName, neighborName, hasController) &&
-				Math.random() < kSealSideProbability) {
-				sealed.push(dir);
-			} else {
+	planned: ReadonlySet<string>,
+): (keyof ExitMap)[] {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	const frontier: (keyof ExitMap)[] = [];
+	const rolled: (keyof ExitMap)[] = [];
+	let openSides = 0;
+	for (const dir of kSides) {
+		const side = kRoomSides[dir];
+		const neighborName = makeSignedRoomName(rx + side.dxx, ry + side.dyy);
+		const record = terrainMap.get(neighborName);
+		if (record) {
+			if ((record.exits & side.sharedExitBit) !== 0) {
 				openSides += 1;
 			}
+		} else if (!planned.has(neighborName)) {
+			frontier.push(dir);
+		} else if (isSealableSide(type, dir, roomName, neighborName, hasController) &&
+			Math.random() < kSealSideProbability) {
+			rolled.push(dir);
+		} else {
+			openSides += 1;
 		}
-		// Never wall off all four sides -- reopen a rolled seal when no border can carry an exit. A
-		// re-entered hole whose four built neighbors all sealed toward it has nothing to reopen and
-		// still generates a zero-exit room; rare, locally unfixable (the neighbors' terrain is already
-		// authored), and the live world does carry fully sealed rooms.
-		if (openSides === 0 && sealed.length > 0) {
-			sealed.shift();
-		}
+	}
+	// Never roll a room's last border shut. Frontier seals stay: a room the void surrounds is walled
+	// off entirely until the world grows past it and punches back in. A re-entered hole whose four
+	// built neighbors all kept their seals also stays walled -- rare, and the live world does carry
+	// fully sealed rooms.
+	if (openSides === 0 && rolled.length > 0) {
+		rolled.shift();
+	}
+	return [ ...frontier, ...rolled ];
+}
 
-		const roomOptions: GenerateRoomOptions = {
-			...type === 'normal' && options,
-			...template,
-			...type === 'highway' && { highway: highwayOrientation(roomName) },
-			exits: Fn.fromEntries(Fn.map(sealed, dir => [ dir, [] ])),
-		};
+// The side of the neighbor across `dir` that faces back at this room.
+const kOppositeSide: Record<keyof ExitMap, keyof ExitMap> = {
+	top: 'bottom', right: 'left', bottom: 'top', left: 'right',
+};
+
+// One tile of this room's border on the given side, indexed along the border.
+const kBorderTile: Record<keyof ExitMap, (pos: number) => readonly [ number, number ]> = {
+	top: pos => [ pos, 0 ],
+	right: pos => [ 49, pos ],
+	bottom: pos => [ pos, 49 ],
+	left: pos => [ 0, pos ],
+};
+
+// The tile just inboard of `kBorderTile` -- the second tile `markExits` holds open per exit.
+const kInboardTile: Record<keyof ExitMap, (pos: number) => readonly [ number, number ]> = {
+	top: pos => [ pos, 1 ],
+	right: pos => [ 48, pos ],
+	bottom: pos => [ pos, 48 ],
+	left: pos => [ 1, pos ],
+};
+
+// Existing rooms that wall off a border facing a planned room, with the sides they wall.
+function sealedBordersTowardBatch(terrainMap: WorldTerrain, planned: Iterable<string>): Map<string, Set<keyof ExitMap>> {
+	const sealed = new Map<string, Set<keyof ExitMap>>();
+	for (const roomName of planned) {
+		const { rx, ry } = parseSignedRoomName(roomName);
+		for (const dir of kSides) {
+			const side = kRoomSides[dir];
+			const neighborName = makeSignedRoomName(rx + side.dxx, ry + side.dyy);
+			const record = terrainMap.get(neighborName);
+			if (record && (record.exits & side.sharedExitBit) === 0) {
+				const sides = sealed.get(neighborName) ?? new Set();
+				sides.add(kOppositeSide[dir]);
+				sealed.set(neighborName, sides);
+			}
+		}
+	}
+	return sealed;
+}
+
+// Reopens existing rooms' borders facing the planned batch, re-deciding each the way an interior
+// border would have rolled. A punch edits the stored terrain in place and only ever removes wall --
+// swamp stays where it lies and no object moves -- so a player-held room takes one like any other,
+// and the batch then inherits whatever the roll decided.
+function reopenSealedBorders(terrainMap: WorldTerrain, planned: ReadonlySet<string>): void {
+	for (const [ roomName, sealedSides ] of sealedBordersTowardBatch(terrainMap, planned)) {
+		const record = terrainMap.get(roomName)!;
+		const type = roomType(roomName);
+		const hasController = roomTypeTemplates[type].controller !== false;
+		const orientation = type === 'highway' ? highwayOrientation(roomName) : undefined;
+		const { rx, ry } = parseRoomName(roomName);
+		const signed = parseSignedRoomName(roomName);
+		const opened = new Map<keyof ExitMap, number[]>();
+		for (const dir of sealedSides) {
+			const side = kRoomSides[dir];
+			const neighborName = makeSignedRoomName(signed.rx + side.dxx, signed.ry + side.dyy);
+			if (isSealableSide(type, dir, roomName, neighborName, hasController) &&
+				Math.random() < kSealSideProbability) {
+				continue;
+			}
+			opened.set(dir, [
+				...orientation !== undefined && isHighwayLaneSide(orientation, dir)
+					? genLaneExit(rx, ry, orientation, dir)
+					: genExit(),
+			]);
+		}
+		if (opened.size === 0) {
+			continue;
+		}
+		const terrain = orientation !== undefined && isGeneratedHighway(record.terrain, rx, ry, orientation)
+			? regenOpenings(record.terrain, rx, ry, orientation, opened)
+			: punchOpenings(record.terrain, opened);
+		terrainMap.set(roomName, { ...record, exits: packExits(terrain), terrain });
+	}
+}
+
+// A room's own border openings, read back off its stored terrain. `RoomSide` describes the shared
+// line within the *neighbor*, and a room's side is the same line as a neighbor's opposite side --
+// the neighbor-below's top row is this room's bottom row -- so each side reads through its
+// opposite's record.
+function terrainExits(old: Terrain): ExitMap {
+	const line = (dir: keyof ExitMap) => {
+		const { axis, fixed } = kRoomSides[kOppositeSide[dir]];
+		return [ ...exitsArray(old, axis, fixed) ];
+	};
+	return { top: line('top'), right: line('right'), bottom: line('bottom'), left: line('left') };
+}
+
+// Whether the stored walls are exactly the field `genHighwayTerrain` grows under the room's
+// current exits. An imported room, or a custom loadout generated at a highway coordinate, carries
+// walls of its own -- regenerating those would erase every wall the field reads as open, so such a
+// room takes the wall-preserving punch instead.
+function isGeneratedHighway(old: Terrain, rx: number, ry: number, orientation: HighwayOrientation): boolean {
+	const grid = genHighwayTerrain(terrainExits(old), rx, ry, orientation, 0);
+	return grid.every((row, yy) => row.every((cell, xx) =>
+		cell.wall === (old.get(xx, yy) === C.TERRAIN_MASK_WALL)));
+}
+
+// A highway's wall field is a deterministic function of its exits and world position, so the punch
+// regenerates it under the reopened exits and intersects with the stored walls: a tile stays wall
+// only where the open room would still grow one, and no tile anywhere gains wall or loses ground.
+function regenOpenings(
+	old: Terrain,
+	rx: number,
+	ry: number,
+	orientation: HighwayOrientation,
+	opened: ReadonlyMap<keyof ExitMap, number[]>,
+): TerrainWriter {
+	const ownExits = terrainExits(old);
+	const exits: ExitMap = {
+		top: opened.get('top') ?? ownExits.top,
+		right: opened.get('right') ?? ownExits.right,
+		bottom: opened.get('bottom') ?? ownExits.bottom,
+		left: opened.get('left') ?? ownExits.left,
+	};
+	const grid = genHighwayTerrain(exits, rx, ry, orientation, 0);
+	const terrain = new TerrainWriter();
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			const prior = old.get(xx, yy);
+			terrain.set(xx, yy, prior === C.TERRAIN_MASK_WALL
+				? cell.wall ? C.TERRAIN_MASK_WALL : 0
+				: prior);
+		}
+	}
+	return terrain;
+}
+
+// An automaton room's terrain can't regenerate without re-rolling all of it, so the punch works the
+// stored walls directly: the span opens two tiles deep -- the border tile and the one behind it,
+// the pair `markExits` holds open for a generated exit -- and each stretch of it the room's ground
+// doesn't already reach gets one slot carved through the seal, the way `connectExits` breaches a
+// cut-off throat.
+function punchOpenings(old: Terrain, opened: ReadonlyMap<keyof ExitMap, number[]>): TerrainWriter {
+	const grid = makeGrid();
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			cell.wall = old.get(xx, yy) === C.TERRAIN_MASK_WALL;
+		}
+	}
+	for (const [ dir, span ] of opened) {
+		for (const pos of span) {
+			const [ xx, yy ] = kBorderTile[dir](pos);
+			grid[yy]![xx]!.wall = false;
+			const [ ix, iy ] = kInboardTile[dir](pos);
+			grid[iy]![ix]!.wall = false;
+		}
+	}
+	// The room's main ground is its largest open area; a sealed room always keeps some. The scan
+	// skips the border so an opened span cut off behind its seal can't anchor the carve.
+	const visited = new Set<number>();
+	let reached: Set<number> | undefined;
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			if (!cell.wall && !isBorder(xx, yy) && !visited.has(yy * 50 + xx)) {
+				const area = reachableOpen(grid, xx, yy);
+				for (const key of area) {
+					visited.add(key);
+				}
+				if (area.size > (reached?.size ?? 0)) {
+					reached = area;
+				}
+			}
+		}
+	}
+	// A span may carry interior gaps, each stretch sealed off on its own, so every punched tile
+	// checks -- as `connectExits` walks every throat. One carve reconnects its whole stretch: the
+	// stretch's other tiles then reach the carved slot along the opened band.
+	for (const [ dir, span ] of opened) {
+		for (const pos of span) {
+			const [ bx, by ] = kBorderTile[dir](pos);
+			if (reached !== undefined && !reached.has(by * 50 + bx)) {
+				carveToOpen(grid, bx, by, reached);
+			}
+		}
+	}
+	const terrain = new TerrainWriter();
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
+			terrain.set(xx, yy, function() {
+				if (cell.wall) {
+					return C.TERRAIN_MASK_WALL;
+				} else {
+					return old.get(xx, yy) === C.TERRAIN_MASK_SWAMP ? C.TERRAIN_MASK_SWAMP : 0;
+				}
+
+			}());
+		}
+	}
+	return terrain;
+}
+
+// Builds each named room of the batch against the accumulated terrain and yields it. Each room's
+// record is committed as it lands so the rooms after it inherit its borders; sector meta waits for
+// `refreshRoomMeta` once the batch is done. No storage I/O; the caller flushes once.
+function *buildRooms(
+	roomNames: Iterable<string>,
+	options: GenerateRoomOptions | undefined,
+	terrainMap: WorldTerrain,
+	planned: ReadonlySet<string>,
+): Iterable<Room> {
+	for (const roomName of roomNames) {
+		const type = roomType(roomName);
+		const hasController = (roomTypeTemplates[type].controller ?? options?.controller) !== false;
+		const sealed = rollSealedSides(roomName, type, hasController, terrainMap, planned);
+		const roomOptions = sectorRoomOptions(roomName, type, options, sealed);
 		const { room, terrain } = buildRoom(roomName, roomOptions, neighborName => terrainMap.get(neighborName));
 		commitRoom(terrainMap, roomName, terrain);
-		existing.add(roomName);
 		yield room;
 	}
 }
@@ -1122,7 +1373,18 @@ export async function generateSector(
 	await ensureWorldTerrain(shard);
 	const [ world, existingRooms ] = await Promise.all([ shard.loadWorld(), shard.data.sMembers('rooms') ]);
 	const terrainMap = new Map(world.terrain);
-	const rooms = [ ...accumulateSector(origin, options, terrainMap, new Set(existingRooms)) ];
+	const existing = new Set(existingRooms);
+	// The inclusive 11x11 block from the origin, so the sector is bounded by its full highway ring
+	// on all four sides -- the origin-corner rings plus the rings shared with the next sectors.
+	// Already-existing rooms are skipped, so the shared rings are idempotent across adjacent sectors
+	// and partially-built sectors can be re-entered.
+	const planned = Fn.pipe(
+		iterateRoomsInRange(origin.rx + 5 * origin.xStep, origin.ry + 5 * origin.yStep, 5),
+		$$ => Fn.map($$, ([ rx, ry ]) => makeSignedRoomName(rx, ry)),
+		$$ => Fn.reject($$, roomName => existing.has(roomName)),
+		$$ => new Set($$));
+	reopenSealedBorders(terrainMap, planned);
+	const rooms = [ ...buildRooms(planned, options, terrainMap, planned) ];
 	refreshRoomMeta(terrainMap, Fn.map(rooms, room => room.name));
 	await flushRooms(shard, terrainMap, rooms);
 	return rooms;
