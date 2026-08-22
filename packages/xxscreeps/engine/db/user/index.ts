@@ -17,12 +17,6 @@ const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
 export const infoKey = (userId: string) => `user/${userId}`;
 
-/**
- * Provider under which an account's email address is filed. An address is an identity the same way
- * a username is, so checking, flattening and looking one up sit beside their username counterparts
- * rather than in the backend mod which makes a feature of them. Every service which can create a
- * user has to agree on all three, and the mod is only loaded by the backend.
- */
 export const emailProvider = 'email';
 
 interface BackendUserInfo {
@@ -43,10 +37,7 @@ export function checkUsername(username: string) {
 }
 
 export function checkEmail(email: string) {
-	return (
-		email.length <= 254 &&
-		/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)
-	);
+	return email.length <= 254 && /^[a-z0-9._%'+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email);
 }
 
 function flattenUsername(username: string) {
