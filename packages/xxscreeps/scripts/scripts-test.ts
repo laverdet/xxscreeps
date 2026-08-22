@@ -205,10 +205,12 @@ describe('scripts/room-gen', () => {
 		assertClosedWorld(terrain);
 		const punched = terrain.get('W5N5');
 		assert.ok(punched !== undefined);
-		const stretches = [ ...Fn.range(1, 49) ]
-			.filter(yy => punched.terrain.get(49, yy) !== C.TERRAIN_MASK_WALL &&
-				punched.terrain.get(49, yy - 1) === C.TERRAIN_MASK_WALL)
-			.length;
+		const stretches = Fn.pipe(
+			Fn.range(1, 49),
+			$$ => Fn.filter($$, yy =>
+				punched.terrain.get(49, yy) !== C.TERRAIN_MASK_WALL &&
+				punched.terrain.get(49, yy - 1) === C.TERRAIN_MASK_WALL),
+			$$ => Fn.accumulate($$, () => 1));
 		assert.ok(stretches >= 2, `the punched span carries a gap (got ${stretches} stretch(es))`);
 		assertPunchedOnly(sealed, terrainString(punched.terrain), 'W5N5');
 		assertExitsReachGround(punched.terrain, 'W5N5');
@@ -238,7 +240,10 @@ describe('scripts/room-gen', () => {
 		assertExitsBacked(punched.terrain, 'W10N5');
 		// A punch opens at most a border span two tiles deep plus one carved slot per stretch;
 		// regenerating the field would strip hundreds of the maze's interior walls.
-		const changed = [ ...after ].filter((tile, ii) => tile !== sealed[ii]).length;
+		const changed = Fn.pipe(
+			Fn.range(after.length),
+			$$ => Fn.reject($$, ii => after[ii] === sealed[ii]),
+			$$ => Fn.accumulate($$, () => 1));
 		assert.ok(changed < 150, `W10N5 lost ${changed} tiles`);
 	});
 

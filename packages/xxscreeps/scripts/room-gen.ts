@@ -439,8 +439,10 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): 
 			const nyy = cyy + dyy;
 			// A border tile can never be cleared, so a path through a walled one would report the
 			// throat connected while leaving it sealed; open border tiles stay traversable.
-			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 &&
-				!(isBorder(nxx, nyy) && grid[nyy]![nxx]!.wall)) {
+			if (
+				nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 &&
+				!(isBorder(nxx, nyy) && grid[nyy]![nxx]!.wall)
+			) {
 				const nkey = nyy * 50 + nxx;
 				if (!prev.has(nkey)) {
 					prev.set(nkey, key);
@@ -1210,8 +1212,11 @@ function reopenSealedBorders(terrainMap: WorldTerrain, planned: ReadonlySet<stri
 				Math.random() < kSealSideProbability) {
 				continue;
 			}
-			opened.set(dir, orientation !== undefined && isHighwayLaneSide(orientation, dir)
-				? [ ...genLaneExit(rx, ry, orientation, dir) ] : [ ...genExit() ]);
+			opened.set(dir, [
+				...orientation !== undefined && isHighwayLaneSide(orientation, dir)
+					? genLaneExit(rx, ry, orientation, dir)
+					: genExit(),
+			]);
 		}
 		if (opened.size === 0) {
 			continue;
@@ -1326,8 +1331,14 @@ function punchOpenings(old: Terrain, opened: ReadonlyMap<keyof ExitMap, number[]
 	const terrain = new TerrainWriter();
 	for (const [ yy, row ] of grid.entries()) {
 		for (const [ xx, cell ] of row.entries()) {
-			terrain.set(xx, yy, cell.wall ? C.TERRAIN_MASK_WALL :
-				old.get(xx, yy) === C.TERRAIN_MASK_SWAMP ? C.TERRAIN_MASK_SWAMP : 0);
+			terrain.set(xx, yy, function() {
+				if (cell.wall) {
+					return C.TERRAIN_MASK_WALL;
+				} else {
+					return old.get(xx, yy) === C.TERRAIN_MASK_SWAMP ? C.TERRAIN_MASK_SWAMP : 0;
+				}
+
+			}());
 		}
 	}
 	return terrain;
