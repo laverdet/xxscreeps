@@ -3,37 +3,6 @@ import type { Endpoint } from 'xxscreeps/backend/index.js';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
-function validateEmail(email: string) {
-	return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
-}
-
-interface CheckEmailRequest {
-	email: string;
-}
-
-const checkEmailRequestSchema: JSONSchemaType<CheckEmailRequest> = {
-	type: 'object',
-	properties: {
-		email: { type: 'string' },
-	},
-	required: [ 'email' ],
-};
-
-const CheckEmailEndpoint: Endpoint = {
-	method: 'get',
-	path: '/api/register/check-email',
-	execute: makeValidatedQueryRoute(checkEmailRequestSchema, async context => {
-		const { email } = context.request.query;
-		if (!validateEmail(email)) {
-			return { error: 'invalid' };
-		}
-		if (await User.findUserByProvider(context.db, 'email', email) !== null) {
-			return { error: 'exists' };
-		}
-		return { ok: 1 };
-	}),
-};
-
 interface CheckUsernameRequest {
 	username: string;
 }
@@ -93,14 +62,14 @@ const SetUsernameEndpoint: Endpoint = {
 		// Sanity check
 		const { username, email: maybeEmail } = context.request.body;
 		const email = maybeEmail === '' ? undefined : maybeEmail;
-		if (!User.checkUsername(username) || (email != null && !validateEmail(email))) {
+		if (!User.checkUsername(username) || (email != null && !User.checkEmail(email))) {
 			return { error: 'invalid' };
 		}
 
 		// Register
 		const providers = [ { provider, id: providerId } ];
 		if (email != null) {
-			providers.push({ provider: 'email', id: email });
+			providers.push({ provider: User.emailProvider, id: email });
 		}
 		await User.create(context.db, newUserId, username, providers);
 		context.state.userId = newUserId;
@@ -111,5 +80,5 @@ const SetUsernameEndpoint: Endpoint = {
 	}),
 };
 
-const endpoints = [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint ];
+const endpoints = [ CheckUsernameEndpoint, SetUsernameEndpoint ];
 export default endpoints;

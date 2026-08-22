@@ -325,6 +325,7 @@ export const initializationDefaults = {
 	mods: [
 		'xxscreeps/mods/classic',
 		'xxscreeps/mods/backend/cookie',
+		'xxscreeps/mods/backend/email',
 		'xxscreeps/mods/backend/password',
 		'xxscreeps/mods/backend/steam',
 	],

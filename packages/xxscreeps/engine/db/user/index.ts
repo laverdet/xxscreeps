@@ -17,6 +17,14 @@ const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
 export const infoKey = (userId: string) => `user/${userId}`;
 
+/**
+ * Provider under which an account's email address is filed. An address is an identity the same way
+ * a username is, so checking, flattening and looking one up sit beside their username counterparts
+ * rather than in the backend mod which makes a feature of them. Every service which can create a
+ * user has to agree on all three, and the mod is only loaded by the backend.
+ */
+export const emailProvider = 'email';
+
 interface BackendUserInfo {
 	username: string;
 	badge: Badge | null;
@@ -34,8 +42,19 @@ export function checkUsername(username: string) {
 	);
 }
 
+export function checkEmail(email: string) {
+	return (
+		email.length <= 254 &&
+		/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)
+	);
+}
+
 function flattenUsername(username: string) {
 	return username.replace(/[-_ ]/g, '').toLowerCase();
+}
+
+function flattenEmail(email: string) {
+	return email.toLowerCase();
 }
 
 export async function create(db: Database, userId: string, username: string, providers: { provider: string; id: string }[] = []) {
@@ -44,7 +63,8 @@ export async function create(db: Database, userId: string, username: string, pro
 	// Check for existing associations
 	const allProviders = [
 		{ provider: 'username', id: flattenUsername(username) },
-		...providers,
+		...Fn.map(providers, ({ provider, id }) =>
+			({ provider, id: provider === emailProvider ? flattenEmail(id) : id })),
 	];
 	const providerConflicts = await Promise.all(Fn.map(allProviders,
 		({ provider, id }) => db.data.hGet(providerMembersKey(provider), id)));
@@ -110,6 +130,15 @@ export async function findUserByProvider(db: Database, provider: string, provide
 
 export async function findUserByName(db: Database, username: string) {
 	return findUserByProvider(db, 'username', flattenUsername(username));
+}
+
+export async function findUserByEmail(db: Database, email: string) {
+	return findUserByProvider(db, emailProvider, flattenEmail(email));
+}
+
+/** The address on a user's account, or `null` if they registered without one. */
+export function emailForUser(db: Database, userId: string) {
+	return providerIdForUser(db, emailProvider, userId);
 }
 
 export async function loadBackendUserInfo(db: Database, userId: string): Promise<BackendUserInfo | undefined> {
