@@ -1,7 +1,10 @@
+import type { NotificationRow } from './model.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { sendNotification } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { consumeDueUsers, getAllRowsForTesting, kRetentionMs, pruneExpiredNotifications, upsertNotification } from './model.js';
+import { consumeDueUsers, getAllRowsForTesting, hooks, upsertNotification } from './model.js';
 
 const userA = '100';
 const userB = '101';
@@ -10,7 +13,20 @@ const empty = simulate({
 	W0N0: () => {},
 });
 
+// `hooks.register` returns nothing disposable, and `makeMapped` locks its listener list on the
+// first call, so a consumer cannot be scoped to one test. One registers here; each test clears it.
+const delivered: NotificationRow[] = [];
+hooks.register('deliver', (shard, userId, rows) => {
+	delivered.push(...rows);
+	return Promise.resolve();
+});
+
+const seedRow = (shard: Shard, userId: string, message: string) =>
+	upsertNotification(shard, userId, 'msg', message, 0);
+
 describe('mods/meta/notify-cron', () => {
+
+	const baseTime = 10_000_000;
 
 	// This mod is the transport registered for the test process, so a plain `sendNotification`
 	// exercises the whole registration path.
@@ -63,7 +79,6 @@ describe('mods/meta/notify-cron', () => {
 	}));
 
 	test('recording schedules the user drain at the group deadline', () => empty(async ({ shard }) => {
-		const baseTime = 10_000_000;
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
 		await upsertNotification(shard, userA, 'msg', 'later', 60);
 		assert.deepStrictEqual(await consumeDueUsers(shard, baseTime), [],
@@ -75,42 +90,115 @@ describe('mods/meta/notify-cron', () => {
 	}));
 
 	test('due users pop independently', () => empty(async ({ shard }) => {
-		using clock = new DeterministicClockForTesting({ start: 10_000_000, step: 0 });
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
 		await upsertNotification(shard, userA, 'msg', 'a-msg', 0);
 		await upsertNotification(shard, userB, 'msg', 'b-msg', 0);
-		const dueUsers = await consumeDueUsers(shard, 10_000_000);
+		const dueUsers = await consumeDueUsers(shard, baseTime);
 		assert.deepStrictEqual(dueUsers.sort(), [ userA, userB ]);
 	}));
 
-	test('prune drops rows past retention', () => empty(async ({ shard }) => {
-		using clock = new DeterministicClockForTesting({ start: 1_000_000, step: 0 });
-		await upsertNotification(shard, userA, 'msg', 'stale', 0);
-		await pruneExpiredNotifications(shard, 1_000_000 + kRetentionMs + 1);
-		assert.deepStrictEqual(await getAllRowsForTesting(shard, userA), []);
+	// Delivery worker tests
+
+	test('drains at cadence boundary with full row shape', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
+		await seedRow(shard, userA, 'hi');
+		await tick(10);
+		assert.strictEqual(delivered.length, 1);
+		const [ row ] = delivered;
+		assert.strictEqual(row?.user, userA);
+		assert.strictEqual(row.message, 'hi');
+		assert.strictEqual(row.count, 1);
+		assert.strictEqual(row.type, 'msg');
+		assert.strictEqual(typeof row.date, 'number');
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
-	test('prune keeps unexpired rows scheduled', () => empty(async ({ shard }) => {
-		using clock = new DeterministicClockForTesting({ start: 1_000_000, step: 0 });
-		await upsertNotification(shard, userA, 'msg', 'stale', 0);
-		clock.set(2_000_000);
-		await upsertNotification(shard, userA, 'msg', 'fresh', 0);
-		await pruneExpiredNotifications(shard, 1_000_000 + kRetentionMs + 1);
-		const rows = await getAllRowsForTesting(shard, userA);
-		assert.deepStrictEqual(rows.map(row => row.message), [ 'fresh' ]);
-		// The surviving row keeps the user scheduled for its own expiry.
-		assert.deepStrictEqual(await consumeDueUsers(shard, 2_000_000), [ userA ]);
+	test('no drain between cadence boundaries', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
+		await tick(1);
+		await seedRow(shard, userA, 'hi');
+		await tick(9);
+		assert.strictEqual(delivered.length, 0,
+			'no drain expected before reaching cadence tick');
+		await tick(1);
+		assert.strictEqual(delivered.length, 1, 'drain at cadence boundary');
 	}));
 
-	test('coalesce-forever rows expire from their last occurrence', () => empty(async ({ shard }) => {
-		using clock = new DeterministicClockForTesting({ start: 1_000_000, step: 0 });
+	test('notifyPrefs.interval throttles', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
+		await seedRow(shard, userA, 'first');
+		await tick(10);
+		assert.strictEqual(delivered.length, 1);
+		// lastNotifyDate is now baseTime.
+		await seedRow(shard, userA, 'second');
+		clock.increment(30 * 60_000);
+		await tick(10);
+		assert.strictEqual(delivered.length, 1, 'still under throttle');
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 1);
+		// 30 + 31 clears the 60-minute throttle.
+		clock.increment(31 * 60_000);
+		await tick(10);
+		assert.strictEqual(delivered.length, 2);
+		assert.strictEqual(delivered[1]?.message, 'second');
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
+	}));
+
+	// Every engine-generated notification takes this path, and its row indexes at `timeGroup` 0
+	// rather than at a bucket boundary.
+	test('coalesce-forever rows drain with their accumulated count', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
 		await upsertNotification(shard, userA, 'msg', 'under attack', Infinity);
-		clock.set(5_000_000);
+		clock.increment(86_400_000);
 		await upsertNotification(shard, userA, 'msg', 'under attack', Infinity);
-		await pruneExpiredNotifications(shard, 1_000_000 + kRetentionMs + 1);
-		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 1,
-			'the second occurrence refreshed retention');
-		await pruneExpiredNotifications(shard, 5_000_000 + kRetentionMs + 1);
-		assert.deepStrictEqual(await getAllRowsForTesting(shard, userA), []);
+		await tick(10);
+		assert.strictEqual(delivered.length, 1);
+		assert.strictEqual(delivered[0]?.message, 'under attack');
+		assert.strictEqual(delivered[0].count, 2);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
+	}));
+
+	test('drains multiple users independently', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
+		await seedRow(shard, userA, 'a-msg');
+		await seedRow(shard, userB, 'b-msg');
+		await tick(10);
+		assert.strictEqual(delivered.length, 2);
+		const byUser = new Map(delivered.map(row => [ row.user, row ]));
+		assert.strictEqual(byUser.get(userA)?.message, 'a-msg');
+		assert.strictEqual(byUser.get(userB)?.message, 'b-msg');
+	}));
+
+	test('short group does not drag long group', () => empty(async ({ shard, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
+		delivered.length = 0;
+		// A cadence shorter than the gap between the two bucket boundaries, so delivery depends on
+		// each row's group deadline rather than on the throttle.
+		await setNotifyPrefs(shard.db, userA, { interval: 5 });
+		await upsertNotification(shard, userA, 'msg', 'long', 60);
+		// 1 is the smallest non-zero `groupInterval`.
+		await upsertNotification(shard, userA, 'msg', 'short', 1);
+
+		// Advance past the short group's bucket boundary; the long group's bucket is still ahead.
+		const shortBucket = Math.ceil(baseTime / 60_000) * 60_000;
+		clock.increment(shortBucket - baseTime + 1);
+		await tick(10);
+		assert.strictEqual(delivered.length, 1, 'only the short group fires at its bucket boundary');
+		assert.strictEqual(delivered[0]?.message, 'short');
+		const remaining = await getAllRowsForTesting(shard, userA);
+		assert.strictEqual(remaining.length, 1, 'long group stays queued under its own deadline');
+		assert.strictEqual(remaining[0]?.message, 'long');
+
+		const longBucket = Math.ceil(baseTime / (60 * 60_000)) * (60 * 60_000);
+		clock.increment(longBucket - shortBucket);
+		await tick(10);
+		assert.strictEqual(delivered.length, 2, 'long group fires once its deadline elapses');
+		assert.strictEqual(delivered[1]?.message, 'long');
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
 });
