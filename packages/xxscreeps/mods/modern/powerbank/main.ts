@@ -3,7 +3,7 @@ import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js'
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
 import * as C from 'xxscreeps:mods/constants';
-import { dueRoomsAt, scheduleRoom, seedRooms } from './model.js';
+import { dueRooms } from './model.js';
 
 // World-management placement policy for power banks. Each highway room runs an independent respawn
 // countdown; the next-due tick is authoritative on the room (`#nextPowerBankTime`) and the scratch
@@ -39,12 +39,12 @@ registerShardInitializer(async shard => {
 			const deadline = room['#nextPowerBankTime'] || shard.time + respawnTime();
 			return [ deadline, roomName ];
 		}));
-	await seedRooms(shard, seeds);
+	await dueRooms.seed(shard, seeds);
 });
 
 // Peek-and-reschedule (no zrem): a crash between peek and reschedule leaves the entry for retry.
 registerShardTickProcessor(async (shard, time) => {
-	const due = await dueRoomsAt(shard, time);
+	const due = await dueRooms.due(shard, time);
 	if (due.length === 0) return;
 	await Fn.mapAwait(due, async roomName => {
 		// Placement waits for the room intent stage (live terrain); the timer advances now.
@@ -56,7 +56,7 @@ registerShardTickProcessor(async (shard, time) => {
 				local: { placePowerBank: [ [ power, nextDue ] ] },
 				internal: true,
 			}),
-			scheduleRoom(shard, roomName, nextDue),
+			dueRooms.schedule(shard, roomName, nextDue),
 		]);
 	});
 });

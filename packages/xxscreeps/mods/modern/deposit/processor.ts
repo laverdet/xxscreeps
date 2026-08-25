@@ -13,7 +13,7 @@ import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.j
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
-import { scheduleSector } from './model.js';
+import { dueSectors } from './model.js';
 
 // The first wall position in 5..44, in random order, with at least one non-wall neighbor (incl.
 // diagonals), inside the sector's 250-square radius, and 2 squares clear of any other room object.
@@ -60,7 +60,7 @@ registerObjectTickProcessor(Deposit, (deposit, context) => {
 		const owning =
 			sectors.find(sectorName => makeSectorRadiusPredicate(sectorName, roomName, sectors)(deposit.pos.x, deposit.pos.y));
 		if (owning !== undefined) {
-			context.task(scheduleSector(context.shard, owning, 0, { earliest: true }));
+			context.task(dueSectors.schedule(context.shard, owning, 0, { earliest: true }));
 		}
 		deposit.room['#removeObject'](deposit);
 		context.didUpdate();
