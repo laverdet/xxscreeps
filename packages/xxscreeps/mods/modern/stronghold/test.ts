@@ -1,6 +1,6 @@
-import type { StructureInvaderCore } from './invader-core.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
@@ -15,12 +15,18 @@ import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { lookForStructureAt, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { create as createNuke } from 'xxscreeps/mods/modern/nuker/nuke.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
+import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { create as createInvaderCore } from './invader-core.js';
+import { StructureInvaderCore, create as createInvaderCore } from './invader-core.js';
+import { kPlacementRetryInterval } from './main.js';
+import { requestSweeps, sweepsForTesting } from './model.js';
+import { kDeployTime } from './processor.js';
+import { templates } from './templates.js';
 
 describe('mods/modern/stronghold', () => {
 	describe('core', () => {
@@ -1315,6 +1321,249 @@ describe('mods/modern/stronghold', () => {
 				assert.strictEqual(scout.hits, scout.hitsMax, 'no attacks while deploying');
 				assert.strictEqual(findRoomCore(room)?.spawning, null, 'no population spawning while deploying');
 			});
+		}));
+	});
+
+	describe('placement', () => {
+		// The test world is a single sector centered on W5N5, so its source-keeper ring is where every
+		// stronghold this cron places has to land.
+		const keeperRing = [ 'W4N4', 'W4N5', 'W4N6', 'W5N4', 'W5N6', 'W6N4', 'W6N5', 'W6N6' ];
+		const corner = new RoomPosition(25, 25, 'W4N4');
+
+		async function loadCores(shard: Shard) {
+			const rooms = await Fn.mapAwait(keeperRing, roomName => shard.loadRoom(roomName));
+			return Fn.transform(rooms, room => lookForStructures(room, C.STRUCTURE_INVADER_CORE));
+		}
+
+		const countCores = async (shard: Shard) => Fn.accumulate(await loadCores(shard), () => 1);
+
+		// Shard initialization scatters a sector's first sweep across the retry interval, so a test
+		// requests it. The first tick's shard processor pushes the placement intent and the second tick's
+		// room processor runs it.
+		async function sweepNow(shard: Shard, world: World, tick: (count?: number) => Promise<void>) {
+			await requestSweeps(shard, world, 'W5N5');
+			await tick(2);
+		}
+
+		const emptySector = simulate({});
+
+		// The wall clock stands still from before the shard initializers run
+		const stoppedClock = simulate({}, () => new DeterministicClockForTesting({ step: 0 }));
+
+		test('schedules every sector center inside the check interval', () => stoppedClock(async ({ shard }) => {
+			const now = Date.now();
+			const sweeps = await sweepsForTesting(shard);
+			assert.deepStrictEqual(sweeps.map(([ , sector ]) => sector), [ 'W5N5' ],
+				'only sector centers are scheduled');
+			const [ sweep ] = sweeps;
+			assert.ok(sweep, 'the sector center is scheduled');
+			assert.ok(sweep[0] >= now && sweep[0] < now + kPlacementRetryInterval,
+				`first sweep is ${sweep[0] - now}ms out, inside the interval`);
+		}));
+
+		test('seeds a stronghold in a source-keeper room', () => emptySector(async ({ peekRoom, shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			const cores = [ ...await loadCores(shard) ];
+			assert.strictEqual(cores.length, 1, 'exactly one stronghold per sector');
+			const [ core ] = cores;
+			assert.ok(core);
+			const { roomName } = core.pos;
+			assert.ok(keeperRing.includes(roomName), `${roomName} is a source-keeper room`);
+			const templateName = core['#templateName'];
+			assert.ok(templateName, 'the core carries the bunker template it deploys');
+			assert.strictEqual(core.level, templates[templateName].rewardLevel);
+			assert.ok(core['#depositType'], 'the core carries the chain its ruin loot rolls from');
+			// Placed by the intent the previous tick processed
+			assert.strictEqual(core['#deployTime'], shard.time + kDeployTime - 1);
+			const terrain = world.map.getRoomTerrain(roomName);
+			assert.ok(
+				Fn.every(templates[templateName].structures, entry =>
+					terrain.get(core.pos.x + entry.dx, core.pos.y + entry.dy) !== C.TERRAIN_MASK_WALL),
+				'no template offset lands on wall terrain');
+			// A core takes no actions until it deploys, so the room is left to sleep out the timer.
+			const driving = await peekRoom(roomName, room => room['#npcData'].users.has(kInvaderUserId));
+			assert.strictEqual(driving, false, 'the invader NPC does not drive a deploying stronghold');
+			// The placed core requests the next sweep itself
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		// Closed rooms take no stronghold, which leaves the sector nowhere to place one
+		const closedRing = simulate({}, async shard => {
+			await shard.data.sRem('rooms', keeperRing);
+			return new DeterministicClockForTesting({ step: 0 });
+		});
+
+		test('retries a sector with no room for a stronghold', () => closedRing(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.deepStrictEqual([ ...await loadCores(shard) ], []);
+			assert.deepStrictEqual(await sweepsForTesting(shard), [ [ Date.now() + kPlacementRetryInterval, 'W5N5' ] ]);
+		}));
+
+		// Cores are left un-activated so their rooms stay asleep and the fixtures hold still.
+		const withCore = (build: (core: StructureInvaderCore) => void) => simulate({
+			W4N4: room => {
+				const core = createInvaderCore(corner, 3, 0);
+				build(core);
+				room['#insertObject'](core);
+			},
+		});
+
+		test('skips a sector holding a core that has yet to deploy', () =>
+			withCore(core => core['#deployTime'] = kDeployTime)(async ({ shard, tick, world }) => {
+				await sweepNow(shard, world, tick);
+				assert.strictEqual(await countCores(shard), 1, 'a deploying core holds its sector');
+				assert.deepStrictEqual(await sweepsForTesting(shard), [], 'a standing core stops the sweeps');
+			}));
+
+		test('skips a sector holding a deployed core', () =>
+			withCore(core => core['#collapseTime'] = 1000)(async ({ shard, tick, world }) => {
+				await sweepNow(shard, world, tick);
+				assert.strictEqual(await countCores(shard), 1, 'a deployed core holds its sector');
+				assert.deepStrictEqual(await sweepsForTesting(shard), [], 'a standing core stops the sweeps');
+			}));
+
+		const withRuin = (decay: number) => simulate({
+			W4N4: room => room['#insertObject'](createRuin(createInvaderCore(corner, 3, 0), decay)),
+		});
+
+		test('skips a sector that holds a core ruin', () => withRuin(5000)(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.deepStrictEqual([ ...await loadCores(shard) ], [], 'a collapsed stronghold holds its sector');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'a standing ruin stops the sweeps');
+		}));
+
+		test('does not place a second stronghold on re-evaluation', () => emptySector(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.strictEqual(await countCores(shard), 1);
+			await sweepNow(shard, world, tick);
+			assert.strictEqual(await countCores(shard), 1, 'the placed core holds its sector');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		// The observer keeps the room processing, so the room processor sees its timers run out
+		const observed = (insert: (room: Room) => void) => simulate({
+			W4N4: room => {
+				insert(room);
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W4N4'), [ C.TOUGH ], 'observer', '100'));
+			},
+		});
+
+		// The sweep runs at `shard.time`, and a core collapsing on the very next tick is already gone as
+		// far as it is concerned, so the sector is free again.
+		const collapsingNow = observed(room => {
+			const core = createInvaderCore(corner, 3, 0);
+			core['#collapseTime'] = 1;
+			room['#insertObject'](core);
+		});
+
+		test('replaces a core whose collapse timer has run out', () => collapsingNow(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			const cores = [ ...await loadCores(shard) ];
+			assert.strictEqual(cores.length, 1);
+			assert.ok(cores[0]?.['#templateName'], 'a placed stronghold replaces the collapsing core');
+		}));
+
+		const decayingNow = observed(room => room['#insertObject'](createRuin(createInvaderCore(corner, 3, 0), 1)));
+
+		test('replaces a core ruin that decays this tick', () => decayingNow(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.strictEqual(await countCores(shard), 1, 'the decaying ruin does not hold its sector');
+		}));
+
+		// A deployed core collapsing as tick 2 is processed
+		const collapsing = observed(room => {
+			const core = createInvaderCore(corner, 3, 0);
+			core['#collapseTime'] = 3;
+			room['#insertObject'](core);
+		});
+
+		test('a collapsing core requests the sweep that replaces it', () => collapsing(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.deepStrictEqual(await sweepsForTesting(shard), []);
+			// The core collapses on the next tick, whose sweep places a stronghold, and one more tick lands it
+			await tick(2);
+			const cores = [ ...await loadCores(shard) ];
+			assert.strictEqual(cores.length, 1);
+			assert.ok(cores[0]?.['#templateName'], 'a placed stronghold replaces the collapsed core');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		// The ruin of a destroyed core, decaying as tick 2 is processed
+		const decaying = observed(room => room['#insertObject'](createRuin(createInvaderCore(corner, 3, 0), 3)));
+
+		test('a decaying core ruin requests the sweep that replaces it', () => decaying(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.deepStrictEqual(await sweepsForTesting(shard), []);
+			// The ruin decays on the next tick, whose sweep places a stronghold, and one more tick lands it
+			await tick(2);
+			assert.strictEqual(await countCores(shard), 1, 'a placed stronghold replaces the ruin');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		// A deployed core and a nuke which lands as tick 2 is processed
+		const nuked = (target: RoomPosition) => observed(room => {
+			const core = createInvaderCore(corner, 3, 0);
+			core['#collapseTime'] = 1000;
+			room['#insertObject'](core);
+			room['#insertObject'](createNuke(target, 'W2N2', 3));
+		});
+
+		test('a nuke destroying a core requests the sweep that replaces it', () => nuked(corner)(async ({ peekRoom, shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			assert.deepStrictEqual(await sweepsForTesting(shard), []);
+			await tick();
+			await peekRoom('W4N4', room => {
+				assert.deepStrictEqual(lookForStructures(room, C.STRUCTURE_INVADER_CORE), [], 'the nuke destroys the core');
+				assert.deepStrictEqual(room['#lookFor'](C.LOOK_RUINS), [], 'a nuke leaves no ruin');
+			});
+			// The nuke is removed on the next tick, whose sweep places a stronghold, and one more tick lands it
+			await tick(2);
+			const cores = [ ...await loadCores(shard) ];
+			assert.strictEqual(cores.length, 1);
+			assert.ok(cores[0]?.['#templateName'], 'a placed stronghold replaces the nuked core');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		// Each nuke's removal requests a sweep, and the second sweep runs before the first one's stronghold
+		// lands
+		const nukedTwice = observed(room => {
+			const core = createInvaderCore(corner, 3, 0);
+			core['#collapseTime'] = 1000;
+			room['#insertObject'](core);
+			room['#insertObject'](createNuke(corner, 'W2N2', 3));
+			room['#insertObject'](createNuke(corner, 'W2N2', 4));
+		});
+
+		test('nukes on consecutive ticks place one stronghold', () => nukedTwice(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			await tick(4);
+			assert.strictEqual(await countCores(shard), 1, 'one stronghold holds the sector');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the placed core stops the sweeps');
+		}));
+
+		test('a core surviving a nuke keeps its sector', () => nuked(new RoomPosition(40, 40, 'W4N4'))(async ({ shard, tick, world }) => {
+			await sweepNow(shard, world, tick);
+			await tick(3);
+			assert.strictEqual(await countCores(shard), 1, 'the standing core holds its sector');
+			assert.deepStrictEqual(await sweepsForTesting(shard), [], 'the standing core stops the sweeps');
+		}));
+
+		// An observer outside the bunker1 footprint keeps the room processing across the deploy
+		// boundary without being crushed by it.
+		const deploying = simulate({
+			W1N1: room => {
+				const core = createInvaderCore(new RoomPosition(25, 25, 'W1N1'), 2, 2);
+				core['#templateName'] = 'bunker1';
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(23, 25, 'W1N1'), [ C.TOUGH ], 'observer', '100'));
+			},
+		});
+
+		test('wakes the invader NPC once the stronghold deploys', () => deploying(async ({ tick, peekRoom }) => {
+			assert.strictEqual(await peekRoom('W1N1', room => room['#npcData'].users.has(kInvaderUserId)), false);
+			await tick(3);
+			assert.ok(await peekRoom('W1N1', room => room['#npcData'].users.has(kInvaderUserId)),
+				'a deployed stronghold is driven by the invader NPC');
 		}));
 	});
 });

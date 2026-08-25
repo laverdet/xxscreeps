@@ -1,5 +1,6 @@
 import type { SectorControl } from './schema.js';
 import type { World } from 'xxscreeps/game/map.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { parseSignedRoomName, roomLinearDistance } from 'xxscreeps/game/room/name.js';
 
 // Iterates the sector-control records stamped on the world's center rooms.
@@ -10,6 +11,12 @@ export function *iterateSectors(world: World): IterableIterator<[ center: string
 			yield [ roomName, sectorControl ];
 		}
 	}
+}
+
+// A sector's source-keeper rooms: the ring of members one room out from the center.
+export function keeperRooms(center: string, sector: SectorControl): Iterable<string> {
+	const parsedCenter = parseSignedRoomName(center);
+	return Fn.filter(sector.members, name => roomLinearDistance(parseSignedRoomName(name), parsedCenter) === 1);
 }
 
 // Given a central room, a subject room, and the sectors to which the subject belongs-- returns a
