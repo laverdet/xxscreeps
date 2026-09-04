@@ -207,6 +207,30 @@ describe('mods/classic/controller', () => {
 				assert.strictEqual(Game.creeps.worker!.reserveController(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
+
+		// Short of CONTROLLER_RESERVE_MAX, so the cap does not hide the arithmetic.
+		const renewableReservation = simulate({
+			W3N3: room => {
+				room['#user'] = '100';
+				room.controller!['#reservationEndTime'] = 200;
+				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			},
+		});
+
+		test('renewing a reservation with one CLAIM part leaves the ticks remaining unchanged',
+			() => renewableReservation(async ({ player, tick }) => {
+				let before = 0;
+				await player('100', Game => {
+					before = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
+					assert.strictEqual(
+						Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+				});
+				await tick();
+				await player('100', Game => {
+					const after = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
+					assert.strictEqual(after, before);
+				});
+			}));
 	});
 
 	describe('upgradeController', () => {

@@ -124,8 +124,9 @@ const intents = [
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			const power = creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
 			const reservationEndTime = controller['#reservationEndTime'];
+			// A renewal adds `power`; only a fresh reservation starts from `gameTime + 1`.
 			const endTime = reservationEndTime
-				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power + 1)
+				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power)
 				: Game.time + power + 1;
 			reserve(context, controller, creep['#user'], endTime);
 			saveAction(creep, 'reserveController', controller.pos);
