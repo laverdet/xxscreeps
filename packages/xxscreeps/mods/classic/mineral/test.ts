@@ -77,7 +77,9 @@ describe('mods/classic/mineral', () => {
 	});
 
 	test('payload round trip', () => prebuiltExtractor(async ({ shard }) => {
-		const payload = await exportPayload(shard);
+		const { payload, dropped } = await exportPayload(shard);
+		// W6N6's neutral extractor rides the mineral's entry; only W6N1's owned one is left behind.
+		assert.strictEqual(dropped.get('StructureExtractor'), 1);
 		const extractorId = payload.W6N6?.objects?.find(object => object.extractor !== undefined)?.extractor;
 		assert.ok(extractorId !== undefined);
 		const { rooms } = importPayload(payload);

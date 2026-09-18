@@ -4,7 +4,6 @@ import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
 import { compositeComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -25,6 +24,13 @@ export interface PayloadRoom {
 
 /** An authored world: every room's terrain and objects, by room name. */
 export type Payload = Record<string, PayloadRoom>;
+
+/** An export, plus a tally of what it couldn't carry. */
+export interface ExportedPayload {
+	payload: Payload;
+	/** How many objects no codec claimed, by class name. */
+	dropped: Map<string, number>;
+}
 
 // Index 3 is wall+swamp, which reads back as wall: `Terrain.get` documents three values, and
 // `packExits` would read anything else as a border opening.
@@ -49,24 +55,30 @@ const codecs = function() {
 }();
 
 // Objects no codec claims -- creeps, roads, anything a payload doesn't carry -- yield undefined and
-// leave their tile's terrain showing.
+// leave their tile's terrain showing. A codec's null is an object it carries in a companion's
+// entry: it earns no marker of its own, but the payload does bring it back.
 function encodeObject(object: RoomObject) {
 	return Fn.find(Fn.map(codecs.values(), codec => {
 		const fields = codec.encode(object);
-		return fields === undefined ? undefined : { marker: codec.marker, meta: { id: object.id, ...fields } };
-	}), nonNullPredicate);
+		return fields == null ? fields : { marker: codec.marker, meta: { id: object.id, ...fields } };
+	}), encoded => encoded !== undefined);
 }
 
-async function exportRoom(shard: Shard, roomName: string, terrain: Terrain): Promise<PayloadRoom> {
+async function exportRoom(shard: Shard, roomName: string, terrain: Terrain) {
 	const room = await shard.loadRoom(roomName);
+	// The layout and the drop tally read one encode pass; a second would re-run every codec.
+	const encodings = [ ...Fn.map(room['#objects'], object => ({ object, encoded: encodeObject(object) })) ];
 	const objects = Fn.pipe(
-		room['#objects'],
-		$$ => Fn.map($$, object => {
-			const encoded = encodeObject(object);
-			return encoded === undefined ? undefined : [ `${object.pos.x},${object.pos.y}`, encoded ] as const;
-		}),
+		encodings,
+		$$ => Fn.map($$, ({ object, encoded }) =>
+			encoded == null ? undefined : [ `${object.pos.x},${object.pos.y}`, encoded ] as const),
 		$$ => Fn.filter($$),
 		$$ => new Map($$));
+	const dropped = Fn.pipe(
+		encodings,
+		$$ => Fn.filter($$, ({ encoded }) => encoded === undefined),
+		$$ => Fn.map($$, ({ object }) => object.constructor.name),
+		$$ => [ ...$$ ]);
 	// Metadata rides the layout's scan order and nothing else, so both come off one resolved array.
 	const cells = [ ...Fn.map(Fn.range(50), yy => [ ...Fn.map(Fn.range(50), xx => {
 		const object = objects.get(`${xx},${yy}`);
@@ -78,24 +90,30 @@ async function exportRoom(shard: Shard, roomName: string, terrain: Terrain): Pro
 		$$ => Fn.transform($$, row => Fn.map(row, cell => cell.meta)),
 		$$ => Fn.filter($$),
 		$$ => [ ...$$ ]);
-	return { layout, ...metadata.length > 0 && { objects: metadata } };
+	return { payload: { layout, ...metadata.length > 0 && { objects: metadata } }, dropped };
 }
 
 /**
  * Renders every room of `shard` as a terrain layout, with each object a registered codec claims
- * folded in as that codec's character plus an entry in the room's metadata.
+ * folded in as that codec's character plus an entry in the room's metadata. Objects no codec
+ * claims are absent from the payload and counted in `dropped`.
  */
-export async function exportPayload(shard: Shard): Promise<Payload> {
+export async function exportPayload(shard: Shard): Promise<ExportedPayload> {
 	const world = await shard.loadWorld();
 	// Sort map so that rooms will be continuous in the JSON top to bottom, left to right.
 	const rooms = [ ...world.entries() ].sort(compositeComparator<readonly [ string, Terrain ]>([
 		mappedNumericComparator(([ roomName ]) => parseRoomName(roomName).rx),
 		mappedNumericComparator(([ roomName ]) => parseRoomName(roomName).ry),
 	]));
-	return Fn.fromEntries(await Fn.mapAwait(rooms, async ([ roomName, terrain ]) => [
-		roomName,
-		await exportRoom(shard, roomName, terrain),
-	] as const));
+	const exported = await Fn.mapAwait(rooms, async ([ roomName, terrain ]) =>
+		[ roomName, await exportRoom(shard, roomName, terrain) ] as const);
+	return {
+		payload: Fn.fromEntries(exported, ([ roomName, { payload } ]) => [ roomName, payload ]),
+		dropped: Fn.reduce(
+			Fn.transform(exported, ([ , { dropped } ]) => dropped),
+			new Map<string, number>(),
+			(counts, name) => counts.set(name, (counts.get(name) ?? 0) + 1)),
+	};
 }
 
 function importRoom(roomName: string, info: PayloadRoom) {

@@ -84,6 +84,9 @@ hooks.register('payload', {
 				...extractor !== undefined && { extractor: extractor.id },
 			};
 		}
+		if (object instanceof StructureExtractor && object['#user'] === null) {
+			return null;
+		}
 	},
 	decode(meta) {
 		const mineral = new Mineral();
