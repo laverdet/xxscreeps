@@ -292,7 +292,10 @@ jobs:
 
       # Setup
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
+      - if: matrix.host.container == 'alpine:3'
+        run: npm install -g pnpm@11.20.0
+      - if: matrix.host.container != 'alpine:3'
+        uses: pnpm/action-setup@v6
         with:
           cache: true
       - shell: sh
@@ -335,10 +338,7 @@ jobs:
           # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
           # standard.
           node-version: 24
-      - if: matrix.host.container == 'alpine:edge'
-        run: npm install -g pnpm@11.20.0
-      - if: matrix.host.container != 'alpine:edge'
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - shell: sh
