@@ -190,6 +190,8 @@ describe('mods/modern/factory', () => {
 						[C.RESOURCE_ENERGY]: 20,
 					});
 				factory['#level'] = 1;
+				factory['#operator'].endTime = 1000;
+				factory['#operator'].level = 1;
 				room['#insertObject'](factory);
 				room['#level'] = 7;
 				room['#user'] = room.controller!['#user'] = '100';
@@ -256,6 +258,83 @@ describe('mods/modern/factory', () => {
 			await player('100', Game => {
 				const factory = getFactory(Game);
 				assert.strictEqual(factory.produce(C.RESOURCE_UTRIUM_BAR), C.ERR_RCL_NOT_ENOUGH);
+			});
+		}));
+	});
+
+	// =========================================================================
+	// produce — the operated window
+	// =========================================================================
+	describe('operated window', () => {
+		// An unoperated level-1 factory, stocked for both a leveled recipe (composite) and a
+		// level-0 one (utrium bar).
+		const operateSim = simulate({
+			W1N1: room => {
+				const factory = createFactoryWithResources(
+					new RoomPosition(25, 25, 'W1N1'), '100',
+					{
+						[C.RESOURCE_UTRIUM_BAR]: 20,
+						[C.RESOURCE_ZYNTHIUM_BAR]: 20,
+						[C.RESOURCE_ENERGY]: 220,
+						[C.RESOURCE_UTRIUM]: 500,
+					});
+				factory['#level'] = 1;
+				room['#insertObject'](factory);
+				room['#level'] = 7;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		const operate = (room: Room, until: number) => {
+			const operator = lookForStructures(room, C.STRUCTURE_FACTORY)[0]!['#operator'];
+			operator.endTime = until;
+			operator.level = 1;
+		};
+
+		test('a leveled recipe needs the factory operated', () => operateSim(async ({ player, poke, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.ERR_BUSY);
+			});
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 1000));
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.OK);
+			});
+		}));
+
+		test('a level-0 recipe produces unoperated', () => operateSim(async ({ player }) => {
+			await player('100', Game => {
+				// Bars carry no recipe level, so a leveled factory produces them unoperated.
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_UTRIUM_BAR), C.OK);
+			});
+		}));
+
+		test('the gate holds through the last operated tick', () => operateSim(async ({ player, poke, tick }) => {
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 1));
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(getFactory(Game).store[C.RESOURCE_COMPOSITE], 20);
+			});
+		}));
+
+		test('the gate closes when the window lapses', () => operateSim(async ({ player, poke, tick }) => {
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time));
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.ERR_BUSY);
+			});
+		}));
+
+		test('a wrong-level recipe is rejected before the operated gate', () => operateSim(async ({ player, poke, tick }) => {
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 1000));
+			await tick();
+			await player('100', Game => {
+				// Crystal is level 2; the level gate answers before the operated gate can.
+				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_CRYSTAL), C.ERR_INVALID_TARGET);
 			});
 		}));
 	});

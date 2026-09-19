@@ -9,7 +9,7 @@ export type FactoryIntents = typeof intents;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureFactory, 'produce', {}, (factory, context, resourceType: ResourceType) => {
-		if (checkProduce(factory, resourceType) !== C.OK) {
+		if (checkProduce(factory, resourceType, context.time) !== C.OK) {
 			return;
 		}
 		const recipe = getCommodityRecipe(resourceType)!;

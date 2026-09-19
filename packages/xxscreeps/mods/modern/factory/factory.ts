@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import { intents, registerGlobal } from 'xxscreeps/game/index.js';
+import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
@@ -109,35 +109,14 @@ export function getCommodityRecipe(resource: string): CommodityRecipe | undefine
 	return C.COMMODITIES[resource];
 }
 
-/**
- * Resolves the effective factory level for recipe validation. In vanilla Screeps the level
- * comes from either a permanent value (stored by depositing power into the factory) or an
- * active PWR_OPERATE_FACTORY effect, whichever is present.
- *
- * Until an effects substrate exists, this only returns the permanent level. When effects
- * land, extend this to prefer an active PWR_OPERATE_FACTORY effect level over the permanent
- * value, and update `checkRecipeLevel` to apply the bars-block rule.
- */
-function getEffectiveLevel(factory: StructureFactory): number {
-	return factory['#level'];
-}
-
-/**
- * Validates a recipe's level requirement against the factory's effective level.
- *
- * Vanilla has a subtlety not captured here: when a factory has BOTH a permanent level and
- * an active PWR_OPERATE_FACTORY effect whose level differs from the permanent value, all
- * level-0 recipes (bars, battery, etc.) are also blocked. That rule requires the effects
- * substrate to observe and cannot be implemented until power creeps exist — add it here.
- */
 function checkRecipeLevel(factory: StructureFactory, recipe: CommodityRecipe) {
-	if (recipe.level !== undefined && recipe.level !== getEffectiveLevel(factory)) {
+	if (recipe.level !== undefined && recipe.level !== factory['#level']) {
 		return C.ERR_INVALID_TARGET;
 	}
 }
 
-// Validation order: ownership, cooldown, recipe checks, then RCL gate.
-export function checkProduce(factory: StructureFactory, resourceType: ResourceType) {
+// Validation order: ownership, cooldown, recipe checks, RCL gate, then the operated window.
+export function checkProduce(factory: StructureFactory, resourceType: ResourceType, time = Game.time) {
 	let recipe: CommodityRecipe | undefined;
 	return chainIntentChecks(
 		() => checkMyStructure(factory, StructureFactory),
@@ -160,6 +139,12 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 		() => {
 			if (recipe === undefined) {
 				return C.ERR_INVALID_ARGS;
+			}
+			// Unlike every other gate here, this one must be live for the intent to succeed, so it
+			// reads the tick being validated: the processor stands one tick ahead of the runtime.
+			const { endTime } = factory['#operator'];
+			if (recipe.level !== undefined && (endTime === 0 || endTime < time)) {
+				return C.ERR_BUSY;
 			}
 			let componentsTotal = 0;
 			for (const [ component, amount ] of Object.entries(recipe.components)) {

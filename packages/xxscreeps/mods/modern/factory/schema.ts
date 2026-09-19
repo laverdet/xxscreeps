@@ -25,6 +25,9 @@ export const factoryShape = declare('StructureFactory', struct(ownedStructureSha
 	'#actionLog': actionLogFormat,
 	'#cooldownTime': 'int32',
 	'#level': 'int32',
+
+	/** Operated window stamped by a power creep; live while `endTime` is in the future. */
+	'#operator': struct({ endTime: 'int32', level: 'int8' }),
 }));
 
 // Register commodity resource types into `ResourceType` enum and `RESOURCES_ALL`

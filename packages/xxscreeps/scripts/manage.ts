@@ -377,6 +377,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 	const context = {
 		shard,
 		state,
+		time,
 		didUpdate() {},
 		setActive() {},
 		wakeAt() {},

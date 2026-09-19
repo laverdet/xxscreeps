@@ -432,6 +432,12 @@ export function powerOpsCost(info: PowerInfo, level: number) {
 	return (Array.isArray(ops) ? ops[level - 1] : ops) ?? 0;
 }
 
+/** Ticks an applied effect lasts — flat, or per-rank when the table carries an array. */
+export function powerDuration(info: PowerInfo, level: number) {
+	const { duration } = info;
+	return (Array.isArray(duration) ? duration[level - 1] : duration) ?? 0;
+}
+
 export function checkUsePower(creep: PowerCreep, power: number, target?: RoomObject) {
 	const info: PowerInfo | undefined = powerInfoTable[power];
 	const entry = creep['#powers'].find(entry => entry.power === power);
