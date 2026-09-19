@@ -90,8 +90,7 @@ First step is make sure nodejs v24.x is installed, older versions will probably 
 ```
 mkdir xxscreeps
 cd xxscreeps
-# note: we use @screeps/launcher to generate terrain
-npm install xxscreeps @screeps/launcher
+npm install xxscreeps
 npx xxscreeps import
 npx xxscreeps start
 ```
@@ -119,12 +118,21 @@ If you're using VS Code and you have the [YAML extension](https://marketplace.vi
 autocomplete. If not you can read the [config
 schema](src/config/config.ts).
 
-If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
-
 ### Adding bots
 
-`import --overwrite-code` replaces the built-in bots. To add a *named* bot — and optionally place
-its first spawn — without touching the built-ins, use the `manage` subcommand:
+`import` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example bot
+the vanilla private server ships when you don't name a directory. These four commands rebuild the
+lineup that server starts with, in the corner rooms it uses:
+
+```
+npx xxscreeps manage bot add AliceBot   --spawn W1N9 36,5
+npx xxscreeps manage bot add EmmaBot    --spawn W1N1 37,31
+npx xxscreeps manage bot add JackBot    --spawn W9N1 33,6
+npx xxscreeps manage bot add MichaelBot --spawn W9N9 17,40
+```
+
+Drop the coordinates to have a spawn placed at random, or pass a directory to run your own bot
+instead:
 
 ```
 npx xxscreeps manage bot add <name> <dir> --spawn <room>

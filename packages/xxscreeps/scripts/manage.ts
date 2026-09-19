@@ -1,5 +1,5 @@
 // Ops tool for managing users and bots on a self-hosted xxscreeps server — connects to the
-// configured storage provider directly, like scripts/scrape-world.ts. Registered as the `manage`
+// configured storage provider directly, like scripts/import.ts. Registered as the `manage`
 // subcommand; run after `tsc -b`: `xxscreeps manage <user|bot> <verb> ...` (usage() lists commands).
 //
 // The running engine caches state: list/show/create read storage per request, but a new user isn't
@@ -12,6 +12,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
@@ -285,6 +286,11 @@ async function loadCodeDir(dir: string) {
 	return modules;
 }
 
+// The example bot the vanilla private server seeds its four bots from, bundled so a freshly
+// imported world can be populated without the operator building a bot first. Sources are verbatim
+// from @screeps/launcher (`init_dist/db.json`, the `users.code` collection).
+const bundledBotDir = fileURLToPath(new URL('../../scripts/data/bot', import.meta.url));
+
 // Shared by `bot add` and `bot update`. Code loads before any database write so a bad directory
 // can't leave a half-registered user.
 async function botSave(who: string, dir: string, branchArg: string | undefined, create: boolean) {
@@ -435,7 +441,7 @@ function usage(): never {
   decoration grant   <name|id> <decorationId>
   decoration revoke  <name|id> <itemId>
   decoration cleanup [name|id]
-  bot  add    <name> <codeDir> [branch] [--spawn <room> [x,y]]
+  bot  add    <name> [codeDir [branch]] [--spawn <room> [x,y]]
   bot  update <name|id> <codeDir> [branch]
   bot  remove <name|id>
 `);
@@ -469,8 +475,8 @@ try {
 			const spawnIndex = rest.indexOf('--spawn');
 			const args = spawnIndex === -1 ? rest : rest.slice(0, spawnIndex);
 			const spawnArgs = spawnIndex === -1 ? undefined : rest.slice(spawnIndex + 1);
-			if (args[0] === undefined || args[1] === undefined) usage();
-			const userId = await botSave(args[0], args[1], args[2], true);
+			if (args[0] === undefined) usage();
+			const userId = await botSave(args[0], args[1] ?? bundledBotDir, args[2], true);
 			if (spawnArgs !== undefined) {
 				if (spawnArgs[0] === undefined) usage();
 				await botSpawn(userId, spawnArgs[0], spawnArgs[1]);
