@@ -72,8 +72,11 @@ export interface PayloadCodec {
 	 * object occupies. May not be one the terrain alphabet spells, and that tile reads back as wall.
 	 */
 	marker: string;
-	/** The fields this codec encodes for `object`, or undefined when it doesn't own the object. */
-	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | undefined;
+	/**
+	 * The fields this codec encodes for `object`, null when it owns `object` but folds it into a
+	 * companion's entry, or undefined when it doesn't own the object.
+	 */
+	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | null | undefined;
 	/**
 	 * Rebuilds the object `meta` describes, plus any companions sharing its tile. The engine
 	 * stamps every object's position and the first one's id -- companions carry ids of their
