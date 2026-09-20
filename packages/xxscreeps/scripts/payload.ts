@@ -112,13 +112,6 @@ export async function exportPayload(shard: Shard): Promise<ExportedPayload> {
 	return {
 		payload: Fn.fromEntries(exported, ([ roomName, { payload } ]) => [ roomName, payload ]),
 		dropped: [ ...Fn.transform(exported, ([ , { dropped } ]) => dropped) ],
-		// dropped: function() {
-		// 	const counts = new Map<string, number>();
-		// 	for (const name of Fn.transform(exported, ([ , { dropped } ]) => dropped)) {
-		// 		counts.set(name, (counts.get(name) ?? 0) + 1);
-		// 	}
-		// 	return counts;
-		// }(),
 	};
 }
 
