@@ -26,11 +26,20 @@ async function main() {
 	await fs.writeFile(file, JSON.stringify(payload, null, 1));
 	const count = Object.keys(payload).length;
 	console.log(`Exported ${count} room${plural(count)} to ${file}`);
-	if (dropped.size > 0) {
-		const total = Fn.accumulate(dropped.values());
-		const byCount = [ ...dropped ].sort(mappedInvertedNumericComparator(([ , value ]) => value));
-		const breakdown = Fn.join(Fn.map(byCount, ([ name, value ]) => `  ${value} ${name}`), '\n');
-		console.error(`Dropped ${total} object${plural(total)} no payload codec claims:\n${breakdown}`);
+	if (dropped.length > 0) {
+		const breakdown = Fn.pipe(
+			function() {
+				const counts = new Map<string, number>();
+				for (const object of dropped) {
+					counts.set(object.constructor.name, (counts.get(object.constructor.name) ?? 0) + 1);
+				}
+				return counts;
+			}(),
+			$$ => [ ...$$ ],
+			$$ => $$.sort(mappedInvertedNumericComparator(([ , value ]) => value)),
+			$$ => Fn.map($$, ([ name, value ]) => `  ${value} ${name}`),
+			$$ => Fn.join($$, '\n'));
+		console.error(`Dropped ${dropped.length} object${plural(dropped.length)} no payload codec claims:\n${breakdown}`);
 	}
 }
 

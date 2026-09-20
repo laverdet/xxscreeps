@@ -9,7 +9,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSignedRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
-import { create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
+import { StructureWall, create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
 import { StructureSpawn, create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
@@ -326,9 +326,9 @@ describe('scripts/payload', () => {
 
 	test('counts the objects no codec claims', () => playerBase(async ({ shard }) => {
 		const { payload, dropped } = await exportPayload(shard);
-		assert.strictEqual(dropped.size, 2);
-		assert.strictEqual(dropped.get('StructureSpawn'), 1);
-		assert.strictEqual(dropped.get('StructureWall'), 2);
+		assert.strictEqual(dropped.length, 3);
+		assert.strictEqual(dropped.filter(instanceOfPredicate(StructureSpawn)).length, 1);
+		assert.strictEqual(dropped.filter(instanceOfPredicate(StructureWall)).length, 2);
 		// The room keeps everything the codecs do cover, so the tally names the whole of the loss.
 		const spawn = Fn.find((await shard.loadRoom('W9N9'))['#objects'], instanceOfPredicate(StructureSpawn));
 		assert.ok(payload.W9N9?.layout.some(line => line.includes('@')));

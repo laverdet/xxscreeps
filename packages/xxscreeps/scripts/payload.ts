@@ -26,10 +26,9 @@ export interface PayloadRoom {
 export type Payload = Record<string, PayloadRoom>;
 
 /** An export, plus a tally of what it couldn't carry. */
-export interface ExportedPayload {
+interface ExportedPayload {
 	payload: Payload;
-	/** How many objects no codec claimed, by class name. */
-	dropped: Map<string, number>;
+	dropped: RoomObject[];
 }
 
 // Index 3 is wall+swamp, which reads back as wall: `Terrain.get` documents three values, and
@@ -67,7 +66,7 @@ function encodeObject(object: RoomObject) {
 async function exportRoom(shard: Shard, roomName: string, terrain: Terrain) {
 	const room = await shard.loadRoom(roomName);
 	// The layout and the drop tally read one encode pass; a second would re-run every codec.
-	const encodings = [ ...Fn.map(room['#objects'], object => ({ object, encoded: encodeObject(object) })) ];
+	const encodings = room['#objects'].map(object => ({ object, encoded: encodeObject(object) }));
 	const objects = Fn.pipe(
 		encodings,
 		$$ => Fn.map($$, ({ object, encoded }) =>
@@ -77,7 +76,7 @@ async function exportRoom(shard: Shard, roomName: string, terrain: Terrain) {
 	const dropped = Fn.pipe(
 		encodings,
 		$$ => Fn.filter($$, ({ encoded }) => encoded === undefined),
-		$$ => Fn.map($$, ({ object }) => object.constructor.name),
+		$$ => Fn.map($$, ({ object }) => object),
 		$$ => [ ...$$ ]);
 	// Metadata rides the layout's scan order and nothing else, so both come off one resolved array.
 	const cells = [ ...Fn.map(Fn.range(50), yy => [ ...Fn.map(Fn.range(50), xx => {
@@ -90,7 +89,10 @@ async function exportRoom(shard: Shard, roomName: string, terrain: Terrain) {
 		$$ => Fn.transform($$, row => Fn.map(row, cell => cell.meta)),
 		$$ => Fn.filter($$),
 		$$ => [ ...$$ ]);
-	return { payload: { layout, ...metadata.length > 0 && { objects: metadata } }, dropped };
+	return {
+		payload: { layout, ...metadata.length > 0 && { objects: metadata } },
+		dropped,
+	};
 }
 
 /**
@@ -109,10 +111,14 @@ export async function exportPayload(shard: Shard): Promise<ExportedPayload> {
 		[ roomName, await exportRoom(shard, roomName, terrain) ] as const);
 	return {
 		payload: Fn.fromEntries(exported, ([ roomName, { payload } ]) => [ roomName, payload ]),
-		dropped: Fn.reduce(
-			Fn.transform(exported, ([ , { dropped } ]) => dropped),
-			new Map<string, number>(),
-			(counts, name) => counts.set(name, (counts.get(name) ?? 0) + 1)),
+		dropped: [ ...Fn.transform(exported, ([ , { dropped } ]) => dropped) ],
+		// dropped: function() {
+		// 	const counts = new Map<string, number>();
+		// 	for (const name of Fn.transform(exported, ([ , { dropped } ]) => dropped)) {
+		// 		counts.set(name, (counts.get(name) ?? 0) + 1);
+		// 	}
+		// 	return counts;
+		// }(),
 	};
 }
 
