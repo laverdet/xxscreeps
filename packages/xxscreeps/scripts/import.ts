@@ -13,15 +13,22 @@ import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { importPayload, seedShard } from 'xxscreeps/scripts/payload.js';
 
 async function writeDefaultConfig() {
-	const rcInfo = await fs.stat(configPath).catch(() => undefined);
-	if ((rcInfo?.size ?? 0) > 0) {
+	const hasConfigurationFile = await async function() {
+		try {
+			const stat = await fs.stat(configPath);
+			return stat.size > 0;
+		} catch {
+			return false;
+		}
+	}();
+	if (hasConfigurationFile) {
 		return;
 	}
 	console.log('Writing default `.screepsrc.yaml`');
 
 	// Get default `mods`
 	const fetched = new Set<string>();
-	const mods = new Set<string>(config.mods);
+	const mods = new Set(config.mods);
 	const fetch = async function(specifier: string, depth: number) {
 		if (depth === 0 || fetched.has(specifier)) {
 			return;

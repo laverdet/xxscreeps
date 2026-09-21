@@ -432,8 +432,6 @@ export default [
 		ignores: [
 			'**/dist',
 			'**/node_modules',
-			// Bundled seed data: an exported world payload, and bot sources carried verbatim.
-			'packages/xxscreeps/scripts/data',
 		],
 	},
 
