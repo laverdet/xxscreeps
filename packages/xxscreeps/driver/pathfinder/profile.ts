@@ -134,15 +134,15 @@ if (process.argv.includes('--with-sandbox')) {
 	const realm = expect(await agent.createRealm());
 	const hash = crypto.createHash('sha256');
 	const hook = expect(await realm.createCapability(
-		() => ({
-			update: result => {
+		{
+			update: (result: unknown) => {
 				const string = String(result);
 				hash.update(string);
 				if (log) {
 					console.log(util.inspect(JSON.parse(string), { depth: null, maxArrayLength: null }));
 				}
 			},
-		}),
+		},
 		{ origin: 'xxscreeps:pathfinder' }));
 	const resolver = async (specifier: string, referrer?: string) => {
 		switch (specifier) {
@@ -166,6 +166,8 @@ if (process.argv.includes('--with-sandbox')) {
 	const loader = async (url: string) => {
 		switch (url) {
 			case 'xxscreeps:hook': return hook;
+				// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+				// @ts-ignore
 			case 'xxscreeps:pathfinder': return expect(await pf.module.instantiate(realm));
 			default: {
 				const sourceText = await async function() {
@@ -197,6 +199,8 @@ if (process.argv.includes('--with-sandbox')) {
 	`));
 	const global = await realm.acquireGlobalObject();
 	await global.set('matrices', matrices);
+	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+	// @ts-ignore
 	await module.link(realm, makeLinker(resolver, makeCachedLoader(loader)));
 	const start = process.hrtime();
 	expectComplete(await module.evaluate(realm));

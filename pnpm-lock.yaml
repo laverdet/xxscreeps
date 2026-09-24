@@ -84,18 +84,18 @@ importers:
   packages/pathfinder:
     dependencies:
       '@isolated-vm/experimental':
-        specifier: ^0.0.12
-        version: 0.0.12
+        specifier: ^0.0.13
+        version: 0.0.13
     devDependencies:
       '@auto_js/js':
-        specifier: ^0.0.11
-        version: 0.0.11
+        specifier: ^0.0.12
+        version: 0.0.12
       '@auto_js/napi':
-        specifier: ^0.0.11
-        version: 0.0.11
+        specifier: ^0.0.12
+        version: 0.0.12
       '@auto_js/v8':
-        specifier: ^0.0.11
-        version: 0.0.11
+        specifier: ^0.0.12
+        version: 0.0.12
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)(supports-color@8.1.1)
@@ -134,8 +134,8 @@ importers:
         specifier: ^7.29.7
         version: 7.29.7
       '@isolated-vm/experimental':
-        specifier: ^0.0.12
-        version: 0.0.12
+        specifier: ^0.0.13
+        version: 0.0.13
       '@jridgewell/trace-mapping':
         specifier: ^0.3.31
         version: 0.3.31
@@ -308,24 +308,24 @@ importers:
 
 packages:
 
-  '@auto_js/js@0.0.11':
-    resolution: {integrity: sha512-oHKo5WciaXKEn2NWKmYo86OYrAkIamL+lMCXMRLh7tmDEdgjFWm/BqlG3CKfRqHcZW0h8J/p+a8Fj2+k6J5JEw==}
+  '@auto_js/js@0.0.12':
+    resolution: {integrity: sha512-mrIeiLrwQ0A+5E0Xe4tI8Kn1Wd5Zl/emGNJSWDgrt5dkkcDG9wrdY4IkcE6jq2KesKRwCPdv7Uc+gDqNQ839wQ==}
     hasBin: true
 
-  '@auto_js/napi@0.0.11':
-    resolution: {integrity: sha512-KxP6PwVcQCG30DEQxbatuU2x5mO/VYATQDUnjl3KZoaErsoV3pRPe2TKimp9oa1LfXObUKrXh3fIfVSm5kWxvw==}
+  '@auto_js/napi@0.0.12':
+    resolution: {integrity: sha512-PZb46PiHvXpulb1VqPz5c9PRDGry8hY1X2ZcJC290DikHE7yrZOBWh84B7ODWLfvHhw9XIAkKxLcVzRChSCOsA==}
 
-  '@auto_js/napi_exports@0.0.10':
-    resolution: {integrity: sha512-2Aqum653SnWCwn04MOpAgSGFgIMr/7ImM+ZUMgwgiwa4ajKgobs0vcxA1bUyVMSEaN71j3Yx+2jxiSpFOI+ZMg==}
+  '@auto_js/napi_exports@0.0.11':
+    resolution: {integrity: sha512-COKz1p8uiKgmZW3y6v1NirUidDbQuZ4gxKy7knSFxba/kIJ1xKaYlSV1bz4zjtU0VBVmYXBd6JgY5CS8TFBdlA==}
 
-  '@auto_js/utility@0.0.10':
-    resolution: {integrity: sha512-6NkkDiaZppVN95hW/Ys2bBjiiWGYV/9ua1AgU5m3IgKa5U0I0XtLLmHT9dQZi23t/0vUv1FNfqEqiYsSgDaKAQ==}
+  '@auto_js/utility@0.0.11':
+    resolution: {integrity: sha512-x9Pw9rUJB+tQ/8RcNoLZR0lC80Z2UmS3lp0+4muNdFUlhJQcHCsZ71hc3KYAiLq/hkuj34XDU122oV1anZ5aDg==}
 
-  '@auto_js/v8@0.0.11':
-    resolution: {integrity: sha512-tm6RcxUNYS4E3YN0+q4xTAl/aEzWYcgiPNj+g9J5+VdqRidP/xIcJhnnn7VxWfmuWSWEzvLNRwP5jUJ+TkuqOw==}
+  '@auto_js/v8@0.0.12':
+    resolution: {integrity: sha512-xxuo+zM/+D37lMBoRGx6IgvIS8wPQiy4av6vGhYIHZNjN119R1bh7ssJbGAtEEv6GDstSQxfr1c659Ki3EwJCw==}
 
-  '@auto_js/v8_exports@0.0.8':
-    resolution: {integrity: sha512-EhDY5AtKtcv7b6BsY0tuTnrTigEu9YdAYjdUfshTcZUx6p3EQoBd5q33bKgEfpaQxSI/I0Ti2aQJyT264ZTYig==}
+  '@auto_js/v8_exports@0.0.9':
+    resolution: {integrity: sha512-co2XkRTmD3OoHs04YbLw09GaddhRNEg44aUxYT7rqZNwZDqd81tC3OWn+rPbu4MTi+SooHuL719mpEiZI7Oqlg==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -679,6 +679,11 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  '@isolated-vm/experimental-darwin-arm64@0.0.13':
+    resolution: {integrity: sha512-SNvXGOb2bPtJuuYKjMub5uODAzJ8zd1Ejsv8qpqRwXDVZgKPzofXWnPCnMf44qaGGQwqbrSYpv4zfik7E28rrw==}
+    cpu: [arm64]
+    os: [darwin]
+
   '@isolated-vm/experimental-darwin-x64@0.0.12':
     resolution: {integrity: sha512-bohLvdEkn41E4/vpE/1xf1lS/ofDlC6KzethI5l7QiCjshmMpk17qxlbOpMktbimdjZMbaKzbg8oeW66gqYgqA==}
     cpu: [x64]
@@ -690,8 +695,20 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.13':
+    resolution: {integrity: sha512-9ny5s2s3BMBiRwEf3VkiM/Lw++wCrz8t6BUe/AHjM4B+DiHPYU9l2YulEpGAfamNUZws7WgCRsrpVa3kib6zaQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
   '@isolated-vm/experimental-linux-arm64-musl@0.0.12':
     resolution: {integrity: sha512-qG2Pw4Vh0XCuRvVhk+dNuTGsnujW1ygKg4UjfzeoJT4r8Jvy2g0WKE/sGY+W+Svf96Y98OOb4HTAnxvK2+9+NQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.13':
+    resolution: {integrity: sha512-FJJZXzVBOX0z/objVH0TpVWlDyNx9VGlXw9nXu1pFXX9VrzbUd2N7f890VojAkWrKVNLwoMja0oNoDmI7uclAw==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
@@ -702,8 +719,20 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.13':
+    resolution: {integrity: sha512-cIWj37aTdb6PeA18VC1p+ksBoKduxd2LEmtOE5HYaXTNrLUs4pVE5pJmhVd8Bij5AnL4rWmudMN1aMOSEWAVOw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
   '@isolated-vm/experimental-linux-x64-musl@0.0.12':
     resolution: {integrity: sha512-mHypkTx4sV8TRKmrY04w73apH2jj3nZn8rB77kCn+Ihg0DZwpZ/bocOZEn8bC3pIHuh/g4rBlY0xjRysdiUvAA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.13':
+    resolution: {integrity: sha512-xIPJ4x5VjDHHkI3/U6yjN7GYMQ5nZJQWFTWWIdDjnQrOVC1i61aFaQW7G3Ud13e1ZzzLVdsgTgJZvoU5OzbwTw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
@@ -713,8 +742,16 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@isolated-vm/experimental-win32-x64@0.0.13':
+    resolution: {integrity: sha512-KlveXPb3VPYgF+Jp5gr+EkbBBUFuagS3TdPEtPCn7Lw5yvKAbakKOqvoOb1+5ZACtc/TWan8Z1e9q/Ha5uDXYg==}
+    cpu: [x64]
+    os: [win32]
+
   '@isolated-vm/experimental@0.0.12':
     resolution: {integrity: sha512-smxaFkvBE5SKBfO5OZQXATTBj0066DdAKcSdxvZFcBury7Vwi+FC2pYkg+bkelrEzU8FttUBEbau0lzxWprAlw==}
+
+  '@isolated-vm/experimental@0.0.13':
+    resolution: {integrity: sha512-9mmrdSQTsTAb5DFIOmD53hRz7QUjcA7LOAn4a0rsYGTX27J4vEfMc93s9/BigwnNv25lFgIoS8MSqmYo47/4Og==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2057,6 +2094,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2519,7 +2557,7 @@ packages:
 
   jquery@2.2.4:
     resolution: {integrity: sha512-lBHj60ezci2u1v2FqnZIraShGgEXq35qCzMv4lITyHGppTnA13rwR0MgwyNJh9TnDs3aXUvd1xjAotfraMHX/Q==}
-    deprecated: This version is deprecated. Please upgrade to the latest version or find support at https://www.herodevs.com/support/jquery-nes.
+    deprecated: This version is deprecated. Please upgrade to the latest version or find support at https://www.herodevs.com/support/jquery-nes or https://tuxcare.com/lp/click-jquery-support/.
 
   jquery@3.7.1:
     resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
@@ -3500,26 +3538,26 @@ packages:
 
 snapshots:
 
-  '@auto_js/js@0.0.11':
+  '@auto_js/js@0.0.12':
     dependencies:
-      '@auto_js/utility': 0.0.10
+      '@auto_js/utility': 0.0.11
 
-  '@auto_js/napi@0.0.11':
+  '@auto_js/napi@0.0.12':
     dependencies:
-      '@auto_js/js': 0.0.11
-      '@auto_js/napi_exports': 0.0.10
-      '@auto_js/v8_exports': 0.0.8
+      '@auto_js/js': 0.0.12
+      '@auto_js/napi_exports': 0.0.11
+      '@auto_js/v8_exports': 0.0.9
 
-  '@auto_js/napi_exports@0.0.10': {}
+  '@auto_js/napi_exports@0.0.11': {}
 
-  '@auto_js/utility@0.0.10': {}
+  '@auto_js/utility@0.0.11': {}
 
-  '@auto_js/v8@0.0.11':
+  '@auto_js/v8@0.0.12':
     dependencies:
-      '@auto_js/js': 0.0.11
-      '@auto_js/v8_exports': 0.0.8
+      '@auto_js/js': 0.0.12
+      '@auto_js/v8_exports': 0.0.9
 
-  '@auto_js/v8_exports@0.0.8': {}
+  '@auto_js/v8_exports@0.0.9': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -3978,22 +4016,40 @@ snapshots:
   '@isolated-vm/experimental-darwin-arm64@0.0.12':
     optional: true
 
+  '@isolated-vm/experimental-darwin-arm64@0.0.13':
+    optional: true
+
   '@isolated-vm/experimental-darwin-x64@0.0.12':
     optional: true
 
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.12':
     optional: true
 
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.13':
+    optional: true
+
   '@isolated-vm/experimental-linux-arm64-musl@0.0.12':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.13':
     optional: true
 
   '@isolated-vm/experimental-linux-x64-gnu@0.0.12':
     optional: true
 
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.13':
+    optional: true
+
   '@isolated-vm/experimental-linux-x64-musl@0.0.12':
     optional: true
 
+  '@isolated-vm/experimental-linux-x64-musl@0.0.13':
+    optional: true
+
   '@isolated-vm/experimental-win32-x64@0.0.12':
+    optional: true
+
+  '@isolated-vm/experimental-win32-x64@0.0.13':
     optional: true
 
   '@isolated-vm/experimental@0.0.12':
@@ -4007,6 +4063,17 @@ snapshots:
       '@isolated-vm/experimental-linux-x64-gnu': 0.0.12
       '@isolated-vm/experimental-linux-x64-musl': 0.0.12
       '@isolated-vm/experimental-win32-x64': 0.0.12
+
+  '@isolated-vm/experimental@0.0.13':
+    dependencies:
+      tslib: 2.8.1
+    optionalDependencies:
+      '@isolated-vm/experimental-darwin-arm64': 0.0.13
+      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.13
+      '@isolated-vm/experimental-linux-arm64-musl': 0.0.13
+      '@isolated-vm/experimental-linux-x64-gnu': 0.0.13
+      '@isolated-vm/experimental-linux-x64-musl': 0.0.13
+      '@isolated-vm/experimental-win32-x64': 0.0.13
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

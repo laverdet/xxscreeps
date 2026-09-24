@@ -33,9 +33,6 @@ jobs:
           - runs-on: ubuntu-24.04
             container: alpine:edge
             triplet: x86_64-alpine-linux-musl
-          - runs-on: macos-15-intel
-            platform: darwin
-            triplet: x86_64-apple-darwin
           - runs-on: windows-2025
             platform: windows
             triplet: x86_64-pc-windows
@@ -264,9 +261,6 @@ jobs:
           - runs-on: ubuntu-24.04
             container: alpine:3
             triplet: x86_64-alpine-linux-musl
-          - runs-on: macos-15-intel
-            platform: darwin
-            triplet: x86_64-apple-darwin
           - runs-on: windows-2025
             platform: windows
             triplet: x86_64-pc-windows
