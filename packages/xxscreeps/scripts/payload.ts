@@ -25,6 +25,12 @@ export interface PayloadRoom {
 /** An authored world: every room's terrain and objects, by room name. */
 export type Payload = Record<string, PayloadRoom>;
 
+/** A parsed payload, ready to write into a shard. */
+export interface PayloadWorld {
+	rooms: Room[];
+	terrain: Readonly<Uint8Array>;
+}
+
 /** An export, plus a tally of what it couldn't carry. */
 interface ExportedPayload {
 	payload: Payload;
@@ -154,7 +160,7 @@ function importRoom(roomName: string, info: PayloadRoom) {
  * Rebuilds every room a payload describes, along with the world terrain blob a shard's `terrain`
  * key holds. Performs no storage I/O; the caller saves what it needs.
  */
-export function importPayload(payload: Payload) {
+export function importPayload(payload: Payload): PayloadWorld {
 	const parsedRooms = Object.entries(payload).map(([ roomName, info ]) => importRoom(roomName, info));
 	const roomNames = new Set(Fn.map(parsedRooms, ({ room }) => room.name));
 	const terrainMap = new Map(Fn.map(parsedRooms, ({ room, terrain }) => [
@@ -168,4 +174,22 @@ export function importPayload(payload: Payload) {
 		rooms: parsedRooms.map(({ room }) => room),
 		terrain: makeWriter(MapSchema.schema)(terrainMap),
 	};
+}
+
+/**
+ * Writes a parsed world into a shard at tick zero. Both room buffers are filled because a caller
+ * may skip the processor's room-initialization stage, which is what fills the second one in a
+ * running server.
+ */
+export async function seedShard(shard: Shard, { rooms, terrain }: PayloadWorld) {
+	shard.time = 0;
+	await Promise.all([
+		shard.data.set('terrain', terrain),
+		shard.data.set('time', shard.time),
+		shard.data.sAdd('rooms', rooms.map(room => room.name)),
+		Fn.mapAwait(rooms, async room => {
+			await shard.saveRoom(room.name, shard.time, room);
+			await shard.copyRoomFromPreviousTick(room.name, shard.time + 1);
+		}),
+	]);
 }

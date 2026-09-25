@@ -3,6 +3,7 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 import { config } from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
@@ -58,7 +59,7 @@ await async function() {
 
 // Create processor workers
 type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
-const userCount = Number(await db.data.sCard('users')) - 3; // minus Invader, Source Keeper, Screeps
+const userCount = Number(await db.data.sCard('users')) - Object.keys(User.npcUsers).length;
 const singleThreaded = config.launcher?.singleThreaded;
 const processorCount = clamp(1, config.processor.concurrency, singleThreaded ? 1 : Math.ceil(userCount / 2));
 const workers = await Fn.pipe(
