@@ -55,8 +55,6 @@ const makeLoader = function() {
 	return (agent: Agent, realm: Realm) =>
 		async (url: string) => {
 			if (url === 'xxscreeps:pathfinder') {
-				// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-				// @ts-ignore
 				return expect(await pf.module.instantiate(realm));
 			} else {
 				const cached = cache.get(url);
@@ -103,8 +101,6 @@ export class ExperimentalSandbox implements Sandbox {
 		// Load & link game runtime modules
 		const agent = await Agent.create();
 		const realm = expect(await agent.createRealm());
-		// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-		// @ts-ignore
 		const loader = makeCachedLoader(makeLoader(agent, realm));
 		const linker = makeLinker(resolver, loader);
 		const module = await loader(await resolver('xxscreeps/driver/sandbox/experimental/runtime.js')) as Module;

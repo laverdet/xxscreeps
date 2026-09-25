@@ -152,8 +152,8 @@ importers:
         specifier: workspace:*
         version: link:../lodash3
       '@xxscreeps/pathfinder':
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.6
+        version: 0.4.6
       acorn:
         specifier: 8.9.0
         version: 8.9.0
@@ -674,26 +674,10 @@ packages:
       '@types/node':
         optional: true
 
-  '@isolated-vm/experimental-darwin-arm64@0.0.12':
-    resolution: {integrity: sha512-rC+rC4KeQU6HeFCNzMFQRY1k7uY64whQjCVMQwLUpLrStQkuQxf7WCVzofaWylXqSZRwRMl6/jw719r34jrmiA==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@isolated-vm/experimental-darwin-arm64@0.0.13':
     resolution: {integrity: sha512-SNvXGOb2bPtJuuYKjMub5uODAzJ8zd1Ejsv8qpqRwXDVZgKPzofXWnPCnMf44qaGGQwqbrSYpv4zfik7E28rrw==}
     cpu: [arm64]
     os: [darwin]
-
-  '@isolated-vm/experimental-darwin-x64@0.0.12':
-    resolution: {integrity: sha512-bohLvdEkn41E4/vpE/1xf1lS/ofDlC6KzethI5l7QiCjshmMpk17qxlbOpMktbimdjZMbaKzbg8oeW66gqYgqA==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@isolated-vm/experimental-linux-arm64-gnu@0.0.12':
-    resolution: {integrity: sha512-SJH1n+F0CxyJ9q05aGgbejYjetpsRIkrePTH73EBuiURP7MBpijQnif7tGwcDLWfglq7PLq+VmMHKNU4QuY5+g==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
 
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.13':
     resolution: {integrity: sha512-9ny5s2s3BMBiRwEf3VkiM/Lw++wCrz8t6BUe/AHjM4B+DiHPYU9l2YulEpGAfamNUZws7WgCRsrpVa3kib6zaQ==}
@@ -701,23 +685,11 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@isolated-vm/experimental-linux-arm64-musl@0.0.12':
-    resolution: {integrity: sha512-qG2Pw4Vh0XCuRvVhk+dNuTGsnujW1ygKg4UjfzeoJT4r8Jvy2g0WKE/sGY+W+Svf96Y98OOb4HTAnxvK2+9+NQ==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
   '@isolated-vm/experimental-linux-arm64-musl@0.0.13':
     resolution: {integrity: sha512-FJJZXzVBOX0z/objVH0TpVWlDyNx9VGlXw9nXu1pFXX9VrzbUd2N7f890VojAkWrKVNLwoMja0oNoDmI7uclAw==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
-
-  '@isolated-vm/experimental-linux-x64-gnu@0.0.12':
-    resolution: {integrity: sha512-xh3S2x3vtYW6S9qZgodNTZcXv1hyG5hdjDxJ9ivBkX/ZvJOyL3/NPTF1+SkJiA8ZP7doczOgVwzQP+wNZeuAtg==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
 
   '@isolated-vm/experimental-linux-x64-gnu@0.0.13':
     resolution: {integrity: sha512-cIWj37aTdb6PeA18VC1p+ksBoKduxd2LEmtOE5HYaXTNrLUs4pVE5pJmhVd8Bij5AnL4rWmudMN1aMOSEWAVOw==}
@@ -725,30 +697,16 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@isolated-vm/experimental-linux-x64-musl@0.0.12':
-    resolution: {integrity: sha512-mHypkTx4sV8TRKmrY04w73apH2jj3nZn8rB77kCn+Ihg0DZwpZ/bocOZEn8bC3pIHuh/g4rBlY0xjRysdiUvAA==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
   '@isolated-vm/experimental-linux-x64-musl@0.0.13':
     resolution: {integrity: sha512-xIPJ4x5VjDHHkI3/U6yjN7GYMQ5nZJQWFTWWIdDjnQrOVC1i61aFaQW7G3Ud13e1ZzzLVdsgTgJZvoU5OzbwTw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@isolated-vm/experimental-win32-x64@0.0.12':
-    resolution: {integrity: sha512-WeLJlV7SoFH0JXfWGv1EqcyL/80Nrk/QitNkeddsyChjdR7h0mxaGn3oFyI1ta9tnu2hhdYflUW6Kh5gteVWpA==}
-    cpu: [x64]
-    os: [win32]
-
   '@isolated-vm/experimental-win32-x64@0.0.13':
     resolution: {integrity: sha512-KlveXPb3VPYgF+Jp5gr+EkbBBUFuagS3TdPEtPCn7Lw5yvKAbakKOqvoOb1+5ZACtc/TWan8Z1e9q/Ha5uDXYg==}
     cpu: [x64]
     os: [win32]
-
-  '@isolated-vm/experimental@0.0.12':
-    resolution: {integrity: sha512-smxaFkvBE5SKBfO5OZQXATTBj0066DdAKcSdxvZFcBury7Vwi+FC2pYkg+bkelrEzU8FttUBEbau0lzxWprAlw==}
 
   '@isolated-vm/experimental@0.0.13':
     resolution: {integrity: sha512-9mmrdSQTsTAb5DFIOmD53hRz7QUjcA7LOAn4a0rsYGTX27J4vEfMc93s9/BigwnNv25lFgIoS8MSqmYo47/4Og==}
@@ -1509,47 +1467,42 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
-  '@xxscreeps/pathfinder-darwin-arm64@0.4.4':
-    resolution: {integrity: sha512-9C0HqVKYiLe9HQPfxgWs8zbm2YdNTNvefOuuBZM8heHiGK2sm+rVHDbMmT8rvltNAAV4xbXqEv8vX7iVAYJm5Q==}
+  '@xxscreeps/pathfinder-darwin-arm64@0.4.6':
+    resolution: {integrity: sha512-yOBlZzcauEsMTBv4hNVhBiVBDEGWb1bp9+tGbDA3NUrGcZ8Iv8LVxpDqSWJASfQEDg0KXSjfXZXKXSxrxD370w==}
     cpu: [arm64]
     os: [darwin]
 
-  '@xxscreeps/pathfinder-darwin-x64@0.4.4':
-    resolution: {integrity: sha512-2348Mnm3/uINw7bxe38iEcuHxK0SgcM6stHVAs+ZMErcez5INJCWCd81GnjQ9nV8JVsPSAR8C95mSZb1gmN5Tw==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.4':
-    resolution: {integrity: sha512-9WXScQ87htQC9jdv9j/3DaiZ1qovoIA9YSKowb0EA/vnpPjhihatL9WYijBSSmHQMESD+qQfXWFFVvirO4C/2Q==}
+  '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.6':
+    resolution: {integrity: sha512-xODtrm69bc2ErorVjVAXYdWYlPZ6iXipwec1w8FP7cmjuYZF8NPgppTEoCkwn6Oa9DqvEh0XN4j/h0TanietkQ==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@xxscreeps/pathfinder-linux-arm64-musl@0.4.4':
-    resolution: {integrity: sha512-XwwwDcVowSzup7Pw6yUPkXWZ/iZpLq+8iZMdzur8eZk7tuG9+epecZAzL4A/NVxkLviBNAkurJruLKljlJdUBw==}
+  '@xxscreeps/pathfinder-linux-arm64-musl@0.4.6':
+    resolution: {integrity: sha512-lbrcb8ndE1dqSrs7eVw+zLbgB43YnWx4wx75FJXpQv0YWhNGFEFqfbuh7dKANgRuZhQAOZLeYM2gLyuP5wxXnQ==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@xxscreeps/pathfinder-linux-x64-gnu@0.4.4':
-    resolution: {integrity: sha512-zM7rp5usg/JLrv7Vboh9v1C4mVjqrX43t2EZQ6ZSdA1mDoH2njfPiKcFCZnBFGuyS4oN9gSUlKZWbQCazzv70Q==}
+  '@xxscreeps/pathfinder-linux-x64-gnu@0.4.6':
+    resolution: {integrity: sha512-9E3TE9gl0iA9GtXVhWatxiHYymZVJtZ/qKE3i33A2phW1ZeCO4cITtuYB/qpeme7vuZBh6pU1ezwuYdZ9ajgNA==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@xxscreeps/pathfinder-linux-x64-musl@0.4.4':
-    resolution: {integrity: sha512-X/wlY/4PgUqG/aMQlxRrm++K/if+kJMIJLw/l2eCNGMqEgxcAM9PWOsQy9VDUNPmHi0G9B6jJMXSPQ89pZsnHw==}
+  '@xxscreeps/pathfinder-linux-x64-musl@0.4.6':
+    resolution: {integrity: sha512-rlvTF+pBgWeX4oBkYMsdqFXrvbpR0DXiDqSK93q+XfeldtIvXgExcY1lRagWRaqfaKsP0JHEBws2VVApulqqQw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@xxscreeps/pathfinder-win32-x64@0.4.4':
-    resolution: {integrity: sha512-4keAJCGnj62LQCwoSvs9QaNAWjuq8V+UgtQoUzZKSPuOnUfFrqv9hKEuTzRhhnZ8KAiLyWrw0eRmywzJw24FMA==}
+  '@xxscreeps/pathfinder-win32-x64@0.4.6':
+    resolution: {integrity: sha512-wuGQOjE1BEwu7u9TQVVJikYxLoSLn32+UDkpiNOO+DRxC2ksYEaFYUgDSgToFW430N5ARN6tEsF/24JvJS8lCQ==}
     cpu: [x64]
     os: [win32]
 
-  '@xxscreeps/pathfinder@0.4.4':
-    resolution: {integrity: sha512-hF+N0QQzLoTOVwCPj2kUuxQsVTnMGUglcGIuKlZJ14uI1Dwy0fe/HGXpQxAnZ1e/GnSf6OKo2oU/GUPeVxDfSQ==}
+  '@xxscreeps/pathfinder@0.4.6':
+    resolution: {integrity: sha512-wdzYM0fRXKdGLrLNXoqZtLnKkqXi/pV0pth2OT/EPZm1igo5UtXg9yswt9nsMEWPeLbTXvToq1/h+5ZWbf4KSA==}
 
   abab@2.0.6:
     resolution: {integrity: sha512-j2afSsaIENvHZN2B8GOpF566vZ5WVk5opAiMTvWgaQT8DkbOqsTfvNAvHoRGU2zzP8cPoqys+xHTRDWW8L+/BA==}
@@ -4013,56 +3966,23 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.12.2
 
-  '@isolated-vm/experimental-darwin-arm64@0.0.12':
-    optional: true
-
   '@isolated-vm/experimental-darwin-arm64@0.0.13':
-    optional: true
-
-  '@isolated-vm/experimental-darwin-x64@0.0.12':
-    optional: true
-
-  '@isolated-vm/experimental-linux-arm64-gnu@0.0.12':
     optional: true
 
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.13':
     optional: true
 
-  '@isolated-vm/experimental-linux-arm64-musl@0.0.12':
-    optional: true
-
   '@isolated-vm/experimental-linux-arm64-musl@0.0.13':
-    optional: true
-
-  '@isolated-vm/experimental-linux-x64-gnu@0.0.12':
     optional: true
 
   '@isolated-vm/experimental-linux-x64-gnu@0.0.13':
     optional: true
 
-  '@isolated-vm/experimental-linux-x64-musl@0.0.12':
-    optional: true
-
   '@isolated-vm/experimental-linux-x64-musl@0.0.13':
-    optional: true
-
-  '@isolated-vm/experimental-win32-x64@0.0.12':
     optional: true
 
   '@isolated-vm/experimental-win32-x64@0.0.13':
     optional: true
-
-  '@isolated-vm/experimental@0.0.12':
-    dependencies:
-      tslib: 2.8.1
-    optionalDependencies:
-      '@isolated-vm/experimental-darwin-arm64': 0.0.12
-      '@isolated-vm/experimental-darwin-x64': 0.0.12
-      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.12
-      '@isolated-vm/experimental-linux-arm64-musl': 0.0.12
-      '@isolated-vm/experimental-linux-x64-gnu': 0.0.12
-      '@isolated-vm/experimental-linux-x64-musl': 0.0.12
-      '@isolated-vm/experimental-win32-x64': 0.0.12
 
   '@isolated-vm/experimental@0.0.13':
     dependencies:
@@ -4865,38 +4785,34 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@xxscreeps/pathfinder-darwin-arm64@0.4.4':
+  '@xxscreeps/pathfinder-darwin-arm64@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-darwin-x64@0.4.4':
+  '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.4':
+  '@xxscreeps/pathfinder-linux-arm64-musl@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-arm64-musl@0.4.4':
+  '@xxscreeps/pathfinder-linux-x64-gnu@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-x64-gnu@0.4.4':
+  '@xxscreeps/pathfinder-linux-x64-musl@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-x64-musl@0.4.4':
+  '@xxscreeps/pathfinder-win32-x64@0.4.6':
     optional: true
 
-  '@xxscreeps/pathfinder-win32-x64@0.4.4':
-    optional: true
-
-  '@xxscreeps/pathfinder@0.4.4':
+  '@xxscreeps/pathfinder@0.4.6':
     dependencies:
-      '@isolated-vm/experimental': 0.0.12
+      '@isolated-vm/experimental': 0.0.13
     optionalDependencies:
-      '@xxscreeps/pathfinder-darwin-arm64': 0.4.4
-      '@xxscreeps/pathfinder-darwin-x64': 0.4.4
-      '@xxscreeps/pathfinder-linux-arm64-gnu': 0.4.4
-      '@xxscreeps/pathfinder-linux-arm64-musl': 0.4.4
-      '@xxscreeps/pathfinder-linux-x64-gnu': 0.4.4
-      '@xxscreeps/pathfinder-linux-x64-musl': 0.4.4
-      '@xxscreeps/pathfinder-win32-x64': 0.4.4
+      '@xxscreeps/pathfinder-darwin-arm64': 0.4.6
+      '@xxscreeps/pathfinder-linux-arm64-gnu': 0.4.6
+      '@xxscreeps/pathfinder-linux-arm64-musl': 0.4.6
+      '@xxscreeps/pathfinder-linux-x64-gnu': 0.4.6
+      '@xxscreeps/pathfinder-linux-x64-musl': 0.4.6
+      '@xxscreeps/pathfinder-win32-x64': 0.4.6
 
   abab@2.0.6: {}
 
