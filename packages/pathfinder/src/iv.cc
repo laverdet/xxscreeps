@@ -27,26 +27,27 @@ class environment
 		: public napi::environment,
 			public napi::string_table<string_literals> {
 	public:
+		using lock = js::napi::environment_lock_witness_of<environment>;
 		using js::napi::environment::environment;
 };
 
 class napi_room_callback {
 	public:
 		napi_room_callback() = default;
-		explicit napi_room_callback(napi::environment& env, napi::local_of<js::function_tag> maybe_room_callback) :
-				env_{&env},
+		explicit napi_room_callback(const environment::lock& lock, napi::local_of<js::function_tag> maybe_room_callback) :
+				lock_{&lock},
 				maybe_room_callback{maybe_room_callback} {}
 
 		auto operator()(room_location_t room) -> room_callback_result_type {
 			if (maybe_room_callback) {
-				return maybe_room_callback->call<room_callback_result_type>(*env_, room);
+				return maybe_room_callback->call<room_callback_result_type>(*lock_, room);
 			} else {
 				return std::monostate{};
 			}
 		}
 
 	private:
-		napi::environment* env_{};
+		const environment::lock* lock_{};
 		napi::local_of<js::function_tag> maybe_room_callback;
 };
 
@@ -126,7 +127,7 @@ auto search(
 js::napi::napi_js_module module_namespace{
 	std::type_identity<environment>{},
 	[](auto& /*env*/) -> auto {
-		constexpr auto search = ::search<environment&, napi::local_of, napi::value_of, napi_room_callback>;
+		constexpr auto search = ::search<const environment::lock&, napi::local_of, napi::value_of, napi_room_callback>;
 		return std::tuple{
 			std::in_place,
 			std::pair{util::cw<"loadTerrain">, js::free_function{load_terrain}},
