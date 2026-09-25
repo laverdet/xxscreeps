@@ -1,3 +1,4 @@
+import type { PowerInfo } from './powercreep.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
@@ -19,6 +20,15 @@ import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn
 import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
 import { PowerCreep, checkEnableRoom, checkRenew, checkUsePower, createSpawnedPowerCreep, powerInfoTable, powerOpsCost } from './powercreep.js';
+
+// Per-power processor arms. A mod implementing a power registers its arm here; the shared
+// cost/cooldown/event tail runs only when the handler reports the power applied.
+type PowerProcessor = (creep: PowerCreep, context: ProcessorContext, info: PowerInfo, level: number, target: RoomObject | undefined) => boolean;
+const powerProcessors = new Map<number, PowerProcessor>();
+
+export function registerPowerProcessor(power: number, processor: PowerProcessor) {
+	powerProcessors.set(power, processor);
+}
 
 function buryPowerCreep(creep: PowerCreep) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
@@ -136,9 +146,13 @@ const intents = [
 				}
 				break;
 			}
-			default:
-				// Powers land one at a time; an unimplemented power's intent drops without cost.
-				return;
+			default: {
+				// An unimplemented or unapplied power's intent drops without cost.
+				const processor = powerProcessors.get(power);
+				if (!processor?.(creep, context, info, entry.level, target)) {
+					return;
+				}
+			}
 		}
 		creep.store['#subtract'](C.RESOURCE_OPS, powerOpsCost(info, entry.level));
 		entry.cooldownTime = Game.time + info.cooldown;

@@ -41,6 +41,12 @@ export interface ProcessorContext {
 	readonly state: GameState;
 
 	/**
+	 * The tick whose intents are being processed. `state.time` is the tick being written, one
+	 * ahead of this, so a check that re-validates a player's intent reads this instead.
+	 */
+	readonly time: number;
+
+	/**
 	 * Invoke this from a processor when game state has been modified in a processor
 	 */
 	didUpdate: () => void;
