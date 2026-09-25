@@ -1,5 +1,6 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
+import { getNotifyPrefs } from './prefs.js';
 
 export type NotificationType = 'msg' | 'error';
 
@@ -34,10 +35,19 @@ export const notificationTransport = makeProviderRegistration<NotificationTransp
  * Deliver a notification through the registered transport. `groupInterval` is a coalescing hint in
  * minutes which transports without their own grouping are free to ignore. `message` and
  * `groupInterval` are assumed already coerced by the caller.
+ *
+ * `disabled` is enforced here rather than in a transport's own delivery pass: the pref belongs to
+ * this mod, and a transport that keeps no store has nowhere else to check it. The read lands per
+ * notification, which is affordable only while the producers stay concurrent -- the processor's go
+ * through `context.task`, which holds an already-started promise.
  */
 export async function sendNotification(
 	shard: Shard, userId: string, type: NotificationType, message: string, groupInterval = 0,
 ) {
+	const { disabled } = await getNotifyPrefs(shard.db, userId);
+	if (disabled) {
+		return;
+	}
 	await notificationTransport.current.send(shard, { userId, type, message, groupInterval });
 }
 
