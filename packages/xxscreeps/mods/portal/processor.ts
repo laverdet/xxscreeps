@@ -18,7 +18,7 @@ registerObjectTickProcessor(StructurePortal, (portal, context) => {
 	} else if (portal['#unstableTime'] === 0) {
 		context.wakeAt(portal['#decayTime']);
 	} else if (Game.time % kUnstableCheckInterval === 0 && Date.now() > portal['#unstableTime']) {
-		portal['#decayTime'] = Game.time + C.PORTAL_DECAY;
+		portal['#decayTime'] = Game.time + C.PORTAL_DECAY - 1;
 		portal['#unstableTime'] = 0;
 		context.didUpdate();
 		context.wakeAt(portal['#decayTime']);

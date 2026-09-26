@@ -54,17 +54,16 @@ describe('mods/portal', () => {
 			room['#insertObject'](portal);
 			room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W1N1'), [ C.MOVE ], 'parker', '100'));
 		},
-	})(async ({ peekRoom, tick }) => {
+	})(async ({ peekRoom, shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: kStart });
 		await tick(kUnstableCheckInterval);
 		await peekRoom('W1N1', room => {
 			assert.strictEqual(findPortal(room)?.ticksToDecay, undefined);
 		});
 		clock.increment(60_000);
-		await tick(kUnstableCheckInterval);
+		await tick(kUnstableCheckInterval - shard.time % kUnstableCheckInterval);
 		await peekRoom('W1N1', room => {
-			const ticksToDecay = findPortal(room)?.ticksToDecay;
-			assert.ok(ticksToDecay !== undefined && ticksToDecay > C.PORTAL_DECAY - kUnstableCheckInterval && ticksToDecay <= C.PORTAL_DECAY);
+			assert.strictEqual(findPortal(room)?.ticksToDecay, C.PORTAL_DECAY - 1);
 		});
 	}));
 
