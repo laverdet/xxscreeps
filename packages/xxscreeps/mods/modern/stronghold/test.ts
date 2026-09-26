@@ -6,6 +6,7 @@ import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -182,7 +183,7 @@ describe('mods/modern/stronghold', () => {
 			await tick();
 			await peekRoom('W1N1', (room, Game) => {
 				const controller = room.controller!;
-				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE + 1;
+				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
 				assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
 				assert.strictEqual(room['#user'], kInvaderUserId, 'room user becomes 2 once reserved');
 				const core = findRoomCore(room)!;
@@ -201,6 +202,29 @@ describe('mods/modern/stronghold', () => {
 				await tick();
 				const second = await peekRoom('W1N1', room => room.controller!['#reservationEndTime']);
 				assert.strictEqual(second - first, C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE);
+			}));
+
+		// At the cap: `ticksToEnd` reads CONTROLLER_RESERVE_MAX - 1, the most a reservation shows.
+		const ownReservationAtCap = simulate({
+			W1N1: room => {
+				room['#user'] = kInvaderUserId;
+				room.controller!['#reservationEndTime'] = Game.time + C.CONTROLLER_RESERVE_MAX - 1;
+				room['#insertObject'](createInvaderCore(corePos, 2, 0));
+				activateNPC(room, kInvaderUserId);
+			},
+		});
+
+		test('a renewal that would reach CONTROLLER_RESERVE_MAX is dropped',
+			() => ownReservationAtCap(async ({ tick, peekRoom }) => {
+				const endTime = await peekRoom('W1N1', room => room.controller?.['#reservationEndTime']);
+				await tick();
+				await peekRoom('W1N1', room => {
+					assert.strictEqual(room.controller?.['#reservationEndTime'], endTime);
+					assert.ok(!room.getEventLog().some(event => event.event === C.EVENT_RESERVE_CONTROLLER));
+					const core = findRoomCore(room);
+					assert.ok(core);
+					assert.ok(!core['#actionLog'].some(entry => entry.type === 'reserveController'));
+				});
 			}));
 
 		const hostileReservation = simulate({

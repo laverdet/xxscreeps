@@ -72,17 +72,14 @@ const intents = [
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (checkReserveController(core, controller) === C.OK) {
 			const power = C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
-			const endTime = (controller['#reservationEndTime'] || Game.time + 1) + power;
-			if (endTime > Game.time + C.CONTROLLER_RESERVE_MAX) {
-				return;
+			if (reserve(context, controller, kInvaderUserId, power)) {
+				saveAction(core, 'reserveController', controller.pos);
+				appendEventLog(controller.room, {
+					event: C.EVENT_RESERVE_CONTROLLER,
+					objectId: core.id,
+					amount: power,
+				});
 			}
-			reserve(context, controller, kInvaderUserId, endTime);
-			saveAction(core, 'reserveController', controller.pos);
-			appendEventLog(controller.room, {
-				event: C.EVENT_RESERVE_CONTROLLER,
-				objectId: core.id,
-				amount: power,
-			});
 		}
 	}),
 
