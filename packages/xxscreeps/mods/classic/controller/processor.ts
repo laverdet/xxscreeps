@@ -33,13 +33,22 @@ export function release(context: ProcessorContext, controller: StructureControll
 	context.didUpdate();
 }
 
-export function reserve(context: ProcessorContext, controller: StructureController, userId: string, endTime: number) {
-	if (controller['#reservationEndTime'] === 0) {
+export function reserve(context: ProcessorContext, controller: StructureController, userId: string, power: number) {
+	const reservationEndTime = controller['#reservationEndTime'];
+	// `Game.time` already reads the next tick here, so a fresh reservation needs no `+ 1`.
+	const endTime = (reservationEndTime || Game.time) + power;
+	// A reserve that would carry `ticksToEnd` to CONTROLLER_RESERVE_MAX is dropped whole, so a
+	// saturated reservation decays this tick.
+	if (endTime >= Game.time + C.CONTROLLER_RESERVE_MAX) {
+		return false;
+	}
+	if (reservationEndTime === 0) {
 		updateRoomStatus(controller.room, 0, userId);
 		context.task(insertReservedRoom(context.shard, userId, controller.room.name));
 	}
 	controller['#reservationEndTime'] = endTime;
 	context.didUpdate();
+	return true;
 }
 
 export type ControllerIntents = typeof intents;
@@ -123,18 +132,14 @@ const intents = [
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			const power = creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
-			const reservationEndTime = controller['#reservationEndTime'];
-			// A renewal adds `power`; only a fresh reservation starts from `gameTime + 1`.
-			const endTime = reservationEndTime
-				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power)
-				: Game.time + power + 1;
-			reserve(context, controller, creep['#user'], endTime);
-			saveAction(creep, 'reserveController', controller.pos);
-			appendEventLog(controller.room, {
-				event: C.EVENT_RESERVE_CONTROLLER,
-				objectId: creep.id,
-				amount: power,
-			});
+			if (reserve(context, controller, creep['#user'], power)) {
+				saveAction(creep, 'reserveController', controller.pos);
+				appendEventLog(controller.room, {
+					event: C.EVENT_RESERVE_CONTROLLER,
+					objectId: creep.id,
+					amount: power,
+				});
+			}
 		}
 	}),
 
