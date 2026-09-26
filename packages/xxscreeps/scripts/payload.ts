@@ -122,11 +122,19 @@ export async function exportPayload(shard: Shard): Promise<ExportedPayload> {
 }
 
 function importRoom(roomName: string, info: PayloadRoom) {
+	// A layout that isn't 50 by 50 would otherwise import: tiles it never spells read back as plain
+	// ground, and `TerrainWriter` indexes by `yy * 50 + xx`, so a long row spills into the next.
+	if (info.layout.length !== 50) {
+		throw new Error(`Room ${roomName} holds ${info.layout.length} layout rows, expected 50`);
+	}
 	const terrain = new TerrainWriter();
 	const room = new Room();
 	room.name = roomName;
 	const metadata = (info.objects ?? []).values();
 	for (const [ yy, line ] of info.layout.entries()) {
+		if (line.length !== 50) {
+			throw new Error(`Room ${roomName} row ${yy} holds ${line.length} characters, expected 50`);
+		}
 		for (const [ xx, character ] of [ ...line as Iterable<string> ].entries()) {
 			const value = terrainValues[terrainMask.indexOf(character)];
 			if (value !== undefined) {
@@ -151,6 +159,9 @@ function importRoom(roomName: string, info: PayloadRoom) {
 				room['#insertObject'](object);
 			}
 		}
+	}
+	if (metadata.next().value !== undefined) {
+		throw new Error(`Room ${roomName} holds more metadata than markers`);
 	}
 	room['#flushObjects'](null);
 	return { room, terrain };
