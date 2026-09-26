@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@types/winreg": "^1.2.36",
-    "jszip": "^3.6.0",
+    "jszip": "^3.10.1",
     "winreg": "^1.2.5"
   },
   "devDependencies": {
