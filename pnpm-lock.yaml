@@ -72,14 +72,13 @@ importers:
         version: 24.12.2
 
   packages/lodash3:
-    dependencies:
-      lodash-es:
-        specifier: 3.10.1
-        version: 3.10.1(patch_hash=338fe3adff79ba4474af007241bc736fe9822c4fb9f5afe806ccddc569812066)
     devDependencies:
       '@types/lodash':
         specifier: 3.10.1
         version: 3.10.1
+      lodash-es:
+        specifier: 3.10.1
+        version: 3.10.1(patch_hash=338fe3adff79ba4474af007241bc736fe9822c4fb9f5afe806ccddc569812066)
 
   packages/pathfinder:
     dependencies:
