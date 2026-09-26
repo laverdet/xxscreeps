@@ -1,9 +1,11 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructurePortal, create as createPortal } from './portal.js';
+import { kUnstableCheckInterval } from './processor.js';
 
 const findPortal = (room: Room) =>
 	room.find(C.FIND_STRUCTURES).find(object => object instanceof StructurePortal);
@@ -41,6 +43,28 @@ describe('mods/portal', () => {
 			const portal = findPortal(room);
 			assert.ok(portal, 'permanent portal should exist');
 			assert.strictEqual(portal.ticksToDecay, undefined);
+		});
+	}));
+
+	const kStart = 1e12;
+	test('stable portal starts to decay once its unstable time passes', () => simulate({
+		W1N1: room => {
+			const portal = createPortal(new RoomPosition(25, 25, 'W1N1'), new RoomPosition(30, 30, 'W2N2'));
+			portal['#unstableTime'] = kStart + 60_000;
+			room['#insertObject'](portal);
+			room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W1N1'), [ C.MOVE ], 'parker', '100'));
+		},
+	})(async ({ peekRoom, tick }) => {
+		using clock = new DeterministicClockForTesting({ start: kStart });
+		await tick(kUnstableCheckInterval);
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(findPortal(room)?.ticksToDecay, undefined);
+		});
+		clock.increment(60_000);
+		await tick(kUnstableCheckInterval);
+		await peekRoom('W1N1', room => {
+			const ticksToDecay = findPortal(room)?.ticksToDecay;
+			assert.ok(ticksToDecay !== undefined && ticksToDecay > C.PORTAL_DECAY - kUnstableCheckInterval && ticksToDecay <= C.PORTAL_DECAY);
 		});
 	}));
 
