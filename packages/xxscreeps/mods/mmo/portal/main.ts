@@ -50,11 +50,12 @@ function pushPlaceRing(shard: Shard, center: RoomPosition, partner: RoomPosition
 
 registerShardTickProcessor(everyNTicks(kSweepInterval, async shard => {
 	const world = await shard.loadWorld();
-	const centerNames = [ ...Fn.pipe(
+	const centerNames = Fn.pipe(
 		iterateSectors(world),
 		$$ => Fn.map($$, ([ center ]) => center),
 		// Out-of-borders and closed rooms take no portals
-		$$ => Fn.filter($$, roomName => world.map.getRoomStatus(roomName).status === 'normal')) ];
+		$$ => Fn.filter($$, roomName => world.map.getRoomStatus(roomName).status === 'normal'),
+		$$ => [ ...$$ ]);
 	const targetPairs = Math.floor(centerNames.length / kCentersPerPair);
 	if (targetPairs === 0) {
 		return;
