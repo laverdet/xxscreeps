@@ -114,10 +114,11 @@ const SendEndpoint: Endpoint = {
 
 		await sendMessage(context.db, userId, respondent, text);
 
-		// Best-effort message notification, gated by the recipient's notify prefs.
+		// Best-effort message notification. `disabled` is `sendNotification`'s to enforce; this mod
+		// owns only the message-specific pref.
 		try {
 			const prefs = await getNotifyPrefs(context.db, respondent);
-			if (!prefs.disabled && !prefs.disabledOnMessages) {
+			if (!prefs.disabledOnMessages) {
 				const sender = await context.db.data.hmGet(User.infoKey(userId), [ 'username' ]);
 				await sendNotification(context.shard, respondent, 'msg', `You have a new message from ${sender.username ?? 'a player'}`, kCoalesceForever);
 			}
