@@ -15,7 +15,7 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './main.js';
-import { scheduleSector } from './model.js';
+import { dueSectors } from './model.js';
 
 interface DepositSimOptions {
 	body?: PartType[];
@@ -173,7 +173,7 @@ describe('mods/modern/deposit', () => {
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 			// Force a sector re-eval by bumping its score to 0 (= due immediately); `earliest` matches
 			// the decay path's bump-down semantics.
-			await scheduleSector(shard, 'W5N5', 0, { earliest: true });
+			await dueSectors.schedule(shard, 'W5N5', 0, { earliest: true });
 			await tick(2);
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1,
 				'saturated sector should not gain a second deposit');

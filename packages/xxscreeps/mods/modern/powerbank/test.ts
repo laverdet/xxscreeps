@@ -11,7 +11,7 @@ import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';
+import { dueRooms } from './model.js';
 import { StructurePowerBank, create as createPowerBank } from './powerbank.js';
 
 interface PowerBankSimOptions {
@@ -151,7 +151,7 @@ describe('mods/modern/powerbank', () => {
 			using rng = deterministicRandomForTesting();
 			const seededAt = shard.time;
 			await runShardInitializers(shard);
-			const due = await inspectDuePowerBankRoomsForTest(shard);
+			const due = await dueRooms.entriesForTest(shard);
 			const world = await shard.loadWorld();
 			const highways = new Set(Fn.transform(iterateSectors(world), ([ , sector ]): Iterable<string> => sector.edges));
 			assert.strictEqual(due.length, highways.size, 'every sector edge room was seeded exactly once');
@@ -169,7 +169,7 @@ describe('mods/modern/powerbank', () => {
 		test('a due highway room places one valid power bank', () => emptyWorld(async ({ shard, tick }) => {
 			using rng = deterministicRandomForTesting();
 			const scheduledAt = shard.time;
-			await scheduleRoom(shard, 'W0N0', 0);
+			await dueRooms.schedule(shard, 'W0N0', 0);
 			// Tick 1: the shard processor pushes a placement intent and reschedules. Tick 2: the room
 			// processor receives the intent and inserts the bank.
 			await tick(2);
@@ -188,7 +188,7 @@ describe('mods/modern/powerbank', () => {
 			assert.strictEqual(bank.hits, C.POWER_BANK_HITS);
 			assert.strictEqual(bank['#nextDecayTime'], shard.time + C.POWER_BANK_DECAY);
 			// The room's timer advanced into the future instead of staying due.
-			const due = await inspectDuePowerBankRoomsForTest(shard);
+			const due = await dueRooms.entriesForTest(shard);
 			const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
 			assert.ok(entry, 'W0N0 remains scheduled');
 			assert.ok(entry[0] - scheduledAt >= C.POWER_BANK_RESPAWN_TIME * 0.75, 'rescheduled into the future');
@@ -200,7 +200,7 @@ describe('mods/modern/powerbank', () => {
 		test('non-highway rooms are never seeded', () => emptyWorld(async ({ shard }) => {
 			using rng = deterministicRandomForTesting();
 			await runShardInitializers(shard);
-			const seeded = new Set((await inspectDuePowerBankRoomsForTest(shard)).map(([ , roomName ]) => roomName));
+			const seeded = new Set((await dueRooms.entriesForTest(shard)).map(([ , roomName ]) => roomName));
 			assert.ok(!seeded.has('W5N5'), 'sector center is not seeded');
 			assert.ok(!seeded.has('W3N3'), 'interior room is not seeded');
 		}));
@@ -208,7 +208,7 @@ describe('mods/modern/powerbank', () => {
 		test('a critical roll adds the max-capacity bonus', () => emptyWorld(async ({ shard, tick }) => {
 			// base roll 0.5 -> 2750; crit roll 0.1 < POWER_BANK_CAPACITY_CRIT adds POWER_BANK_CAPACITY_MAX.
 			using rng = makeRngWithPrefix([ 0.5, 0.1 ]);
-			await scheduleRoom(shard, 'W0N0', 0);
+			await dueRooms.schedule(shard, 'W0N0', 0);
 			await tick(2);
 			const bank = await findPowerBank(shard, 'W0N0');
 			assert.ok(bank, 'a power bank was placed');
@@ -223,7 +223,7 @@ describe('mods/modern/powerbank', () => {
 		})(async ({ shard }) => {
 			using rng = deterministicRandomForTesting();
 			await runShardInitializers(shard);
-			const due = await inspectDuePowerBankRoomsForTest(shard);
+			const due = await dueRooms.entriesForTest(shard);
 			const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
 			assert.ok(entry, 'W0N0 was seeded');
 			assert.strictEqual(entry[0], 12345, 'seeded from the persisted deadline, not a fresh roll');
