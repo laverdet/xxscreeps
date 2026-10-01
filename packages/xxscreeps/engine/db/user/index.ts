@@ -19,6 +19,14 @@ export const infoKey = (userId: string) => `user/${userId}`;
 
 export const emailProvider = 'email';
 
+// Every world needs these; the processor discounts them when sizing its worker pool from the
+// `users` set.
+export const npcUsers = {
+	1: 'Screeps',
+	2: 'Invader',
+	3: 'Source Keeper',
+};
+
 interface BackendUserInfo {
 	username: string;
 	badge: Badge | null;

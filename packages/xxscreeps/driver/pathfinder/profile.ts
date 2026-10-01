@@ -134,15 +134,15 @@ if (process.argv.includes('--with-sandbox')) {
 	const realm = expect(await agent.createRealm());
 	const hash = crypto.createHash('sha256');
 	const hook = expect(await realm.createCapability(
-		() => ({
-			update: result => {
+		{
+			update: (result: unknown) => {
 				const string = String(result);
 				hash.update(string);
 				if (log) {
 					console.log(util.inspect(JSON.parse(string), { depth: null, maxArrayLength: null }));
 				}
 			},
-		}),
+		},
 		{ origin: 'xxscreeps:pathfinder' }));
 	const resolver = async (specifier: string, referrer?: string) => {
 		switch (specifier) {

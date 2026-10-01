@@ -1,8 +1,8 @@
-import type { MaybeCompletionOf, Reference } from '@isolated-vm/experimental';
+import type { MaybeCompletionOf, Module, Realm, Reference } from '@isolated-vm/experimental';
 import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import * as fs from 'node:fs/promises';
-import { Agent, Module, Realm, expect, expectComplete } from '@isolated-vm/experimental';
+import { Agent, expect, expectComplete } from '@isolated-vm/experimental';
 import { makeCachedLoader, makeLinker } from '@isolated-vm/experimental/utility/linker';
 import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';

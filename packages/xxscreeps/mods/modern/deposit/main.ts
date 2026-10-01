@@ -7,7 +7,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { iterateSectors, makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
-import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
+import { dueSectors } from './model.js';
 
 // Deposits are placed in highway-room sectors: a per-sector wall-clock schedule drives periodic
 // evaluation, and a sector below its throughput target gains a deposit. Decay events pull a
@@ -116,7 +116,7 @@ registerShardInitializer(async shard => {
 		$$ => [ ...$$ ],
 	);
 	if (seeds.length > 0) {
-		await seedSectors(shard, seeds);
+		await dueSectors.seed(shard, seeds);
 	}
 });
 
@@ -124,7 +124,7 @@ registerShardInitializer(async shard => {
 // retry next tick instead of dropping it silently.
 registerShardTickProcessor(async shard => {
 	const now = Date.now();
-	const due = await dueSectorsAt(shard, now);
+	const due = await dueSectors.due(shard, now);
 	if (due.length === 0) {
 		return;
 	}
@@ -133,6 +133,6 @@ registerShardTickProcessor(async shard => {
 		await evaluateSector(shard, world, sector);
 		// Re-poll at the cadence ceiling whether or not a deposit lands (placement can fail);
 		// decay pulls the schedule forward sooner.
-		await scheduleSector(shard, sector, now + DEPOSIT_CHECK_INTERVAL);
+		await dueSectors.schedule(shard, sector, now + DEPOSIT_CHECK_INTERVAL);
 	});
 });

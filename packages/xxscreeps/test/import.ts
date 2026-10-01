@@ -5,23 +5,21 @@ import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
-import { importPayload } from 'xxscreeps/scripts/payload.js';
+import { importPayload, seedShard } from 'xxscreeps/scripts/payload.js';
 import { testRedis } from './context.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
 const payload = JSON.parse(await fs.readFile(new URL('../test/data/shard.json', root), 'utf8')) as Payload;
 
-const { rooms, terrain } = importPayload(payload);
-export const testWorld = new MapSchema.World('test', terrain);
+const world = importPayload(payload);
+export const testWorld = new MapSchema.World('test', world.terrain);
 // Seeds the path finder's global terrain as a side effect of importing this module.
 loadTerrain(testWorld);
 
 // Default users
 const users = {
-	1: 'Screeps',
-	2: 'Invader',
-	3: 'Source Keeper',
+	...User.npcUsers,
 	100: 'Player 1',
 	101: 'Player 2',
 };
@@ -67,17 +65,9 @@ export async function instantiateTestShard() {
 	// Save to fake database
 	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
 	// needed right now.
-	shard.time = 0;
 	await Promise.all([
-		shard.data.set('terrain', terrain),
-		shard.data.set('time', shard.time),
-		shard.data.sAdd('rooms', rooms.map(room => room.name)),
-		Promise.all(Fn.map(rooms, async room => {
-			await shard.saveRoom(room.name, shard.time, room);
-			await shard.copyRoomFromPreviousTick(room.name, shard.time + 1);
-		})),
-		Promise.all(Fn.map(Object.entries(users), ([ userId, username ]) =>
-			User.create(db, userId, username))),
+		seedShard(shard, world),
+		Fn.mapAwait(Object.entries(users), ([ userId, username ]) => User.create(db, userId, username)),
 	]);
 
 	return {
