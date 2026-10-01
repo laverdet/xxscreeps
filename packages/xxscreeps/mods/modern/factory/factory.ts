@@ -1,8 +1,8 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
-import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
+import { intents, registerGlobal } from 'xxscreeps/game/index.js';
+import { cooldownTime, createRoomObject, untilTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -116,7 +116,7 @@ function checkRecipeLevel(factory: StructureFactory, recipe: CommodityRecipe) {
 }
 
 // Validation order: ownership, cooldown, recipe checks, RCL gate, then the operated window.
-export function checkProduce(factory: StructureFactory, resourceType: ResourceType, time = Game.time) {
+export function checkProduce(factory: StructureFactory, resourceType: ResourceType, recipeProcessTimeDelta = 0) {
 	let recipe: CommodityRecipe | undefined;
 	return chainIntentChecks(
 		() => checkMyStructure(factory, StructureFactory),
@@ -140,10 +140,9 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 			if (recipe === undefined) {
 				return C.ERR_INVALID_ARGS;
 			}
-			// Unlike every other gate here, this one must be live for the intent to succeed, so it
-			// reads the tick being validated: the processor stands one tick ahead of the runtime.
+			// Inclusive, as in Screeps. Zero is never operated; the shard starts at tick zero.
 			const { endTime } = factory['#operator'];
-			if (recipe.level !== undefined && (endTime === 0 || endTime < time)) {
+			if (recipe.level !== undefined && (endTime === 0 || untilTime(endTime + recipeProcessTimeDelta + 1) === undefined)) {
 				return C.ERR_BUSY;
 			}
 			let componentsTotal = 0;

@@ -1,3 +1,4 @@
+import { Game } from 'xxscreeps/game/index.js';
 import { powerDuration } from 'xxscreeps/mods/mmo/powercreep/powercreep.js';
 import { registerPowerProcessor } from 'xxscreeps/mods/mmo/powercreep/processor.js';
 import { StructureFactory } from 'xxscreeps/mods/modern/factory/factory.js';
@@ -14,7 +15,7 @@ registerPowerProcessor(C.PWR_OPERATE_FACTORY, (_creep, context, info, level, tar
 		return false;
 	}
 	const operator = target['#operator'];
-	operator.endTime = context.time + powerDuration(info, level);
+	operator.endTime = Game.time + powerDuration(info, level) - 1;
 	operator.level = level;
 	return true;
 });
