@@ -17,13 +17,6 @@ export async function runShardInitializers(shard: Shard) {
 	await Promise.all(shardInitializers.map(fn => fn(shard)));
 }
 
-export const everyNTicks = (period: number, fn: ShardTickProcessor): ShardTickProcessor =>
-	(shard, time) => {
-		if (time % period === 0) {
-			return fn(shard, time);
-		}
-	};
-
 export async function runShardTickProcessors(shard: Shard, time: number) {
 	await Fn.mapAwait(shardTickProcessors, fn => fn(shard, time));
 }
