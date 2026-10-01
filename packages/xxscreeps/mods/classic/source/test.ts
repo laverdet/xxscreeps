@@ -73,7 +73,7 @@ describe('mods/classic/source', () => {
 	});
 
 	test('payload round trip', () => guardedRoom(async ({ shard }) => {
-		const payload = await exportPayload(shard);
+		const { payload } = await exportPayload(shard);
 		assert.ok(payload.W6N6?.layout.some(line => line.includes('K')));
 		const { rooms } = importPayload(payload);
 		const keeperLair = Fn.find(

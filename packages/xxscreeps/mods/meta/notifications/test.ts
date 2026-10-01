@@ -2,7 +2,8 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { dispatchQueuedNotifications } from './driver.js';
 import { flush } from './notifications.js';
-import { captureNotificationsForTesting } from './transport.js';
+import { setNotifyPrefs } from './prefs.js';
+import { captureNotificationsForTesting, sendNotification } from './transport.js';
 
 const userA = '100';
 
@@ -14,8 +15,8 @@ describe('mods/meta/notifications', () => {
 
 	// The notify queue is module-level state that persists between tests (the test framework runs
 	// sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain
-	// it, the way prod does). Each test calls `flush()` first to start with a clean queue, mirroring
-	// the visual mod's "calls clear() to avoid shared state" pattern.
+	// it, the way prod does). Each test which queues calls `flush()` first to start with a clean
+	// queue, mirroring the visual mod's "calls clear() to avoid shared state" pattern.
 
 	test('returns OK on accept', () => empty(async ({ player }) => {
 		flush();
@@ -131,6 +132,16 @@ describe('mods/meta/notifications', () => {
 		assert.strictEqual(capture.sent.length, 1);
 		assert.strictEqual(capture.sent[0]?.message, 'undefined');
 		assert.strictEqual(capture.sent[0].type, 'msg');
+	}));
+
+	test('notifyPrefs.disabled drops before the transport', () => empty(async ({ shard }) => {
+		using capture = captureNotificationsForTesting();
+		await setNotifyPrefs(shard.db, userA, { disabled: true });
+		await sendNotification(shard, userA, 'msg', 'hi');
+		assert.strictEqual(capture.sent.length, 0, 'disabled user reaches no transport');
+		await setNotifyPrefs(shard.db, userA, { disabled: false });
+		await sendNotification(shard, userA, 'msg', 'hi');
+		assert.strictEqual(capture.sent.length, 1, 'the same call lands once the pref clears');
 	}));
 
 });

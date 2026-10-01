@@ -17,13 +17,6 @@ export async function runShardInitializers(shard: Shard) {
 	await Promise.all(shardInitializers.map(fn => fn(shard)));
 }
 
-export const everyNTicks = (period: number, fn: ShardTickProcessor): ShardTickProcessor =>
-	(shard, time) => {
-		if (time % period === 0) {
-			return fn(shard, time);
-		}
-	};
-
 export interface DueSet {
 	/** Members due at or before `at`, soonest first. */
 	due: (shard: Shard, at: number) => Promise<string[]>;

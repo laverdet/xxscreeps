@@ -1,16 +1,27 @@
+import type { Payload } from './payload.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
 import * as assert from 'node:assert';
+import * as fs from 'node:fs/promises';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSignedRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
+import { StructureWall, create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
+import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
+import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
+import { StructureKeeperLair } from 'xxscreeps/mods/classic/source/keeper-lair.js';
+import { Source } from 'xxscreeps/mods/classic/source/source.js';
+import { StructureSpawn, create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { describe, test } from 'xxscreeps/test/index.js';
+import { describe, simulate, test } from 'xxscreeps/test/index.js';
+import { exportPayload, importPayload } from './payload.js';
 import { generateRoom, generateSector } from './room-gen.js';
 
 interface SideInfo {
@@ -309,4 +320,47 @@ describe('scripts/room-gen', () => {
 		assert.deepStrictEqual([ ...terrain.get('W30N25')?.sectors ?? [] ].sort(), [ 'W25N25', 'W35N25' ]);
 		assert.ok(terrain.get('W25N25')?.sectorControl, 'the first sector keeps its control record');
 	});
+});
+
+describe('scripts/payload', () => {
+	// The world `xxscreeps import` ships is only as good as the codecs registered when it was
+	// exported. A codec that drops or renames its marker fails here instead of on a user's install.
+	test('decodes the bundled default shard', async () => {
+		const file = new URL('../../scripts/data/shard.json', import.meta.url);
+		const payload = JSON.parse(await fs.readFile(file, 'utf8')) as Payload;
+		const { rooms } = importPayload(payload);
+		const countOf = function(predicate: (object: RoomObject) => boolean) {
+			return Fn.pipe(
+				rooms,
+				$$ => Fn.transform($$, room => room['#objects']),
+				$$ => Fn.filter($$, predicate),
+				$$ => Fn.accumulate($$, () => 1),
+			);
+		};
+		assert.strictEqual(rooms.length, 121);
+		assert.strictEqual(countOf(instanceOfPredicate(StructureController)), 72);
+		assert.strictEqual(countOf(instanceOfPredicate(Source)), 141);
+		assert.strictEqual(countOf(instanceOfPredicate(Mineral)), 81);
+		assert.strictEqual(countOf(instanceOfPredicate(StructureKeeperLair)), 32);
+		assert.strictEqual(countOf(instanceOfPredicate(StructureExtractor)), 9);
+	});
+
+	const playerBase = simulate({
+		W9N9: room => {
+			room['#insertObject'](createSpawn(new RoomPosition(26, 25, room.name), '100', 'Spawn1'));
+			room['#insertObject'](createWall(new RoomPosition(27, 25, room.name)));
+			room['#insertObject'](createWall(new RoomPosition(28, 25, room.name)));
+		},
+	});
+
+	test('counts the objects no codec claims', () => playerBase(async ({ shard }) => {
+		const { payload, dropped } = await exportPayload(shard);
+		assert.strictEqual(dropped.length, 3);
+		assert.strictEqual(dropped.filter(instanceOfPredicate(StructureSpawn)).length, 1);
+		assert.strictEqual(dropped.filter(instanceOfPredicate(StructureWall)).length, 2);
+		// The room keeps everything the codecs do cover, so the tally names the whole of the loss.
+		const spawn = Fn.find((await shard.loadRoom('W9N9'))['#objects'], instanceOfPredicate(StructureSpawn));
+		assert.ok(payload.W9N9?.layout.some(line => line.includes('@')));
+		assert.strictEqual(payload.W9N9?.objects?.some(object => object.id === spawn?.id), false);
+	}));
 });
