@@ -16,9 +16,9 @@ const empty = simulate({
 // `hooks.register` returns nothing disposable, and `makeMapped` locks its listener list on the
 // first call, so a consumer cannot be scoped to one test. One registers here; each test clears it.
 const delivered: NotificationRow[] = [];
-hooks.register('deliver', (shard, userId, rows) => {
+// eslint-disable-next-line @typescript-eslint/require-await
+hooks.register('deliver', async (shard, userId, rows) => {
 	delivered.push(...rows);
-	return Promise.resolve();
 });
 
 const seedRow = (shard: Shard, userId: string, message: string) =>
@@ -98,12 +98,11 @@ describe('mods/meta/notify-cron', () => {
 	}));
 
 	// Delivery worker tests
-
-	test('drains at cadence boundary with full row shape', () => empty(async ({ shard, tick }) => {
+	test('drains a due row on the next tick with full row shape', () => empty(async ({ shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
+		delivered.splice(0);
 		await seedRow(shard, userA, 'hi');
-		await tick(10);
+		await tick(1);
 		assert.strictEqual(delivered.length, 1);
 		const [ row ] = delivered;
 		assert.strictEqual(row?.user, userA);
@@ -114,21 +113,9 @@ describe('mods/meta/notify-cron', () => {
 		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
-	test('no drain between cadence boundaries', () => empty(async ({ shard, tick }) => {
-		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
-		await tick(1);
-		await seedRow(shard, userA, 'hi');
-		await tick(9);
-		assert.strictEqual(delivered.length, 0,
-			'no drain expected before reaching cadence tick');
-		await tick(1);
-		assert.strictEqual(delivered.length, 1, 'drain at cadence boundary');
-	}));
-
 	test('notifyPrefs.interval throttles', () => empty(async ({ shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
+		delivered.splice(0);
 		await seedRow(shard, userA, 'first');
 		await tick(10);
 		assert.strictEqual(delivered.length, 1);
@@ -150,7 +137,7 @@ describe('mods/meta/notify-cron', () => {
 	// rather than at a bucket boundary.
 	test('coalesce-forever rows drain with their accumulated count', () => empty(async ({ shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
+		delivered.splice(0);
 		await upsertNotification(shard, userA, 'msg', 'under attack', Infinity);
 		clock.increment(86_400_000);
 		await upsertNotification(shard, userA, 'msg', 'under attack', Infinity);
@@ -163,7 +150,7 @@ describe('mods/meta/notify-cron', () => {
 
 	test('drains multiple users independently', () => empty(async ({ shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
+		delivered.splice(0);
 		await seedRow(shard, userA, 'a-msg');
 		await seedRow(shard, userB, 'b-msg');
 		await tick(10);
@@ -175,7 +162,7 @@ describe('mods/meta/notify-cron', () => {
 
 	test('short group does not drag long group', () => empty(async ({ shard, tick }) => {
 		using clock = new DeterministicClockForTesting({ start: baseTime, step: 0 });
-		delivered.length = 0;
+		delivered.splice(0);
 		// A cadence shorter than the gap between the two bucket boundaries, so delivery depends on
 		// each row's group deadline rather than on the throttle.
 		await setNotifyPrefs(shard.db, userA, { interval: 5 });

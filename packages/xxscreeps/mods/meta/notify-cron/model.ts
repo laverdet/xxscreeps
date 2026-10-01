@@ -25,7 +25,7 @@ export const hooks = makeHookRegistration<{
 	 * loads only in the processor worker and never fires. The fan-out is awaited inside the shard
 	 * tick, so a consumer which blocks on slow I/O holds up every player on the shard.
 	 */
-	deliver: (shard: Shard, userId: string, rows: readonly NotificationRow[]) => Promise<unknown>;
+	deliver: (shard: Shard, userId: string, rows: readonly NotificationRow[]) => Promise<void>;
 }>();
 
 // Sorted set: score = the group deadline in ms; coalesce-forever rows score 0 and are always due.
@@ -95,10 +95,10 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
 
 // Pop users whose scheduled drain time has elapsed. Caller owns rescheduling via `scheduleUserDrain`.
 export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<string[]> {
-	const userIds = await shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' });
-	if (userIds.length > 0) {
-		await shard.data.zRem(dueUsersKey, userIds);
-	}
+	const [ userIds ] = await Promise.all([
+		shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' }),
+		shard.data.zRemRange(dueUsersKey, 0, nowMs),
+	]);
 	return userIds;
 }
 

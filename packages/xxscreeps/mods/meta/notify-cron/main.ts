@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import { everyNTicks, registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { consumeDueUsers, getDueNotifications, getLastNotifyDate, hooks, kDefaultIntervalMinutes, nextPendingDueAt, removeNotifications, scheduleUserDrain, setLastNotifyDate } from './model.js';
@@ -23,8 +23,11 @@ async function drainUser(shard: Shard, userId: string) {
 	if (items.length > 0) {
 		// Rows are removed even when a consumer rejects; keeping them would redeliver to the
 		// consumers that did accept, on every later pass.
-		await Fn.mapAwait(deliverHooks(shard, userId, items.map(item => item.row)), delivery =>
-			delivery.catch(err => console.error(`Notification delivery failed for user ${userId}`, err)));
+		try {
+			await Promise.all(deliverHooks(shard, userId, items.map(item => item.row)));
+		} catch (error) {
+			console.error(`Notification delivery failed for user ${userId}`, error);
+		}
 		await Promise.all([
 			removeNotifications(shard, userId, items.map(item => item.id)),
 			setLastNotifyDate(shard.db, userId, now),
@@ -41,4 +44,4 @@ async function drainAndDeliver(shard: Shard) {
 	await Fn.mapAwait(userIds, userId => drainUser(shard, userId));
 }
 
-registerShardTickProcessor(everyNTicks(10, drainAndDeliver));
+registerShardTickProcessor(drainAndDeliver);
