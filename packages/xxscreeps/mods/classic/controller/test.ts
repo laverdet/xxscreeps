@@ -1,4 +1,5 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
@@ -37,13 +38,13 @@ describe('mods/classic/controller', () => {
 		W3N3: room => {
 			room['#user'] = '101';
 			room.controller!['#reservationEndTime'] = 5000;
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
 	const neutralRoom = simulate({
 		W3N3: room => {
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
@@ -72,11 +73,12 @@ describe('mods/classic/controller', () => {
 		},
 	});
 
+	// At the cap, where a one-CLAIM renewal still lands short of CONTROLLER_RESERVE_MAX.
 	const ownReservation = simulate({
 		W3N3: room => {
 			room['#user'] = '100';
-			room.controller!['#reservationEndTime'] = 5000;
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room.controller!['#reservationEndTime'] = Game.time + C.CONTROLLER_RESERVE_MAX - 1;
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
@@ -208,12 +210,24 @@ describe('mods/classic/controller', () => {
 			});
 		}));
 
+		test('a fresh reservation with one CLAIM part leaves CONTROLLER_RESERVE ticks remaining',
+			() => neutralRoom(async ({ player, tick }) => {
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+				});
+				await tick();
+				await player('100', Game => {
+					const ticksToEnd = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
+					assert.strictEqual(ticksToEnd, C.CONTROLLER_RESERVE);
+				});
+			}));
+
 		// Short of CONTROLLER_RESERVE_MAX, so the cap does not hide the arithmetic.
 		const renewableReservation = simulate({
 			W3N3: room => {
 				room['#user'] = '100';
 				room.controller!['#reservationEndTime'] = 200;
-				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+				room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 			},
 		});
 
@@ -222,13 +236,37 @@ describe('mods/classic/controller', () => {
 				let before = 0;
 				await player('100', Game => {
 					before = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
-					assert.strictEqual(
-						Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
 				});
 				await tick();
 				await player('100', Game => {
 					const after = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
 					assert.strictEqual(after, before);
+				});
+			}));
+
+		// At the cap: `ticksToEnd` reads CONTROLLER_RESERVE_MAX - 1, the most a reservation shows.
+		const saturatedReservation = simulate({
+			W3N3: room => {
+				room['#user'] = '100';
+				room.controller!['#reservationEndTime'] = Game.time + C.CONTROLLER_RESERVE_MAX - 1;
+				room['#insertObject'](create(pos, [ C.CLAIM, C.CLAIM ], 'claimer', '100'));
+			},
+		});
+
+		test('a renewal that would reach CONTROLLER_RESERVE_MAX is dropped',
+			() => saturatedReservation(async ({ peekRoom, player, tick }) => {
+				const endTime = await peekRoom('W3N3', room => room.controller?.['#reservationEndTime']);
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+				});
+				await tick();
+				await peekRoom('W3N3', room => {
+					assert.strictEqual(room.controller?.['#reservationEndTime'], endTime);
+					assert.ok(!room.getEventLog().some(entry => entry.event === C.EVENT_RESERVE_CONTROLLER));
+					const claimer = room.find(C.FIND_CREEPS).find(creep => creep.name === 'claimer');
+					assert.ok(claimer);
+					assert.ok(!claimer['#actionLog'].some(entry => entry.type === 'reserveController'));
 				});
 			}));
 	});
@@ -348,7 +386,7 @@ describe('mods/classic/controller', () => {
 	describe('room status side effects', () => {
 		const reserveNeutral = simulate({
 			W3N3: room => {
-				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+				room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 			},
 		});
 
