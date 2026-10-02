@@ -116,7 +116,7 @@ function checkRecipeLevel(factory: StructureFactory, recipe: CommodityRecipe) {
 }
 
 // Validation order: ownership, cooldown, recipe checks, RCL gate, then the operated window.
-export function checkProduce(factory: StructureFactory, resourceType: ResourceType, recipeProcessTimeDelta = 0) {
+export function checkProduce(factory: StructureFactory, resourceType: ResourceType) {
 	let recipe: CommodityRecipe | undefined;
 	return chainIntentChecks(
 		() => checkMyStructure(factory, StructureFactory),
@@ -140,9 +140,10 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 			if (recipe === undefined) {
 				return C.ERR_INVALID_ARGS;
 			}
-			// Inclusive, as in Screeps. Zero is never operated; the shard starts at tick zero.
-			const { endTime } = factory['#operator'];
-			if (recipe.level !== undefined && (endTime === 0 || untilTime(endTime + recipeProcessTimeDelta + 1) === undefined)) {
+			if (
+				recipe.level !== undefined &&
+				untilTime(factory['#operator'].endTime) === undefined
+			) {
 				return C.ERR_BUSY;
 			}
 			let componentsTotal = 0;

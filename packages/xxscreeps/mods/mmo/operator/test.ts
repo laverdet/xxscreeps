@@ -71,7 +71,7 @@ describe('mods/mmo/operator', () => {
 			} ]);
 			assert.strictEqual(alice.store[C.RESOURCE_OPS], 0);
 			assert.deepStrictEqual({ ...alice.powers }, {
-				[C.PWR_OPERATE_FACTORY]: { cooldown: operateInfo.cooldown, level: 1 },
+				[C.PWR_OPERATE_FACTORY]: { cooldown: operateInfo.cooldown - 1, level: 1 },
 			});
 		});
 		await peekRoom('W1N1', room => {

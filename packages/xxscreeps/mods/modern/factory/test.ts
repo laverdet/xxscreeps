@@ -310,7 +310,7 @@ describe('mods/modern/factory', () => {
 		}));
 
 		test('the gate holds through the last operated tick', () => operateSim(async ({ player, poke, tick }) => {
-			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 1));
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 2));
 			await tick();
 			await player('100', Game => {
 				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.OK);
@@ -322,7 +322,7 @@ describe('mods/modern/factory', () => {
 		}));
 
 		test('the gate closes when the window lapses', () => operateSim(async ({ player, poke, tick }) => {
-			await poke('W1N1', '100', (Game, room) => operate(room, Game.time));
+			await poke('W1N1', '100', (Game, room) => operate(room, Game.time + 1));
 			await tick();
 			await player('100', Game => {
 				assert.strictEqual(getFactory(Game).produce(C.RESOURCE_COMPOSITE), C.ERR_BUSY);

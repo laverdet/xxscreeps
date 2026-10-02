@@ -15,7 +15,7 @@ registerPowerProcessor(C.PWR_OPERATE_FACTORY, (_creep, context, info, level, tar
 		return false;
 	}
 	const operator = target['#operator'];
-	operator.endTime = Game.time + powerDuration(info, level) - 1;
+	operator.endTime = Game.time + powerDuration(info, level);
 	operator.level = level;
 	return true;
 });
