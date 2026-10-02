@@ -38,13 +38,13 @@ describe('mods/classic/controller', () => {
 		W3N3: room => {
 			room['#user'] = '101';
 			room.controller!['#reservationEndTime'] = 5000;
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
 	const neutralRoom = simulate({
 		W3N3: room => {
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
@@ -78,7 +78,7 @@ describe('mods/classic/controller', () => {
 		W3N3: room => {
 			room['#user'] = '100';
 			room.controller!['#reservationEndTime'] = Game.time + C.CONTROLLER_RESERVE_MAX - 1;
-			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 		},
 	});
 
@@ -213,8 +213,7 @@ describe('mods/classic/controller', () => {
 		test('a fresh reservation with one CLAIM part leaves CONTROLLER_RESERVE ticks remaining',
 			() => neutralRoom(async ({ player, tick }) => {
 				await player('100', Game => {
-					assert.strictEqual(
-						Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
 				});
 				await tick();
 				await player('100', Game => {
@@ -228,7 +227,7 @@ describe('mods/classic/controller', () => {
 			W3N3: room => {
 				room['#user'] = '100';
 				room.controller!['#reservationEndTime'] = 200;
-				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+				room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 			},
 		});
 
@@ -237,8 +236,7 @@ describe('mods/classic/controller', () => {
 				let before = 0;
 				await player('100', Game => {
 					before = Game.rooms.W3N3!.controller!['#reservationEndTime'] - Game.time;
-					assert.strictEqual(
-						Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
 				});
 				await tick();
 				await player('100', Game => {
@@ -260,8 +258,7 @@ describe('mods/classic/controller', () => {
 			() => saturatedReservation(async ({ peekRoom, player, tick }) => {
 				const endTime = await peekRoom('W3N3', room => room.controller?.['#reservationEndTime']);
 				await player('100', Game => {
-					assert.strictEqual(
-						Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
 				});
 				await tick();
 				await peekRoom('W3N3', room => {
@@ -389,7 +386,7 @@ describe('mods/classic/controller', () => {
 	describe('room status side effects', () => {
 		const reserveNeutral = simulate({
 			W3N3: room => {
-				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+				room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
 			},
 		});
 

@@ -35,11 +35,10 @@ export function release(context: ProcessorContext, controller: StructureControll
 
 export function reserve(context: ProcessorContext, controller: StructureController, userId: string, power: number) {
 	const reservationEndTime = controller['#reservationEndTime'];
-	// `Game.time` already reads the next tick here, so a fresh reservation needs no `+ 1`.
-	const endTime = (reservationEndTime || Game.time) + power;
+	const endTime = (reservationEndTime || Game.time + 1) + power;
 	// A reserve that would carry `ticksToEnd` to CONTROLLER_RESERVE_MAX is dropped whole, so a
 	// saturated reservation decays this tick.
-	if (endTime >= Game.time + C.CONTROLLER_RESERVE_MAX) {
+	if (endTime > Game.time + C.CONTROLLER_RESERVE_MAX) {
 		return false;
 	}
 	if (reservationEndTime === 0) {
