@@ -1,6 +1,6 @@
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
-import { saveAction } from 'xxscreeps/game/object.js';
+import { expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/classic/combat/processor.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -85,14 +85,14 @@ const intents = [
 ];
 
 registerObjectTickProcessor(StructureRampart, (rampart, context) => {
-	if (rampart.ticksToDecay === 0) {
+	if (expiresNextTick(rampart['#nextDecayTime'])) {
 		rampart.hits -= C.RAMPART_DECAY_AMOUNT;
 		context.didUpdate();
 		if (rampart.hits <= 0) {
 			rampart.room['#removeObject'](rampart);
 			return;
 		}
-		rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME - 1;
+		rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME;
 	}
 	context.wakeAt(rampart['#nextDecayTime']);
 });

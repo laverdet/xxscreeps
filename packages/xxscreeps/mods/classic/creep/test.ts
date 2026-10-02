@@ -534,8 +534,8 @@ describe('mods/classic/creep', () => {
 				const tombs = room['#lookFor'](C.LOOK_TOMBSTONES);
 				assert.strictEqual(tombs.length, 1);
 				const tomb = tombs[0];
-				assert.strictEqual(tomb?.store[C.RESOURCE_ENERGY], 19);
-				assert.strictEqual(tomb.store[C.RESOURCE_UTRIUM_HYDRIDE], 5);
+				assert.strictEqual(tomb?.store[C.RESOURCE_ENERGY], 20);
+				assert.strictEqual(tomb.store[C.RESOURCE_UTRIUM_HYDRIDE], 6);
 			});
 		}));
 
@@ -557,8 +557,8 @@ describe('mods/classic/creep', () => {
 			await peekRoom('W8N8', room => {
 				const tombs = room['#lookFor'](C.LOOK_TOMBSTONES);
 				assert.strictEqual(tombs.length, 1);
-				// Using CREEP_LIFE_TIME instead would yield floor(600 * 0.2 * (599/1500)) = 47.
-				assert.strictEqual(tombs[0]?.store[C.RESOURCE_ENERGY], 119);
+				// Using CREEP_LIFE_TIME instead would yield floor(600 * 0.2 * (600/1500)) = 48.
+				assert.strictEqual(tombs[0]?.store[C.RESOURCE_ENERGY], 120);
 			});
 		}));
 	});

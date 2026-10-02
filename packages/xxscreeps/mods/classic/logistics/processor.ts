@@ -13,7 +13,7 @@ const intents = [
 		if (checkTransferEnergy(link, target, amount) === C.OK) {
 			link.store['#subtract'](C.RESOURCE_ENERGY, amount);
 			target.store['#add'](C.RESOURCE_ENERGY, Math.floor(amount * (1 - C.LINK_LOSS_RATIO)));
-			link['#cooldownTime'] = Game.time + C.LINK_COOLDOWN * link.pos.getRangeTo(target) - 1;
+			link['#cooldownTime'] = Game.time + C.LINK_COOLDOWN * link.pos.getRangeTo(target);
 			saveAction(link, 'transferEnergy', target.pos);
 			appendEventLog(link.room, {
 				event: C.EVENT_TRANSFER,

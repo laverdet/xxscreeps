@@ -11,7 +11,7 @@ import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { createRoomObject } from 'xxscreeps/game/object.js';
+import { createRoomObject, expiresNextTick } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
@@ -79,7 +79,7 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 		body: creep.body.map(bodyPart => bodyPart.type),
 		id: creep.id,
 		name: creep.name,
-		saying: saying?.isPublic && saying.time === Game.time ? saying.message : undefined,
+		saying: saying?.isPublic && saying.time === Game.time + 1 ? saying.message : undefined,
 		ticksToLive: creep.ticksToLive!,
 		user: creep['#user'],
 	};
@@ -89,7 +89,7 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 }
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
-	const timeLimit = Game.time - kRetainActionsTime;
+	const timeLimit = Game.time - kRetainActionsTime + 1;
 
 	const length = actionLog.length;
 	if (length > 0) {
@@ -180,7 +180,7 @@ export function processSay(creep: CreepLib.Carrier, context: ProcessorContext, m
 		creep['#saying'] = {
 			isPublic,
 			message: String(message).substring(0, 10),
-			time: Game.time,
+			time: Game.time + 1,
 		};
 		context.didUpdate();
 	}
@@ -232,7 +232,7 @@ export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearo
 		if (road) {
 			// Wear-out advances decay but must not slip past `Game.time` — the road's Tick handler throws
 			// on overdue `ticksToDecay`.
-			road['#nextDecayTime'] = Math.max(Game.time, road['#nextDecayTime'] - roadWearout);
+			road['#nextDecayTime'] = Math.max(Game.time + 1, road['#nextDecayTime'] - roadWearout);
 			return 1;
 		}
 		const terrain = mover.room.getTerrain().get(pos.x, pos.y);
@@ -358,7 +358,7 @@ const intents = [
 
 registerObjectPreTickProcessor(Creep, (creep, context) => {
 	const kRetainActionsTime = 10;
-	const timeLimit = Game.time - kRetainActionsTime;
+	const timeLimit = Game.time - kRetainActionsTime + 1;
 	flushActionLog(creep['#actionLog'], context);
 
 	// Remove `saying`
@@ -386,7 +386,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		recalculateBody(creep);
 		context.didUpdate();
 	}
-	if (creep.ticksToLive === 0 || creep.hits <= 0) {
+	if (expiresNextTick(creep['#ageTime']) || creep.hits <= 0) {
 		if (creep.hits <= 0) {
 			// Only violent deaths count; old age is not a loss
 			context.incrementRoomStat?.(creep['#user'], 'creepsLost', creep.body.length);
@@ -476,7 +476,7 @@ export function teleportCreep(creep: Teleportable, next: RoomPosition, context: 
 }
 
 registerObjectTickProcessor(Tombstone, (tombstone, context) => {
-	if (tombstone.ticksToDecay === 0) {
+	if (expiresNextTick(tombstone['#decayTime'])) {
 		for (const [ resourceType, amount ] of tombstone.store['#entries']()) {
 			ResourceIntent.drop(tombstone.pos, resourceType, amount);
 		}

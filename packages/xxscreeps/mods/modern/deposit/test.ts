@@ -113,7 +113,7 @@ describe('mods/modern/deposit', () => {
 			await tick();
 			await player('100', Game => {
 				const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0];
-				assert.strictEqual(deposit?.ticksToDecay, C.DEPOSIT_DECAY_TIME);
+				assert.strictEqual(deposit?.ticksToDecay, C.DEPOSIT_DECAY_TIME - 1);
 			});
 		}));
 	});
@@ -154,7 +154,7 @@ describe('mods/modern/deposit', () => {
 			const { roomName, deposit } = found[0]!;
 			// Round-trip: the type survives intent serialization and the schema enum write/read.
 			assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
-			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME);
+			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME - 1);
 			// Ported placement predicates: wall terrain, inside the sector's 250-square radius.
 			const world = await shard.loadWorld();
 			const terrain = world.map.getRoomTerrain(roomName);

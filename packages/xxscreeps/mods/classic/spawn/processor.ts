@@ -5,7 +5,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
-import { saveAction } from 'xxscreeps/game/object.js';
+import { expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { makePositionChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
@@ -188,7 +188,7 @@ const intents = [
 		});
 		spawning['#spawnId'] = spawn.id;
 		spawning['#spawningCreepId'] = creep.id;
-		spawning['#spawnTime'] = Game.time + needTime - 1;
+		spawning['#spawnTime'] = Game.time + needTime;
 		context.didUpdate();
 	}),
 ];
@@ -254,8 +254,8 @@ export function birthSpawnCreep(
 		}
 
 		if (!spawnPos) {
-			// No valid position — retry next tick
-			spawning['#spawnTime'] = Game.time + 1;
+			// No valid position, retry next tick
+			spawning['#spawnTime'] = Game.time + 2;
 			context.setActive();
 			return;
 		}
@@ -271,9 +271,9 @@ export function birthSpawnCreep(
 registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Check creep spawning
-	if (spawn.spawning?.remainingTime === 0) {
+	if (spawn.spawning && expiresNextTick(spawn.spawning['#spawnTime'])) {
 		birthSpawnCreep(spawn, context, creep =>
-			Game.time + (creep.body.some(part => part.type === C.CLAIM) ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1);
+			Game.time + (creep.body.some(part => part.type === C.CLAIM) ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME));
 	}
 
 	// Add 1 energy per tick to spawns in low energy rooms

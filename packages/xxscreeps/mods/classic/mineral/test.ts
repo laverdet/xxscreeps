@@ -64,6 +64,33 @@ describe('mods/classic/mineral', () => {
 		});
 	}));
 
+	const freshExtractor = simulate({
+		W6N1: room => {
+			const mineral = room.find(C.FIND_MINERALS)[0]!;
+			room['#insertObject'](createExtractor(mineral.pos, '100'));
+			room['#insertObject'](createCreep(mineral.pos, [ C.WORK, C.CARRY, C.MOVE ], 'harvester', '100'));
+			room['#level'] = 6;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('harvest starts the extractor cooldown', () => freshExtractor(async ({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.harvester!.harvest(Game.rooms.W6N1!.find(C.FIND_MINERALS)[0]!), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const extractor = Game.rooms.W6N1!.find(C.FIND_STRUCTURES).find(instanceOfPredicate(StructureExtractor))!;
+			// Screeps shows the full cooldown on the tick after the harvest
+			assert.strictEqual(extractor.cooldown, C.EXTRACTOR_COOLDOWN);
+			assert.strictEqual(Game.creeps.harvester!.harvest(Game.rooms.W6N1!.find(C.FIND_MINERALS)[0]!), C.ERR_TIRED);
+		});
+		await tick(C.EXTRACTOR_COOLDOWN);
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.harvester!.harvest(Game.rooms.W6N1!.find(C.FIND_MINERALS)[0]!), C.OK);
+		});
+	}));
+
 	const prebuiltExtractor = simulate({
 		W6N6: room => {
 			const mineral = room.find(C.FIND_MINERALS)[0]!;

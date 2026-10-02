@@ -76,7 +76,7 @@ export function create(pos: RoomPosition, owner: string) {
 		hits: 1,
 		isPublic: false,
 	});
-	rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME - 1;
+	rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME;
 	rampart['#user'] = owner;
 	return rampart;
 }

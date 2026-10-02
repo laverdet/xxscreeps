@@ -5,7 +5,7 @@ import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
-import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
+import { createRoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { StructureController, resetController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/classic/defense/tower.js';
@@ -41,7 +41,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 	 */
 	@enumerable get ticksToDeploy(): number | undefined {
 		const deployTime = this['#deployTime'];
-		return deployTime === 0 ? undefined : requiredExpiryTime(deployTime + 1) - 1;
+		return optionalExpiryTime(deployTime);
 	}
 
 	override get hitsMax(): number {
