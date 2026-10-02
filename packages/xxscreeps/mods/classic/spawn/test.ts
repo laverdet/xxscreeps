@@ -39,7 +39,7 @@ describe('mods/classic/spawn', () => {
 			}
 			await tick(1);
 			await player('100', Game => {
-				assert.strictEqual(Game.creeps.creep?.ticksToLive, 1499);
+				assert.strictEqual(Game.creeps.creep?.ticksToLive, C.CREEP_LIFE_TIME - 1);
 			});
 		}));
 

@@ -3,7 +3,7 @@ import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { createRoomObject } from 'xxscreeps/game/object.js';
+import { createRoomObject, expiresNextTick } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -43,14 +43,14 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 	const cooldown = Math.ceil(C.DEPOSIT_EXHAUST_MULTIPLY * deposit['#harvested'] ** C.DEPOSIT_EXHAUST_POW);
 	deposit.lastCooldown = cooldown;
 	if (cooldown > 1) {
-		deposit['#cooldownTime'] = Game.time + cooldown - 1;
+		deposit['#cooldownTime'] = Game.time + cooldown;
 	}
 	deposit['#nextDecayTime'] = Game.time + C.DEPOSIT_DECAY_TIME;
 	return amount;
 });
 
 registerObjectTickProcessor(Deposit, (deposit, context) => {
-	if (deposit.ticksToDecay === 0) {
+	if (expiresNextTick(deposit['#nextDecayTime'])) {
 		// Decay just freed throughput in the owning sector — of the 1–4 candidate sectors for
 		// this room, the one whose 250-square radius contains the position. Score 0 = due
 		// immediately; the evaluator excludes deposits at their decay tick from the tally, so

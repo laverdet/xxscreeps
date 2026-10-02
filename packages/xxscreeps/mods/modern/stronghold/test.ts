@@ -124,21 +124,21 @@ describe('mods/modern/stronghold', () => {
 			},
 		});
 
-		test('clears the deploy timer the tick after it elapses', () => deployBoundary(async ({ player, tick }) => {
-			// Game.time === deployTime: final invulnerable tick, `ticksToDeploy === 0`.
-			await tick(2);
-			await player('100', Game => {
-				const core = findCore(Game);
-				assert.strictEqual(Game.time, 2);
-				assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
-				assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 } ]);
-			});
-			// Game.time === deployTime + 1: the elapsed timer deploys the stronghold, swapping
-			// invulnerability for a collapse timer. Reading the expiry getters must not throw.
+		test('deploys as the deploy timer elapses', () => deployBoundary(async ({ player, tick }) => {
+			// Game.time === deployTime - 1: final invulnerable tick, `ticksToDeploy === 1`.
 			await tick();
 			await player('100', Game => {
 				const core = findCore(Game);
-				assert.strictEqual(Game.time, 3);
+				assert.strictEqual(Game.time, 1);
+				assert.strictEqual(core.ticksToDeploy, 1, 'invulnerable through the last countdown tick');
+				assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 1 } ]);
+			});
+			// Game.time === deployTime: the stronghold is deployed, swapping invulnerability for a
+			// collapse timer. Reading the expiry getters must not throw.
+			await tick();
+			await player('100', Game => {
+				const core = findCore(Game);
+				assert.strictEqual(Game.time, 2);
 				assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared after it elapses');
 				const effects = core.effects!;
 				assert.strictEqual(effects.length, 1, 'a deployed core reports only the collapse timer');
@@ -182,7 +182,7 @@ describe('mods/modern/stronghold', () => {
 			await tick();
 			await peekRoom('W1N1', (room, Game) => {
 				const controller = room.controller!;
-				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE + 1;
+				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
 				assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
 				assert.strictEqual(room['#user'], kInvaderUserId, 'room user becomes 2 once reserved');
 				const core = findRoomCore(room)!;
@@ -240,11 +240,11 @@ describe('mods/modern/stronghold', () => {
 			await tick();
 			await peekRoom('W1N1', (room, Game) => {
 				const controller = room.controller!;
-				const expiry = Game.time + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
+				const expiry = Game.time - 1 + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
 				assert.strictEqual(controller['#downgradeTime'], expiry);
 				const invulnerability = controller.effects?.find(effect => effect.effect === C.EFFECT_INVULNERABILITY);
 				assert.ok(invulnerability, 'controller should report EFFECT_INVULNERABILITY after upgradeController');
-				assert.strictEqual(invulnerability.ticksRemaining, C.INVADER_CORE_CONTROLLER_DOWNGRADE);
+				assert.strictEqual(invulnerability.ticksRemaining, C.INVADER_CORE_CONTROLLER_DOWNGRADE - 1);
 			});
 		}));
 
@@ -539,8 +539,8 @@ describe('mods/modern/stronghold', () => {
 		const corePos = new RoomPosition(25, 25, 'W1N1');
 		const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
 
-		// The deploy timer elapses the tick after `deployTime` (Game.time === 2); `activateNPC` keeps the
-		// room processing across the boundary.
+		// The stronghold is deployed at `deployTime` (Game.time === 1); `activateNPC` keeps the room
+		// processing across the boundary.
 		const deployScene = simulate({
 			W1N1: room => {
 				const core = createInvaderCore(corePos, 2, 1);
@@ -628,7 +628,7 @@ describe('mods/modern/stronghold', () => {
 		});
 
 		test('deploy crushes player objects on template tiles', () => crushScene(async ({ tick, peekRoom }) => {
-			await tick(2);
+			await tick();
 			await peekRoom('W1N1', room => {
 				// The creep dies where it stood — once, though its tile carries three template entries.
 				assert.strictEqual(room.find(C.FIND_CREEPS).length, 0, 'a creep on a template tile dies');

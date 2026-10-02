@@ -1,6 +1,7 @@
 import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
@@ -8,7 +9,7 @@ import * as C from 'xxscreeps:mods/constants';
 import { StructurePowerBank, create } from './powerbank.js';
 
 registerObjectTickProcessor(StructurePowerBank, (powerBank, context) => {
-	if (powerBank.ticksToDecay === 0) {
+	if (expiresNextTick(powerBank['#nextDecayTime'])) {
 		powerBank.room['#removeObject'](powerBank);
 		context.didUpdate();
 	} else {

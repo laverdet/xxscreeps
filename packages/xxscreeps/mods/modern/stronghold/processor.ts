@@ -6,7 +6,7 @@ import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
+import { expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
@@ -91,10 +91,10 @@ const intents = [
 		if (checkAttackController(core, controller) === C.OK) {
 			if (controller.level > 0) {
 				controller['#downgradeTime'] -= C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_CLAIM_DOWNGRADE;
-				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
+				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE;
 			} else {
 				const reduced = controller['#reservationEndTime'] - C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
-				if (reduced <= Game.time) {
+				if (reduced <= Game.time + 1) {
 					release(context, controller);
 				} else {
 					controller['#reservationEndTime'] = reduced;
@@ -140,7 +140,7 @@ const intents = [
 			const spawning = core.spawning = assign(new Spawning(), { needTime });
 			spawning['#spawnId'] = core.id;
 			spawning['#spawningCreepId'] = creep.id;
-			spawning['#spawnTime'] = Game.time + needTime - 1;
+			spawning['#spawnTime'] = Game.time + needTime;
 			context.didUpdate();
 		}
 	}),
@@ -178,7 +178,7 @@ Structure.prototype['#ruinDecay'] = function(ruinDecay) {
 
 // Wire up collapse for stronghold objects
 registerObjectPreTickProcessor(Structure, (structure, context) => {
-	if (optionalExpiryTime(structure['#collapseTime']) === 0) {
+	if (expiresNextTick(structure['#collapseTime'])) {
 		structure.room['#removeObject'](structure);
 		context.didUpdate();
 	}
@@ -187,7 +187,7 @@ registerObjectPreTickProcessor(Structure, (structure, context) => {
 // The core shadows that removal to first reset any owned controller in its room to neutral. A
 // level-0 controller short-circuits so its reservation, if any, expires on its own.
 registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
-	if (optionalExpiryTime(core['#collapseTime']) === 0) {
+	if (expiresNextTick(core['#collapseTime'])) {
 		const controller = core.room.controller;
 		if (controller && controller.level > 0) {
 			release(context, controller);
@@ -201,25 +201,20 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 
 	flushActionLog(core['#actionLog'], context);
 
-	// Deploy the stronghold once the deploy timer elapses. `ticksToDeploy` already clamps to
-	// `undefined` from `deployTime + 1`, but the raw field has to be cleared by `deployTime + 2` or
-	// its `requiredExpiryTime` read throws; the `wakeAt` below guarantees a processing tick at
-	// `deployTime + 1` to do it.
+	// Deploy the stronghold once the deploy timer elapses.
 	const deployTime = core['#deployTime'];
-	if (deployTime !== 0) {
-		if (deployTime < Game.time) {
-			deployStronghold(core, context);
-		} else {
-			context.wakeAt(deployTime + 1);
-		}
+	if (expiresNextTick(deployTime)) {
+		deployStronghold(core, context);
+	} else {
+		context.wakeAt(deployTime);
 	}
 
 	// Advance an in-progress defender spawn. A player spawn's room is kept ticking by its energy
 	// regen; this NPC core has none, so wake it at completion.
 	const { spawning } = core;
 	if (spawning) {
-		if (spawning.remainingTime === 0) {
-			birthSpawnCreep(core, context, () => core['#collapseTime'] || Game.time + C.CREEP_LIFE_TIME - 1);
+		if (expiresNextTick(spawning['#spawnTime'])) {
+			birthSpawnCreep(core, context, () => core['#collapseTime'] || Game.time + C.CREEP_LIFE_TIME);
 		} else {
 			context.wakeAt(spawning['#spawnTime']);
 		}

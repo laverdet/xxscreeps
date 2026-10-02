@@ -378,7 +378,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 	// intent performs (drop neutral objects, claim the controller, insert the spawn), but without the
 	// processor. `claim` queues its scratch writes through a minimal context we drain afterwards.
 	const room = await shard.loadRoom(roomName, time);
-	const state = new GameState(world, time + 1, [ room ]);
+	const state = new GameState(world, time, [ room ]);
 	const tasks: Promise<unknown>[] = [];
 	const context = {
 		shard,

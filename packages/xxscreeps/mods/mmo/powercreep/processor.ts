@@ -5,7 +5,7 @@ import type { Direction } from 'xxscreeps/game/position.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
+import { createRoomObject, expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
@@ -42,7 +42,7 @@ function buryPowerCreep(creep: PowerCreep) {
 		body: [],
 		id: creep.id,
 		name: creep.name,
-		saying: saying?.isPublic && saying.time === Game.time ? saying.message : undefined,
+		saying: saying?.isPublic && saying.time === Game.time + 1 ? saying.message : undefined,
 		ticksToLive: creep.ticksToLive ?? 0,
 		user: creep['#user'],
 	};
@@ -72,10 +72,10 @@ const intents = [
 		if (checkMyStructure(spawn, StructurePowerSpawn) !== C.OK || checkIsActive(spawn) !== C.OK) {
 			return;
 		}
-		if (spawn['#spawnTime'] === Game.time) {
+		if (spawn['#spawnTime'] === Game.time + 1) {
 			return;
 		}
-		spawn['#spawnTime'] = Game.time;
+		spawn['#spawnTime'] = Game.time + 1;
 		const ageTime = Game.time + C.POWER_CREEP_LIFE_TIME;
 		context.task(Model.claimSpawn(context.shard.db, spawn['#user']!, id, ageTime), entry => {
 			if (entry) {
@@ -171,7 +171,7 @@ registerObjectPreTickProcessor(PowerCreep, (creep, context) => {
 	flushActionLog(creep['#actionLog'], context);
 	const saying = creep['#saying'];
 	if (saying) {
-		if (saying.time <= Game.time - kRetainActionsTime) {
+		if (saying.time <= Game.time - kRetainActionsTime + 1) {
 			creep['#saying'] = undefined;
 			context.didUpdate();
 		} else {
@@ -192,7 +192,7 @@ registerObjectTickProcessor(PowerCreep, (creep, context) => {
 		creep.tickRawDamage = 0;
 		context.didUpdate();
 	}
-	if (creep.ticksToLive === 0 || creep.hits <= 0) {
+	if (expiresNextTick(creep['#ageTime']) || creep.hits <= 0) {
 		killPowerCreep(creep, context);
 	} else if (isBorder(creep.pos.x, creep.pos.y)) {
 		teleportCreep(creep, borderExitPosition(creep.pos), context);

@@ -58,7 +58,7 @@ export function create(pos: RoomPosition) {
 		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});
 	container['#nextDecayTime'] =
-		Game.time + (ownedController === undefined ? C.CONTAINER_DECAY_TIME : C.CONTAINER_DECAY_TIME_OWNED) - 1;
+		Game.time + (ownedController === undefined ? C.CONTAINER_DECAY_TIME : C.CONTAINER_DECAY_TIME_OWNED);
 	return container;
 }
 

@@ -27,8 +27,9 @@ bindRenderer(RoomObject, object => {
 export function renderActionLog(actionLog: ActionLog, previousTime: number | undefined): RenderedActionLog {
 	return Fn.pipe(
 		actionLog,
-		$$ => Fn.filter($$, previousTime === undefined
-			? action => action.time === Game.time
-			: action => action.time > previousTime),
+		$$ => Fn.filter($$,
+			previousTime === undefined
+				? action => action.time === Game.time
+				: action => action.time > previousTime),
 		$$ => Fn.fromEntries($$, action => [ action.type, { x: action.x, y: action.y } ]));
 }

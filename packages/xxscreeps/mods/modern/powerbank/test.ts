@@ -117,7 +117,7 @@ describe('mods/modern/powerbank', () => {
 				assert.strictEqual(lookForStructures(room, C.STRUCTURE_POWER_BANK).length, 0);
 				const ruin = room['#lookFor'](C.LOOK_RUINS)[0]!;
 				assert.strictEqual(ruin.store[C.RESOURCE_POWER], bankPower);
-				assert.strictEqual(ruin.ticksToDecay, C.RUIN_DECAY_STRUCTURES.powerBank);
+				assert.strictEqual(ruin.ticksToDecay, C.RUIN_DECAY_STRUCTURES.powerBank! - 1);
 				assert.strictEqual(ruin.structureType, C.STRUCTURE_POWER_BANK);
 				assert.strictEqual(Game.creeps.attacker?.hits, 100 - C.ATTACK_POWER * C.POWER_BANK_HIT_BACK);
 				const log = room.getEventLog();
@@ -186,7 +186,7 @@ describe('mods/modern/powerbank', () => {
 			assert.ok(bank.power >= C.POWER_BANK_CAPACITY_MIN && bank.power < 2 * C.POWER_BANK_CAPACITY_MAX,
 				'power within capacity range');
 			assert.strictEqual(bank.hits, C.POWER_BANK_HITS);
-			assert.strictEqual(bank['#nextDecayTime'], shard.time + C.POWER_BANK_DECAY);
+			assert.strictEqual(bank['#nextDecayTime'], shard.time + C.POWER_BANK_DECAY - 1);
 			// The room's timer advanced into the future instead of staying due.
 			const due = await dueRooms.entriesForTest(shard);
 			const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
