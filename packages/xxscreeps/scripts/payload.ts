@@ -122,35 +122,48 @@ export async function exportPayload(shard: Shard): Promise<ExportedPayload> {
 }
 
 function importRoom(roomName: string, info: PayloadRoom) {
+	// A layout that isn't 50 by 50 would otherwise import: tiles it never spells read back as plain
+	// ground, and `TerrainWriter` indexes by `yy * 50 + xx`, so a long row spills into the next.
+	if (info.layout.length !== 50) {
+		throw new Error(`Room ${roomName} holds ${info.layout.length} layout rows, expected 50`);
+	}
 	const terrain = new TerrainWriter();
 	const room = new Room();
 	room.name = roomName;
-	const metadata = (info.objects ?? []).values();
-	for (const [ yy, line ] of info.layout.entries()) {
-		for (const [ xx, character ] of [ ...line as Iterable<string> ].entries()) {
-			const value = terrainValues[terrainMask.indexOf(character)];
-			if (value !== undefined) {
-				terrain.set(xx, yy, value);
-				continue;
-			}
-			const codec = codecs.get(character);
-			if (codec === undefined) {
-				throw new Error(`Room ${roomName} holds unregistered character '${character}'`);
-			}
-			const meta = metadata.next().value;
-			if (meta === undefined) {
-				throw new Error(`Room ${roomName} holds more markers than metadata`);
-			}
-			terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-			const decoded = codec.decode(meta, room);
-			const objects = Array.isArray(decoded) ? decoded : [ decoded ] as const;
-			objects[0].id = meta.id;
-			for (const object of objects) {
-				object.pos = new RoomPosition(xx, yy, roomName);
-				object['#posId'] = object.pos['#id'];
-				room['#insertObject'](object);
-			}
+	let itemIndex = 0;
+	const metadata = info.objects ?? [];
+	const entries = Fn.transform(info.layout.entries(), ([ yy, line ]) => {
+		if (line.length !== 50) {
+			throw new Error(`Room ${roomName} row ${yy} holds ${line.length} characters, expected 50`);
 		}
+		return Fn.map(line as Iterable<string>, (character, xx) => ({ xx, yy, character }));
+	});
+	for (const { xx, yy, character } of entries) {
+		const value = terrainValues[terrainMask.indexOf(character)];
+		if (value !== undefined) {
+			terrain.set(xx, yy, value);
+			continue;
+		}
+		const codec = codecs.get(character);
+		if (codec === undefined) {
+			throw new Error(`Room ${roomName} holds unregistered character '${character}'`);
+		}
+		const meta = metadata[itemIndex++];
+		if (meta === undefined) {
+			throw new Error(`Room ${roomName} holds more markers than metadata`);
+		}
+		terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
+		const decoded = codec.decode(meta, room);
+		const objects = Array.isArray(decoded) ? decoded : [ decoded ] as const;
+		objects[0].id = meta.id;
+		for (const object of objects) {
+			object.pos = new RoomPosition(xx, yy, roomName);
+			object['#posId'] = object.pos['#id'];
+			room['#insertObject'](object);
+		}
+	}
+	if (metadata[itemIndex] !== undefined) {
+		throw new Error(`Room ${roomName} holds more metadata than markers`);
 	}
 	room['#flushObjects'](null);
 	return { room, terrain };

@@ -363,4 +363,26 @@ describe('scripts/payload', () => {
 		assert.ok(payload.W9N9?.layout.some(line => line.includes('@')));
 		assert.strictEqual(payload.W9N9?.objects?.some(object => object.id === spawn?.id), false);
 	}));
+
+	const plainLayout = () => [ ...Fn.map(Fn.range(50), () => ' '.repeat(50)) ];
+
+	test('rejects a layout that miscounts its rows', () => {
+		const short = plainLayout().slice(0, 49);
+		assert.throws(() => importPayload({ W0N0: { layout: short } }), /W0N0 holds 49 layout rows/);
+		const long = [ ...plainLayout(), ' '.repeat(50) ];
+		assert.throws(() => importPayload({ W0N0: { layout: long } }), /W0N0 holds 51 layout rows/);
+	});
+
+	test('rejects a row that miscounts its characters', () => {
+		for (const width of [ 10, 60 ]) {
+			const layout = plainLayout();
+			layout[10] = ' '.repeat(width);
+			assert.throws(() => importPayload({ W0N0: { layout } }), new RegExp(`W0N0 row 10 holds ${width} characters`));
+		}
+	});
+
+	test('rejects metadata no marker claimed', () => {
+		const room = { layout: plainLayout(), objects: [ { id: 'deadbeef' } ] };
+		assert.throws(() => importPayload({ W0N0: room }), /W0N0 holds more metadata than markers/);
+	});
 });
