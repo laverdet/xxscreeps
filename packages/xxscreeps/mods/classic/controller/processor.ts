@@ -1,15 +1,13 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { saveAction } from 'xxscreeps/game/object.js';
+import { expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/classic/creep/creep.js';
-import { checkActiveStructures } from 'xxscreeps/mods/classic/structure/structure.js';
-import { upsertNotification } from 'xxscreeps/mods/meta/notifications/model.js';
+import { kCoalesceForever, sendNotification } from 'xxscreeps/mods/meta/notifications/transport.js';
 import * as C from 'xxscreeps:mods/constants';
-import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
+import { StructureController, checkActivateSafeMode, checkUnclaim, resetController, updateRoomStatus } from './controller.js';
 import * as CreepLib from './creep.js';
 import { controlledRoomsKey, incrementGlobalControlLevel, insertControlledRoom, insertReservedRoom, removeControlledRoom, removeReservedRoom } from './model.js';
 
@@ -26,22 +24,12 @@ export function claim(context: ProcessorContext, controller: StructureController
 }
 
 export function release(context: ProcessorContext, controller: StructureController) {
-	const { room } = controller;
-	const userId = room['#user'];
+	const userId = controller.room['#user'];
 	if (userId != null) {
 		const remove = controller.level > 0 ? removeControlledRoom : removeReservedRoom;
 		context.task(remove(context.shard, userId, controller.room.name));
 	}
-	controller['#downgradeTime'] = 0;
-	controller['#progress'] = 0;
-	controller['#reservationEndTime'] = 0;
-	controller['#safeModeCooldownTime'] = 0;
-	controller['#user'] = null;
-	// TODO: Power needs to be moved to the powercreep mod
-	controller.isPowerEnabled = false;
-	controller.safeModeAvailable = 0;
-	room['#safeModeUntil'] = 0;
-	updateRoomStatus(room, 0, null);
+	resetController(controller);
 	context.didUpdate();
 }
 
@@ -52,20 +40,6 @@ export function reserve(context: ProcessorContext, controller: StructureControll
 	}
 	controller['#reservationEndTime'] = endTime;
 	context.didUpdate();
-}
-
-/**
- * Update room owner and/or level, and notify all objects of the change
- */
-function updateRoomStatus(room: Room, level: number, userId: string | null | undefined) {
-	room['#level'] = level;
-	room['#user'] = userId ?? null;
-	// `#immediateObjects` avoids `#flushObjects` mid-Tick: that mutates `#objects` while the engine
-	// processor's Tick loop is iterating it.
-	for (const object of room['#immediateObjects']()) {
-		object['#roomStatusDidChange'](level, userId);
-	}
-	checkActiveStructures(room);
 }
 
 export type ControllerIntents = typeof intents;
@@ -84,7 +58,7 @@ const intents = [
 				controller['#reservationEndTime'] = reservation - effect * C.CONTROLLER_RESERVE;
 			} else {
 				controller['#downgradeTime'] -= effect * C.CONTROLLER_CLAIM_DOWNGRADE;
-				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
+				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE;
 			}
 			saveAction(creep, 'attack', controller.pos);
 			appendEventLog(controller.room, {
@@ -150,8 +124,9 @@ const intents = [
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			const power = creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
 			const reservationEndTime = controller['#reservationEndTime'];
+			// A renewal adds `power`; only a fresh reservation starts from `gameTime + 1`.
 			const endTime = reservationEndTime
-				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power + 1)
+				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power)
 				: Game.time + power + 1;
 			reserve(context, controller, creep['#user'], endTime);
 			saveAction(creep, 'reserveController', controller.pos);
@@ -209,7 +184,7 @@ const intents = [
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
 					const message = `Your Controller in room ${controller.room.name} has been upgraded to level ${level}.`;
-					context.task(upsertNotification(context.shard, controller['#user']!, 'msg', message, 0));
+					context.task(sendNotification(context.shard, controller['#user']!, 'msg', message, kCoalesceForever));
 					updateRoomStatus(controller.room, level, controller['#user']);
 				}
 			}
@@ -229,8 +204,8 @@ const intents = [
 	registerIntentProcessor(StructureController, 'activateSafeMode', {}, (controller, context) => {
 		if (checkActivateSafeMode(controller) === C.OK) {
 			--controller.safeModeAvailable;
-			controller.room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION - 1;
-			controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
+			controller.room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+			controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN;
 			context.didUpdate();
 		}
 	}),
@@ -246,7 +221,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 	if (controller.level === 0) {
 		const reservationEndTime = controller['#reservationEndTime'];
 		if (reservationEndTime) {
-			if (reservationEndTime <= Game.time) {
+			if (reservationEndTime <= Game.time + 1) {
 				release(context, controller);
 			} else {
 				context.wakeAt(reservationEndTime);
@@ -257,7 +232,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		const upgradePower = controller.upgradePowerThisTick ?? 0;
 		controller.upgradePowerThisTick = 0;
 		if (ticksToDowngrade === undefined) {
-			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
+			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! + 1;
 			context.didUpdate();
 		} else if (upgradePower > 0) {
 			controller['#downgradeTime'] = 1 + Math.min(
@@ -266,7 +241,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			context.task(incrementGlobalControlLevel(context.shard, controller['#user']!, upgradePower));
 			context.incrementRoomStat?.(controller['#user'], 'energyControl', upgradePower);
 			context.didUpdate();
-		} else if (ticksToDowngrade === 0) {
+		} else if (expiresNextTick(controller['#downgradeTime'])) {
 			const { room } = controller;
 			const userId = controller['#user']!;
 			// The new level is not written to the room here. `release` reads the current level to tell
@@ -275,19 +250,19 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			const level = controller.level - 1;
 			controller.safeModeAvailable = 0;
 			const message = `Your Controller in room ${room.name} has been downgraded to level ${level} due to absence of upgrading activity!`;
-			context.task(upsertNotification(context.shard, userId, 'msg', message, 0));
+			context.task(sendNotification(context.shard, userId, 'msg', message, kCoalesceForever));
 			if (level === 0) {
 				release(context, controller);
 			} else {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[level]! * 0.9);
-				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
+				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN;
 				updateRoomStatus(controller.room, level, controller['#user']);
 			}
 			context.didUpdate();
 		} else if (ticksToDowngrade === PRE_DOWNGRADE_WARNING_TICKS) {
 			const message = `Attention! Your Controller in room ${controller.room.name} will be downgraded to level ${controller.level - 1} in 3000 ticks (~2 hours)! Upgrade it to prevent losing of this room. <a href='http://support.screeps.com/hc/en-us/articles/203086021-Territory-control'>Learn more</a>`;
-			context.task(upsertNotification(context.shard, controller['#user']!, 'msg', message, 0));
+			context.task(sendNotification(context.shard, controller['#user']!, 'msg', message, kCoalesceForever));
 		}
 		context.wakeAt(controller['#downgradeTime']);
 	}

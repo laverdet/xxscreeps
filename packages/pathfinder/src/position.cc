@@ -188,7 +188,7 @@ using namespace screeps;
 template <>
 struct formatter<world_position_t> : formatter<std::string> {
 		using formatter<std::string>::format;
-		auto format(world_position_t pos, std::format_context& context) const {
+		constexpr auto format(world_position_t pos, std::format_context& context) const {
 			return format(std::format("world_position_t({}, {}, {})", pos.room(), pos.xx % 50, pos.yy % 50), context);
 		}
 };
@@ -196,7 +196,7 @@ struct formatter<world_position_t> : formatter<std::string> {
 template <>
 struct formatter<indexed_position_t> : formatter<std::string> {
 		using formatter<std::string>::format;
-		auto format(indexed_position_t pos, std::format_context& context) const {
+		constexpr auto format(indexed_position_t pos, std::format_context& context) const {
 			return format(std::format("indexed_position_t({}, {}, {}, {})", pos.room(), *pos.room_index, pos.xx % 50, pos.yy % 50), context);
 		}
 };

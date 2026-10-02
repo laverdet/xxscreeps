@@ -19,10 +19,11 @@ import { conflicts, decodeProps, encodeProps } from './placement.js';
 // so it lives in the shared `db.data` store next to the other per-user records — `active.shard`
 // says which shard a placement points at.
 //
-// With `decorations.grantAll` (the default) the whole catalog is owned by everybody and no grant is
-// read from the store at all — the natural setup for a private server, where decorations are a
-// customisation option rather than something to earn. Explicit grants are still written and kept;
-// they take effect once `grantAll` is turned off. Placements are stored either way.
+// Ownership is earned or handed out: a user owns what `xxscreeps manage decoration grant` wrote for
+// them, and nothing else. With `decorations.grantAll` the whole catalog is owned by everybody
+// instead and no grant is read from the store at all — a private server treating decorations as a
+// customisation option rather than something to earn. Explicit grants are still written and kept
+// while it is on; they take effect again once it is off. Placements are stored either way.
 //
 // A placement made while `grantAll` is on has no stored grant behind it. Turning the flag off
 // strands it — invisible everywhere, unreachable from the client — until `xxscreeps manage
@@ -47,7 +48,7 @@ const shardIndexKey = (shardName: string) => `decorations/${shardName}`;
 /** set: `userId/itemId` of the creep decorations, which follow their owner instead of a room. */
 const globalIndexKey = 'decorations/global';
 
-export const grantAll = () => config.decorations?.grantAll ?? true;
+export const grantAll = () => config.decorations?.grantAll ?? false;
 
 /**
  * Announces that what is placed in a room changed, so open room sockets re-read it. Creep

@@ -3,7 +3,7 @@ import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { createRoomObject } from 'xxscreeps/game/object.js';
+import { createRoomObject, expiresNextTick } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -13,7 +13,7 @@ import { makeSectorRadiusPredicate } from 'xxscreeps/mods/modern/sector/sector.j
 import { shuffledSquare } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
-import { scheduleSector } from './model.js';
+import { dueSectors } from './model.js';
 
 // The first wall position in 5..44, in random order, with at least one non-wall neighbor (incl.
 // diagonals), inside the sector's 250-square radius, and 2 squares clear of any other room object.
@@ -43,14 +43,14 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 	const cooldown = Math.ceil(C.DEPOSIT_EXHAUST_MULTIPLY * deposit['#harvested'] ** C.DEPOSIT_EXHAUST_POW);
 	deposit.lastCooldown = cooldown;
 	if (cooldown > 1) {
-		deposit['#cooldownTime'] = Game.time + cooldown - 1;
+		deposit['#cooldownTime'] = Game.time + cooldown;
 	}
 	deposit['#nextDecayTime'] = Game.time + C.DEPOSIT_DECAY_TIME;
 	return amount;
 });
 
 registerObjectTickProcessor(Deposit, (deposit, context) => {
-	if (deposit.ticksToDecay === 0) {
+	if (expiresNextTick(deposit['#nextDecayTime'])) {
 		// Decay just freed throughput in the owning sector — of the 1–4 candidate sectors for
 		// this room, the one whose 250-square radius contains the position. Score 0 = due
 		// immediately; the evaluator excludes deposits at their decay tick from the tally, so
@@ -60,7 +60,7 @@ registerObjectTickProcessor(Deposit, (deposit, context) => {
 		const owning =
 			sectors.find(sectorName => makeSectorRadiusPredicate(sectorName, roomName, sectors)(deposit.pos.x, deposit.pos.y));
 		if (owning !== undefined) {
-			context.task(scheduleSector(context.shard, owning, 0, { earliest: true }));
+			context.task(dueSectors.schedule(context.shard, owning, 0, { earliest: true }));
 		}
 		deposit.room['#removeObject'](deposit);
 		context.didUpdate();

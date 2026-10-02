@@ -51,6 +51,7 @@ const javaScriptRules = {
 	'no-native-reassign': 'warn',
 	'no-negated-condition': 'warn',
 	'no-negated-in-lhs': 'warn',
+	'no-nested-ternary': 'warn',
 	'no-new-func': 'warn',
 	'no-new-wrappers': 'warn',
 	'no-new': 'warn',

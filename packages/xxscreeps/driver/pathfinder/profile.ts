@@ -14,7 +14,7 @@ import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
 
 const iterations = Number(process.argv.at(-1)) || 1;
 const log = process.argv.includes('--log');
-const expectedResult = '49872482';
+const expectedResult = 'cb11d874';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -134,15 +134,15 @@ if (process.argv.includes('--with-sandbox')) {
 	const realm = expect(await agent.createRealm());
 	const hash = crypto.createHash('sha256');
 	const hook = expect(await realm.createCapability(
-		() => ({
-			update: result => {
+		{
+			update: (result: unknown) => {
 				const string = String(result);
 				hash.update(string);
 				if (log) {
 					console.log(util.inspect(JSON.parse(string), { depth: null, maxArrayLength: null }));
 				}
 			},
-		}),
+		},
 		{ origin: 'xxscreeps:pathfinder' }));
 	const resolver = async (specifier: string, referrer?: string) => {
 		switch (specifier) {

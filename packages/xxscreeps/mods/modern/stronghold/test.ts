@@ -124,21 +124,21 @@ describe('mods/modern/stronghold', () => {
 			},
 		});
 
-		test('clears the deploy timer the tick after it elapses', () => deployBoundary(async ({ player, tick }) => {
-			// Game.time === deployTime: final invulnerable tick, `ticksToDeploy === 0`.
-			await tick(2);
-			await player('100', Game => {
-				const core = findCore(Game);
-				assert.strictEqual(Game.time, 2);
-				assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
-				assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 } ]);
-			});
-			// Game.time === deployTime + 1: the elapsed timer deploys the stronghold, swapping
-			// invulnerability for a collapse timer. Reading the expiry getters must not throw.
+		test('deploys as the deploy timer elapses', () => deployBoundary(async ({ player, tick }) => {
+			// Game.time === deployTime - 1: final invulnerable tick, `ticksToDeploy === 1`.
 			await tick();
 			await player('100', Game => {
 				const core = findCore(Game);
-				assert.strictEqual(Game.time, 3);
+				assert.strictEqual(Game.time, 1);
+				assert.strictEqual(core.ticksToDeploy, 1, 'invulnerable through the last countdown tick');
+				assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 1 } ]);
+			});
+			// Game.time === deployTime: the stronghold is deployed, swapping invulnerability for a
+			// collapse timer. Reading the expiry getters must not throw.
+			await tick();
+			await player('100', Game => {
+				const core = findCore(Game);
+				assert.strictEqual(Game.time, 2);
 				assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared after it elapses');
 				const effects = core.effects!;
 				assert.strictEqual(effects.length, 1, 'a deployed core reports only the collapse timer');
@@ -182,7 +182,7 @@ describe('mods/modern/stronghold', () => {
 			await tick();
 			await peekRoom('W1N1', (room, Game) => {
 				const controller = room.controller!;
-				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE + 1;
+				const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
 				assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
 				assert.strictEqual(room['#user'], kInvaderUserId, 'room user becomes 2 once reserved');
 				const core = findRoomCore(room)!;
@@ -240,11 +240,11 @@ describe('mods/modern/stronghold', () => {
 			await tick();
 			await peekRoom('W1N1', (room, Game) => {
 				const controller = room.controller!;
-				const expiry = Game.time + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
+				const expiry = Game.time - 1 + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
 				assert.strictEqual(controller['#downgradeTime'], expiry);
 				const invulnerability = controller.effects?.find(effect => effect.effect === C.EFFECT_INVULNERABILITY);
 				assert.ok(invulnerability, 'controller should report EFFECT_INVULNERABILITY after upgradeController');
-				assert.strictEqual(invulnerability.ticksRemaining, C.INVADER_CORE_CONTROLLER_DOWNGRADE);
+				assert.strictEqual(invulnerability.ticksRemaining, C.INVADER_CORE_CONTROLLER_DOWNGRADE - 1);
 			});
 		}));
 
@@ -320,6 +320,90 @@ describe('mods/modern/stronghold', () => {
 					assert.strictEqual(room.find(C.FIND_RUINS).length, 1, 'damage-destroy leaves a Ruin');
 					const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 					assert.ok(destroyed, 'damage-destroy emits EVENT_OBJECT_DESTROYED');
+				});
+			}));
+
+		const stampedThenKilled = (stamp: (core: StructureInvaderCore) => void) => simulate({
+			W1N1: room => {
+				const core = createInvaderCore(corePos, 2, 0);
+				core.hits = 1;
+				stamp(core);
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		const lootOfKilledCore = (scene: ReturnType<typeof stampedThenKilled>) => scene(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.killer!.attack(findCore(Game)), C.OK);
+			});
+			await tick();
+			return peekRoom('W1N1', room => {
+				const [ ruin ] = room.find(C.FIND_RUINS);
+				assert.ok(ruin, 'damage-destroy leaves a Ruin');
+				return Object.entries(ruin.store);
+			});
+		});
+
+		// The first four links of the metal chain, which is as far as a bunker3 core's reward level
+		// reaches, against the density each contributes toward `coreAmounts[3]`.
+		const metalDensity: Record<string, number> = {
+			[C.RESOURCE_ALLOY]: 10,
+			[C.RESOURCE_TUBE]: 220,
+			[C.RESOURCE_FIXTURES]: 1400,
+			[C.RESOURCE_FRAME]: 5100,
+		};
+
+		test('damage-destroy loots the ruin from the deposit chain', async () => {
+			const loot = await lootOfKilledCore(stampedThenKilled(core => {
+				core['#templateName'] = 'bunker3';
+				core['#depositType'] = 'metal';
+			}));
+			assert.ok(loot.length > 0, 'the ruin carries loot');
+			for (const [ resource, amount ] of loot) {
+				assert.ok(metalDensity[resource] !== undefined, `${resource} is outside the metal chain a bunker3 core reaches`);
+				assert.ok(amount > 0, `${resource} is looted in a usable amount`);
+			}
+			// Whichever resource rolls last absorbs the remainder, so the total lands within half of
+			// the largest participating density.
+			const weighted = Fn.accumulate(loot, ([ resource, amount ]) => amount * metalDensity[resource]!);
+			assert.ok(Math.abs(weighted - 60000) <= 5100 / 2, `weighted loot ${weighted} lands on the reward level's amount`);
+		});
+
+		test('damage-destroy of a core with no deposit type leaves an empty ruin', async () => {
+			const loot = await lootOfKilledCore(stampedThenKilled(core => {
+				core['#templateName'] = 'bunker3';
+			}));
+			assert.deepStrictEqual(loot, [], 'a core with no deposit type rolls no loot');
+		});
+
+		// A core that took over the room controller, then killed by damage rather than left to
+		// collapse: the controller is released to neutral all the same.
+		const ownedThenKilled = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = kInvaderUserId;
+				room.controller!['#user'] = kInvaderUserId;
+				room.controller!['#downgradeTime'] = 1000;
+				room.controller!['#upgradeInvulnerableUntil'] = 1000;
+				const core = createInvaderCore(corePos, 2, 0);
+				core.hits = 1;
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		test('damage-destroy of a controller-owning core releases the controller to neutral',
+			() => ownedThenKilled(async ({ player, tick, peekRoom }) => {
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.killer!.attack(findCore(Game)), C.OK);
+				});
+				await tick();
+				await peekRoom('W1N1', room => {
+					assert.strictEqual(findRoomCore(room), undefined, 'core should be removed');
+					assert.strictEqual(room['#user'], null, 'room ownership released');
+					assert.strictEqual(room.controller?.level, 0, 'controller downgraded to neutral');
+					assert.strictEqual(room.controller.effects, undefined, 'controller invulnerability cleared');
 				});
 			}));
 	});
@@ -455,8 +539,8 @@ describe('mods/modern/stronghold', () => {
 		const corePos = new RoomPosition(25, 25, 'W1N1');
 		const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
 
-		// The deploy timer elapses the tick after `deployTime` (Game.time === 2); `activateNPC` keeps the
-		// room processing across the boundary.
+		// The stronghold is deployed at `deployTime` (Game.time === 1); `activateNPC` keeps the room
+		// processing across the boundary.
 		const deployScene = simulate({
 			W1N1: room => {
 				const core = createInvaderCore(corePos, 2, 1);
@@ -544,7 +628,7 @@ describe('mods/modern/stronghold', () => {
 		});
 
 		test('deploy crushes player objects on template tiles', () => crushScene(async ({ tick, peekRoom }) => {
-			await tick(2);
+			await tick();
 			await peekRoom('W1N1', room => {
 				// The creep dies where it stood — once, though its tile carries three template entries.
 				assert.strictEqual(room.find(C.FIND_CREEPS).length, 0, 'a creep on a template tile dies');
@@ -584,6 +668,33 @@ describe('mods/modern/stronghold', () => {
 				assert.strictEqual(room.find(C.FIND_RUINS).length, 0, 'collapse leaves no Ruin');
 				const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 				assert.strictEqual(destroyed, undefined, 'collapse emits no EVENT_OBJECT_DESTROYED');
+			});
+		}));
+
+		// A peer killed long before the stronghold would have collapsed. Its ruin outlives `RUIN_DECAY`
+		// so the spoils of a raided stronghold stay put for as long as the stronghold itself would have.
+		const peerCollapseTime = 50000;
+		const peerKilledEarly = simulate({
+			W1N1: room => {
+				const container = createContainer(corePos);
+				container['#collapseTime'] = peerCollapseTime;
+				container.hits = 1;
+				room['#insertObject'](container);
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
+			},
+		});
+
+		test('the ruin of a damage-destroyed peer decays with the stronghold', () => peerKilledEarly(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				const [ container ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER);
+				assert.ok(container, 'peer is visible to the player');
+				assert.strictEqual(Game.creeps.killer!.attack(container), C.OK);
+			});
+			await tick();
+			await peekRoom('W1N1', (room, game) => {
+				const [ ruin ] = room.find(C.FIND_RUINS);
+				assert.ok(ruin, 'damage-destroy leaves a Ruin');
+				assert.strictEqual(ruin.ticksToDecay, peerCollapseTime - game.time, 'the ruin lasts until the collapse it was carrying');
 			});
 		}));
 

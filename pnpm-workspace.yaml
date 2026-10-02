@@ -10,14 +10,16 @@ allowBuilds:
   ivm-inspect: true
 
 minimumReleaseAgeExclude:
-  - '@xxscreeps/pathfinder-darwin-arm64@0.4.3'
-  - '@xxscreeps/pathfinder-darwin-x64@0.4.3'
-  - '@xxscreeps/pathfinder-linux-arm64-gnu@0.4.3'
-  - '@xxscreeps/pathfinder-linux-arm64-musl@0.4.3'
-  - '@xxscreeps/pathfinder-linux-x64-gnu@0.4.3'
-  - '@xxscreeps/pathfinder-linux-x64-musl@0.4.3'
-  - '@xxscreeps/pathfinder-win32-x64@0.4.3'
-  - '@xxscreeps/pathfinder@0.4.3'
+  - '@auto_js/*'
+  - '@isolated-vm/*'
+  - '@xxscreeps/pathfinder-darwin-arm64'
+  - '@xxscreeps/pathfinder-darwin-x64'
+  - '@xxscreeps/pathfinder-linux-arm64-gnu'
+  - '@xxscreeps/pathfinder-linux-arm64-musl'
+  - '@xxscreeps/pathfinder-linux-x64-gnu'
+  - '@xxscreeps/pathfinder-linux-x64-musl'
+  - '@xxscreeps/pathfinder-win32-x64'
+  - '@xxscreeps/pathfinder'
 
 patchedDependencies:
   lodash-es: patches/lodash-es.patch

@@ -17,10 +17,6 @@ const kDefaultTtlHours = 24;
 // separator, so the address is whatever follows it.
 const kSeparator = ':';
 
-export function validateEmail(email: string) {
-	return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
-}
-
 /**
  * Build the confirmation link for `email`. It is rooted at `backend.publicUrl` rather than at the
  * origin of the request which triggered the mail: that origin is the `Host` header, so a forged one

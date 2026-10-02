@@ -90,4 +90,111 @@ class heap_t : private Compare, private Projection {
 		inplace_vector<value_type, Capacity> heap_;
 };
 
+// Dial's heap. Score overflow and underflows (due to heuristic weight) fallback to `heap_t`.
+template <class Type, class Projection, std::size_t Capacity, std::size_t Window = 256>
+class bucket_heap_t : private Projection {
+	public:
+		using value_type = Type;
+		using key_project = Projection;
+		using score_type = std::invoke_result_t<Projection, Type>;
+
+		explicit constexpr bucket_heap_t(key_project projection = {}) :
+				key_project{std::move(projection)} {
+			buckets_.fill(npos);
+		}
+
+		[[nodiscard]] constexpr auto empty() const -> bool { return bucket_size_ == 0 && overflow_.empty(); }
+		[[nodiscard]] constexpr auto key_proj() const -> const key_project& { return *this; }
+		[[nodiscard]] constexpr auto size() const -> std::size_t { return bucket_size_ + overflow_.size(); }
+
+		constexpr auto clear() -> void {
+			buckets_.fill(npos);
+			pool_.clear();
+			overflow_.clear();
+			free_ = npos;
+			bucket_size_ = 0;
+			base_ = 0;
+		}
+
+		[[nodiscard]] constexpr auto top() -> value_type {
+			if (bucket_size_ == 0) {
+				return overflow_.top();
+			}
+			settle();
+			if (!overflow_.empty()) {
+				auto overflow_top = overflow_.top();
+				if (key_proj()(overflow_top) < base_) {
+					return overflow_top;
+				}
+			}
+			return pool_[ buckets_[ bucket_of(base_) ] - 1 ].value;
+		}
+
+		constexpr auto pop() -> void {
+			if (bucket_size_ == 0) {
+				base_ = std::max(base_, key_proj()(overflow_.top()));
+				overflow_.pop();
+				return;
+			}
+			settle();
+			if (!overflow_.empty() && key_proj()(overflow_.top()) < base_) {
+				overflow_.pop();
+				return;
+			}
+			auto& head = buckets_[ bucket_of(base_) ];
+			auto index = std::exchange(head, pool_[ head - 1 ].next);
+			pool_[ index - 1 ].next = std::exchange(free_, index);
+			--bucket_size_;
+		}
+
+		constexpr auto push(value_type value) -> void {
+			auto key = key_proj()(value);
+			if (key < base_ || key - base_ >= score_type{Window}) {
+				overflow_.push(value);
+				return;
+			}
+			auto& head = buckets_[ bucket_of(key) ];
+			auto index = [ & ] {
+				if (free_ == npos) {
+					pool_.emplace_back(value, head);
+					return static_cast<index_type>(pool_.size());
+				} else {
+					auto index = std::exchange(free_, pool_[ free_ - 1 ].next);
+					pool_[ index - 1 ] = {value, head};
+					return index;
+				}
+			}();
+			head = index;
+			++bucket_size_;
+		}
+
+	private:
+		using index_type = std::uint32_t;
+		// 0 (which compares faster) is sentinel and positions are 1-based.
+		constexpr static auto npos = index_type{0};
+
+		struct node_t {
+				value_type value;
+				index_type next;
+		};
+
+		constexpr static auto bucket_of(std::integral auto key) -> std::size_t {
+			return static_cast<std::size_t>(key) % Window;
+		}
+
+		// invariant: non-empty
+		constexpr auto settle() -> void {
+			while (buckets_[ bucket_of(base_) ] == npos) {
+				++base_;
+			}
+		}
+
+		std::array<index_type, Window> buckets_;
+		inplace_vector<node_t, Capacity> pool_;
+		heap_t<Type, std::greater<>, Projection, Capacity / 8> overflow_;
+		index_type free_ = npos;
+		std::size_t bucket_size_ = 0;
+		score_type base_ = 0;
+};
+
 } // namespace screeps

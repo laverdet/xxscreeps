@@ -17,10 +17,12 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/meta/leaderboard',
 		'xxscreeps/mods/meta/messages',
 		'xxscreeps/mods/meta/notifications',
+		'xxscreeps/mods/meta/notify-cron',
 		'xxscreeps/mods/meta/stats',
 		'xxscreeps/mods/meta/visual',
 
 		'xxscreeps/mods/modern/deposit',
+		'xxscreeps/mods/modern/effects',
 		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/modern/nuker',
 		'xxscreeps/mods/modern/observer',
@@ -28,6 +30,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/powerspawn',
 		'xxscreeps/mods/modern/stronghold',
 
+		'xxscreeps/mods/mmo/operator',
 		'xxscreeps/mods/mmo/powercreep',
 		'xxscreeps/mods/mmo/wallstreet',
 

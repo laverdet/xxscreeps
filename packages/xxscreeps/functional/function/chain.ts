@@ -21,11 +21,11 @@ export function chain(
 	next: Nullable<AnyFn>,
 	combine: Combinator<AnyFn, AnyFn>,
 ): Nullable<AnyFn> {
-	return prev
-		? next
-			? combine(prev, next)
-			: prev
-		: next;
+	if (prev) {
+		return next ? combine(prev, next) : prev;
+	} else {
+		return next;
+	}
 }
 
 export function chainSequenceInto<Arg>(prev: (arg: Arg) => Arg, next: (arg: Arg) => Arg) {

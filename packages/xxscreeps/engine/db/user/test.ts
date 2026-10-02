@@ -16,6 +16,38 @@ describe('engine/db/user', () => {
 		}
 	});
 
+	test('an address is found from either side, however it was capitalized', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '400', 'MailUser', [ { provider: User.emailProvider, id: 'Mail@User.test' } ]);
+		assert.strictEqual(await User.findUserByEmail(db, 'mail@user.test'), '400');
+		assert.strictEqual(await User.findUserByEmail(db, 'MAIL@USER.TEST'), '400');
+		assert.strictEqual(await User.emailForUser(db, '400'), 'mail@user.test');
+	});
+
+	test('an address another account holds cannot be registered under a different case', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '401', 'FirstUser', [ { provider: User.emailProvider, id: 'shared@user.test' } ]);
+		await assert.rejects(() => User.create(db, '402', 'SecondUser',
+			[ { provider: User.emailProvider, id: 'Shared@User.test' } ]));
+	});
+
+	test('an account registered without an address has none', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '403', 'PlainUser');
+		assert.strictEqual(await User.emailForUser(db, '403'), null);
+		assert.strictEqual(await User.findUserByEmail(db, 'mail@user.test'), null);
+	});
+
+	test('checkEmail takes an address in any case and rejects a username', () => {
+		assert.strictEqual(User.checkEmail('mail@user.test'), true);
+		assert.strictEqual(User.checkEmail('John.Doe@Example.com'), true);
+		assert.strictEqual(User.checkEmail('MailUser'), false);
+		assert.strictEqual(User.checkEmail(`${'long'.repeat(64)}@user.test`), false);
+	});
+
 	test('removed user is no longer found', async () => {
 		await using testShard = await instantiateTestShard();
 		const { db } = testShard;

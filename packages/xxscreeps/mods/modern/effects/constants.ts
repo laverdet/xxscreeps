@@ -1,0 +1,1 @@
+export const EFFECT_INVULNERABILITY = 1001;

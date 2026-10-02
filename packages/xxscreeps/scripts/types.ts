@@ -484,8 +484,14 @@ function cleanTypeNode<Type extends ts.Node>(node: Type, enclosing: ts.Node): Ty
 						}
 					}
 				}
-				const fallback = node.qualifier
-					? ts.isQualifiedName(node.qualifier) ? node.qualifier.right.text : node.qualifier.text : 'never';
+				const { qualifier } = node;
+				const fallback = function() {
+					if (qualifier === undefined) {
+						return 'never';
+					} else {
+						return ts.isQualifiedName(qualifier) ? qualifier.right.text : qualifier.text;
+					}
+				}();
 				console.error(`warning: could not resolve import() type; emitted bare '${fallback}'`);
 				return ts.factory.createTypeReferenceNode(fallback, typeArguments);
 			}

@@ -16,7 +16,12 @@
                 "grantAll": {
                     "description": "Whether every user owns the whole decoration catalog. With this off, decorations must be handed out explicitly with `xxscreeps manage decoration grant`.",
                     "type": "boolean",
-                    "default": true
+                    "default": false
+                },
+                "inventory": {
+                    "description": "Whether players have a decoration inventory. With this off the client is never told the `inventory` feature exists, so it offers neither the inventory section nor the room view's decorations panel, and the routes which place one are not served. Decorations already placed are still rendered, and taking one down is still served.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "packs": {
                     "description": "Additional decoration packs to load. Each entry is a path to a `pack.json`, or to the directory holding one.",

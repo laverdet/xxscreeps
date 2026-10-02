@@ -162,7 +162,7 @@ using namespace screeps;
 template <>
 struct formatter<room_location_t> : formatter<std::string> {
 		using formatter<std::string>::format;
-		auto format(room_location_t room, std::format_context& context) const {
+		constexpr auto format(room_location_t room, std::format_context& context) const {
 			auto rx = room.xx - 0x80;
 			auto ry = room.yy - 0x80;
 			auto ww = rx < 0;

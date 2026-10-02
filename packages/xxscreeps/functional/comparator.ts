@@ -42,7 +42,11 @@ type PrimitiveComparable = bigint | boolean | string;
  * `numeric` so the types don't permit it in that case.
  */
 export function primitiveComparator<Type extends PrimitiveComparable>(left: Type, right: Type): number {
-	return left < right ? -1 : left === right ? 0 : 1;
+	if (left === right) {
+		return 0;
+	} else {
+		return left < right ? -1 : 1;
+	}
 }
 
 export const invertedPrimitiveComparator: <Type extends PrimitiveComparable>(left: Type, right: Type) => number =

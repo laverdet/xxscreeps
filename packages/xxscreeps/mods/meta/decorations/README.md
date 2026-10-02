@@ -216,8 +216,11 @@ was — the user's badge is a fact of its own, not a view onto the grant.
 decorations:
   # Load the pack bundled with the server. Default: true
   builtin: true
-  # Every user owns the whole catalog. Default: true
-  grantAll: true
+  # Every user owns the whole catalog, instead of only what they were granted. Default: false
+  grantAll: false
+  # Players have an inventory: the client's inventory section, the room view's decorations panel,
+  # and the routes which place one. Default: false
+  inventory: false
   # Placing a decoration requires controlling or reserving the room. Default: true
   requireRoomOwnership: true
   # Extra packs, as a path to a pack.yaml or the directory holding one
@@ -228,11 +231,24 @@ backend:
   assetBaseUrl: https://screeps.example.com
 ```
 
+`inventory` is the one which changes what the client is, and it is off unless you ask for it: the
+`inventory` feature gates both the client's inventory section and the room view's decorations panel,
+so a default server renders the decorations standing in its rooms while offering nobody a way to
+place one. The official season servers run exactly like that — their `/api/version` names no
+`inventory` feature and the room view draws decorations all the same. Turn it on for a server where
+players are meant to place their own.
+
+The routes go with the flag rather than merely the section: a server which offers no inventory
+should not take an activation from a client which asks for one anyway. Deactivation is the
+exception, and stays served either way — it only ever takes a decoration down, and what players
+placed before the flag was turned off has to stay reachable. `manage decoration` is no substitute:
+under `grantAll` those placements have no stored grant to revoke, so nothing but the route can reach
+them.
+
 ## Handing out decorations
 
-With `grantAll` (the default) there is nothing to do — everybody owns everything, and the ids the
-inventory reports name a decoration rather than a stored grant, so there is nothing to revoke either.
-With it off:
+Ownership is explicit by default: a user owns what they were given, and a fresh server has given
+nobody anything.
 
 ```sh
 xxscreeps manage decoration catalog
@@ -242,7 +258,9 @@ xxscreeps manage decoration revoke  <name|id> <itemId>
 xxscreeps manage decoration cleanup [name|id]
 ```
 
-Grants are stored either way, so turning `grantAll` off later leaves each user with exactly what
-they were given. What it does not leave them is the placements they made while ownership was
-implicit: those have no grant behind them, so they go invisible and nothing can reach them any more.
+With `grantAll` on there is nothing to hand out — everybody owns everything, and the ids the
+inventory reports name a decoration rather than a stored grant, so there is nothing to revoke
+either. Grants are stored either way, so turning it back off leaves each user with exactly what they
+were given. What it does not leave them is the placements they made while ownership was implicit:
+those have no grant behind them, so they go invisible and nothing can reach them any more.
 `decoration cleanup` deactivates them — for one user, or with no argument for all of them.

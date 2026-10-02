@@ -1,31 +1,56 @@
-import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import type { NotificationType } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { createHash } from 'node:crypto';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
-export type NotificationType = 'msg' | 'error';
-
-export type NotificationRow = {
+export interface NotificationRow {
 	user: string;
 	message: string;
 	date: number;
 	count: number;
 	type: NotificationType;
-};
+}
 
-// Sorted set: score = group due time (ms), member = rowId.
+export const hooks = makeHookRegistration<{
+	/**
+	 * Fired at most once per user per drain pass, with every row whose group deadline has elapsed
+	 * and after the user's `interval` cadence has been honored. Consumers which deliver
+	 * notifications somewhere — a mailer, a chat bridge, an in-game inbox — hang off this rather
+	 * than claiming the transport slot, which stores rows and admits only one owner. Rows are
+	 * removed once the batch has been handed out, whether or not a consumer accepted it.
+	 *
+	 * The drain runs on `main`, so register from a consumer's own `main.ts`. A registration in
+	 * `processor.ts` is the trap: the suite loads that slot, so the tests pass, but in production it
+	 * loads only in the processor worker and never fires. The fan-out is awaited inside the shard
+	 * tick, so a consumer which blocks on slow I/O holds up every player on the shard.
+	 */
+	deliver: (shard: Shard, userId: string, rows: readonly NotificationRow[]) => Promise<void>;
+}>();
+
+// Sorted set: score = the group deadline in ms; coalesce-forever rows score 0 and are always due.
+// Member = rowId.
 const userIndexKey = (userId: string) => `user/${userId}/notifications`;
 const rowKey = (userId: string, rowId: string) => `user/${userId}/notifications/${rowId}`;
 // Sorted set: score = ms when the user's next drain is due, member = userId.
 const dueUsersKey = 'notifications/dueUsers';
+// Cadence cursor for the drain. Global like `notifyPrefs` itself, so an N-shard server delivers
+// once per interval rather than once per interval per shard.
+const lastNotifyDateKey = (userId: string) => `user/${userId}/notifications/lastDate`;
+
+export const kDefaultIntervalMinutes = 60;
 
 function rowIdFor(type: NotificationType, timeGroup: number, message: string) {
 	return createHash('sha1').update(JSON.stringify([ type, timeGroup, message ])).digest('hex');
 }
 
-async function readRows(
-	shard: Shard, userId: string, ids: Iterable<string>,
-): Promise<{ id: string; row: NotificationRow }[]> {
-	return Fn.mapAwait(ids, async (id): Promise<{ id: string; row: NotificationRow }> => {
+interface IndexedRow {
+	id: string;
+	row: NotificationRow;
+}
+
+async function readRows(shard: Shard, userId: string, ids: Iterable<string>): Promise<IndexedRow[]> {
+	return Fn.mapAwait(ids, async (id): Promise<IndexedRow> => {
 		const fields = await shard.data.hGetAll(rowKey(userId, id));
 		return {
 			id,
@@ -40,28 +65,24 @@ async function readRows(
 	});
 }
 
-export async function flushNotifications(shard: Shard, userId: string) {
-	const ids = await shard.data.zRange(userIndexKey(userId), 0, -1);
-	await removeNotifications(shard, userId, ids);
-}
-
-// Rows whose group due time has elapsed (score ≤ `nowMs`).
-export async function getDueNotifications(
-	shard: Shard, userId: string, nowMs: number,
-): Promise<{ id: string; row: NotificationRow }[]> {
+// Paired with the ids the drain deletes them by.
+export async function getDueNotifications(shard: Shard, userId: string, nowMs: number) {
 	const ids = await shard.data.zRange(userIndexKey(userId), 0, nowMs, { by: 'SCORE' });
 	return readRows(shard, userId, ids);
 }
 
 export async function getAllRowsForTesting(shard: Shard, userId: string) {
-	const notifications = await getDueNotifications(shard, userId, Infinity);
-	return notifications.map(item => item.row);
+	const items = await getDueNotifications(shard, userId, Infinity);
+	return items.map(item => item.row);
 }
 
-// When the user's next group becomes due, or undefined if nothing is queued.
-export async function nextPendingDueAt(shard: Shard, userId: string): Promise<number | undefined> {
-	const head = await shard.data.zRangeWithScores(userIndexKey(userId), 0, 0);
-	return head[0]?.[0];
+export async function getLastNotifyDate(db: Database, userId: string): Promise<number> {
+	const value = await db.data.get(lastNotifyDateKey(userId));
+	return value === null ? 0 : Number(value);
+}
+
+export async function setLastNotifyDate(db: Database, userId: string, time: number) {
+	await db.data.set(lastNotifyDateKey(userId), String(time));
 }
 
 export async function removeNotifications(shard: Shard, userId: string, ids: string[]) {
@@ -74,16 +95,21 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
 
 // Pop users whose scheduled drain time has elapsed. Caller owns rescheduling via `scheduleUserDrain`.
 export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<string[]> {
-	const userIds = await shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' });
-	if (userIds.length > 0) {
-		await shard.data.zRem(dueUsersKey, userIds);
-	}
+	const [ userIds ] = await Promise.all([
+		shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' }),
+		shard.data.zRemRange(dueUsersKey, 0, nowMs),
+	]);
 	return userIds;
 }
 
 // Schedule a user's next drain, keeping the sooner of any existing entry.
 export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: number) {
 	await shard.data.zAdd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'LT' });
+}
+
+export async function nextPendingDueAt(shard: Shard, userId: string): Promise<number | undefined> {
+	const head = await shard.data.zRangeWithScores(userIndexKey(userId), 0, 0);
+	return head[0]?.[0];
 }
 
 /**
@@ -111,28 +137,21 @@ async function recordNotification(
 }
 
 /**
- * Persist a notification, coalescing within `groupInterval` minutes (clamped to [0, 1440]).
+ * Persist a notification, coalescing within `groupInterval` minutes. `Infinity` coalesces with
+ * every earlier occurrence of the same message and is due immediately; `0` never coalesces.
  * `message` and `groupInterval` are assumed already coerced by the caller.
- *
- * TODO: rows accumulate forever — no consumer prunes them, and the keyval layer doesn't yet
- * implement EXPIRE.
  */
 export async function upsertNotification(
 	shard: Shard, userId: string, type: NotificationType, message: string, groupInterval: number,
 ) {
 	const intervalMs = groupInterval * 60_000;
 	const now = Date.now();
-	const timeGroup = intervalMs > 0 ? Math.ceil(now / intervalMs) * intervalMs : now;
+	const timeGroup = function() {
+		if (intervalMs === Infinity) {
+			return 0;
+		} else {
+			return intervalMs > 0 ? Math.ceil(now / intervalMs) * intervalMs : now;
+		}
+	}();
 	await recordNotification(shard, userId, type, message, timeGroup, now);
-}
-
-/**
- * Engine-fired notification: one row per (user, type, message), count++ per call.
- * Used by attack/event handlers; `upsertNotification` is for `Game.notify` with a
- * user-supplied `groupInterval`.
- */
-export async function sendNotification(
-	shard: Shard, userId: string, type: NotificationType, message: string,
-) {
-	await recordNotification(shard, userId, type, message, 0, Date.now());
 }

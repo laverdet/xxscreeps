@@ -3,6 +3,6 @@ import * as types from 'xxscreeps/tsroot.js';
 
 export const manifest: Manifest = {
 	dependencies: [ 'xxscreeps/mods/classic/creep', 'xxscreeps/mods/classic/structure' ],
-	provides: [ 'backend', 'driver', 'game', 'main', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'driver', 'game', 'processor', 'schema', 'test' ],
 	types,
 };

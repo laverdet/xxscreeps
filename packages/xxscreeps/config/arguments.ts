@@ -2,14 +2,23 @@ import { ArgumentParser } from 'argparse';
 
 export function checkArguments<Type extends {
 	argv?: true;
+	array?: readonly string[];
 	boolean?: readonly string[];
 	string?: readonly string[];
 }>(options: Type):
 	Record<NonNullable<Type['boolean']>[number], boolean> &
+	Partial<Record<NonNullable<Type['array']>[number], string[]>> &
 	Partial<Record<NonNullable<Type['string']>[number], string>> & {
 		argv: Type['argv'] extends true ? (string | undefined)[] : never;
 	} {
 	const parser = new ArgumentParser();
+	for (const key of options.array ?? []) {
+		parser.add_argument(`--${key}`, {
+			dest: key,
+			nargs: '+',
+			type: 'str',
+		});
+	}
 	for (const key of options.boolean ?? []) {
 		parser.add_argument(`--${key}`, {
 			action: 'store_true',
@@ -20,7 +29,6 @@ export function checkArguments<Type extends {
 	for (const key of options.string ?? []) {
 		parser.add_argument(`--${key}`, {
 			dest: key,
-			nargs: '?',
 			type: 'str',
 		});
 	}

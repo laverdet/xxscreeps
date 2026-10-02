@@ -17,9 +17,19 @@ const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
 export const infoKey = (userId: string) => `user/${userId}`;
 
+export const emailProvider = 'email';
+
 // Field on the user info hash holding an address awaiting confirmation. Distinct from the `email`
 // provider, which only ever holds a *confirmed* address.
 const pendingEmailField = 'pendingEmail';
+
+// Every world needs these; the processor discounts them when sizing its worker pool from the
+// `users` set.
+export const npcUsers = {
+	1: 'Screeps',
+	2: 'Invader',
+	3: 'Source Keeper',
+};
 
 interface BackendUserInfo {
 	username: string;
@@ -38,8 +48,16 @@ export function checkUsername(username: string) {
 	);
 }
 
+export function checkEmail(email: string) {
+	return email.length <= 254 && /^[a-z0-9._%'+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email);
+}
+
 function flattenUsername(username: string) {
 	return username.replace(/[-_ ]/g, '').toLowerCase();
+}
+
+function flattenEmail(email: string) {
+	return email.toLowerCase();
 }
 
 export async function create(db: Database, userId: string, username: string, providers: { provider: string; id: string }[] = []) {
@@ -48,7 +66,8 @@ export async function create(db: Database, userId: string, username: string, pro
 	// Check for existing associations
 	const allProviders = [
 		{ provider: 'username', id: flattenUsername(username) },
-		...providers,
+		...Fn.map(providers, ({ provider, id }) =>
+			({ provider, id: provider === emailProvider ? flattenEmail(id) : id })),
 	];
 	const providerConflicts = await Promise.all(Fn.map(allProviders,
 		({ provider, id }) => db.data.hGet(providerMembersKey(provider), id)));
@@ -77,26 +96,27 @@ export async function create(db: Database, userId: string, username: string, pro
 }
 
 /**
- * Associate `email` as the user's confirmed `email` provider, replacing any address they had before.
+ * Associate an already flattened `email` as the user's confirmed `email` provider, replacing any
+ * address they had before.
  * The reverse lookup is claimed with `NX` so two accounts racing to confirm the same address cannot
  * both win it; returns `false` without writing when somebody else holds it.
  */
 async function associateEmail(db: Database, userId: string, email: string) {
 	const [ claimed, previous ] = await Promise.all([
-		db.data.hSet(providerMembersKey('email'), email, userId, { if: 'NX' }),
-		db.data.hGet(userProvidersKey(userId), 'email'),
+		db.data.hSet(providerMembersKey(emailProvider), email, userId, { if: 'NX' }),
+		emailForUser(db, userId),
 	]);
 	if (!claimed) {
 		// Somebody holds it — us, if this is a repeat confirmation, and otherwise not ours to take.
-		const holder = await db.data.hGet(providerMembersKey('email'), email);
+		const holder = await db.data.hGet(providerMembersKey(emailProvider), email);
 		if (holder !== userId) {
 			return false;
 		}
 	}
 	await Promise.all([
-		db.data.hSet(userProvidersKey(userId), 'email', email),
+		db.data.hSet(userProvidersKey(userId), emailProvider, email),
 		// Free the reverse lookup for a replaced address so it can be reused.
-		...previous !== null && previous !== email ? [ db.data.hDel(providerMembersKey('email'), [ previous ]) ] : [],
+		...previous !== null && previous !== email ? [ db.data.hDel(providerMembersKey(emailProvider), [ previous ]) ] : [],
 	]);
 	return true;
 }
@@ -111,7 +131,8 @@ async function associateEmail(db: Database, userId: string, email: string) {
  * deliberately not indexed for uniqueness, so two accounts may await the same one; whoever confirms
  * first keeps it (see `verifyPendingEmail`).
  */
-export async function setEmail(db: Database, userId: string, email: string, holdPending: boolean) {
+export async function setEmail(db: Database, userId: string, rawEmail: string, holdPending: boolean) {
+	const email = flattenEmail(rawEmail);
 	if (holdPending) {
 		await db.data.hSet(infoKey(userId), pendingEmailField, email);
 		return { pending: true };
@@ -136,10 +157,11 @@ export function pendingEmailForUser(db: Database, userId: string) {
  * Confirming an address the user has *already* confirmed succeeds without writing, so opening a
  * still-valid confirmation link a second time is idempotent rather than an error.
  */
-export async function verifyPendingEmail(db: Database, userId: string, email: string) {
-	const pending = await db.data.hGet(infoKey(userId), pendingEmailField);
+export async function verifyPendingEmail(db: Database, userId: string, rawEmail: string) {
+	const email = flattenEmail(rawEmail);
+	const pending = await pendingEmailForUser(db, userId);
 	if (pending !== email) {
-		const confirmed = await providerIdForUser(db, 'email', userId);
+		const confirmed = await emailForUser(db, userId);
 		return confirmed === email;
 	}
 	// A different account may have confirmed the same address while this one was pending.
@@ -188,6 +210,15 @@ export async function findUserByProvider(db: Database, provider: string, provide
 
 export async function findUserByName(db: Database, username: string) {
 	return findUserByProvider(db, 'username', flattenUsername(username));
+}
+
+export async function findUserByEmail(db: Database, email: string) {
+	return findUserByProvider(db, emailProvider, flattenEmail(email));
+}
+
+/** The address on a user's account, or `null` if they registered without one. */
+export function emailForUser(db: Database, userId: string) {
+	return providerIdForUser(db, emailProvider, userId);
 }
 
 export async function loadBackendUserInfo(db: Database, userId: string): Promise<BackendUserInfo | undefined> {

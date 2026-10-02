@@ -1,35 +1,8 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import { reportUnsentVerification, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-
-interface CheckEmailRequest {
-	email: string;
-}
-
-const checkEmailRequestSchema: JSONSchemaType<CheckEmailRequest> = {
-	type: 'object',
-	properties: {
-		email: { type: 'string' },
-	},
-	required: [ 'email' ],
-};
-
-const CheckEmailEndpoint: Endpoint = {
-	method: 'get',
-	path: '/api/register/check-email',
-	execute: makeValidatedQueryRoute(checkEmailRequestSchema, async context => {
-		const { email } = context.request.query;
-		if (!validateEmail(email)) {
-			return { error: 'invalid' };
-		}
-		if (await User.findUserByProvider(context.db, 'email', email) !== null) {
-			return { error: 'exists' };
-		}
-		return { ok: 1 };
-	}),
-};
 
 interface CheckUsernameRequest {
 	username: string;
@@ -90,7 +63,7 @@ const SetUsernameEndpoint: Endpoint = {
 		// Sanity check
 		const { username, email: maybeEmail } = context.request.body;
 		const email = maybeEmail === '' ? undefined : maybeEmail;
-		if (!User.checkUsername(username) || (email != null && !validateEmail(email))) {
+		if (!User.checkUsername(username) || (email != null && !User.checkEmail(email))) {
 			return { error: 'invalid' };
 		}
 
@@ -107,5 +80,5 @@ const SetUsernameEndpoint: Endpoint = {
 	}),
 };
 
-const endpoints = [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint ];
+const endpoints = [ CheckUsernameEndpoint, SetUsernameEndpoint ];
 export default endpoints;

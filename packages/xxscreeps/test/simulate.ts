@@ -21,7 +21,6 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameConstructor, GameState, initializeGameEnvironment, runForPlayer, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
-import { stdoutTransport } from 'xxscreeps/mods/meta/notifications/transport-stdout.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { asyncDisposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 import { logSandbox } from './context.js';
@@ -34,9 +33,6 @@ import 'xxscreeps:mods/processor';
 const initializeRoom = makeInitializeRoomForProcessor();
 initializeGameEnvironment();
 initializeIntentConstraints();
-
-// TODO: Something better here.
-stdoutTransport[Symbol.dispose]();
 
 interface SimulationGlobals {
 	Game: GameConstructor;

@@ -1,9 +1,8 @@
-import type { RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
 import { optionalExpiryTime, untilTime } from 'xxscreeps/game/object.js';
-import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
+import { OwnedStructure, checkActiveStructures, checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { controllerShape } from './schema.js';
@@ -112,16 +111,6 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 	}
 
 	/**
-	 * Applied effects, an array of {@link RoomObjectEffect} objects.
-	 * @public
-	 * @see https://docs.screeps.com/api/#StructureController.effects
-	 */
-	@enumerable override get effects(): RoomObjectEffect[] | undefined {
-		const ticksRemaining = optionalExpiryTime(this['#upgradeInvulnerableUntil']);
-		return ticksRemaining === undefined ? undefined : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining } ];
-	}
-
-	/**
 	 * The controller structure cannot be damaged or destroyed, so this is always undefined.
 	 * @public
 	 * @see https://docs.screeps.com/api/#StructureController.hits
@@ -205,6 +194,39 @@ let lastActivateSafeModeId: string | undefined;
 hooks.register('gameInitializer', () => {
 	lastActivateSafeModeId = undefined;
 });
+
+/**
+ * Return a controller and its room to the neutral state. The caller owns whatever bookkeeping the
+ * departing owner needs.
+ */
+export function resetController(controller: StructureController) {
+	const { room } = controller;
+	controller['#downgradeTime'] = 0;
+	controller['#progress'] = 0;
+	controller['#reservationEndTime'] = 0;
+	controller['#safeModeCooldownTime'] = 0;
+	controller['#upgradeInvulnerableUntil'] = 0;
+	controller['#user'] = null;
+	// TODO: Power needs to be moved to the powercreep mod
+	controller.isPowerEnabled = false;
+	controller.safeModeAvailable = 0;
+	room['#safeModeUntil'] = 0;
+	updateRoomStatus(room, 0, null);
+}
+
+/**
+ * Update room owner and/or level, and notify all objects of the change
+ */
+export function updateRoomStatus(room: Room, level: number, userId: string | null | undefined) {
+	room['#level'] = level;
+	room['#user'] = userId ?? null;
+	// `#immediateObjects` avoids `#flushObjects` mid-Tick: that mutates `#objects` while the engine
+	// processor's Tick loop is iterating it.
+	for (const object of room['#immediateObjects']()) {
+		object['#roomStatusDidChange'](level, userId);
+	}
+	checkActiveStructures(room);
+}
 
 export function checkActivateSafeMode(controller: StructureController) {
 	return chainIntentChecks(

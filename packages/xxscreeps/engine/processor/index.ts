@@ -13,7 +13,7 @@ import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbo
 
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
 export { registerRoomTickProcessor } from './room.js';
-export { everyNTicks, registerShardInitializer, registerShardTickProcessor } from './shard.js';
+export { registerShardInitializer, registerShardTickProcessor } from './shard.js';
 export { hooks } from './symbols.js';
 
 // Intent type definitions
@@ -65,9 +65,15 @@ export function registerIntentProcessor<Type extends object, Intent extends stri
 	},
 	process: (receiver: Type, context: ProcessorContext, ...data: Data) => void,
 ): null | IntentDeclaration<Type, Intent, RemapNull<Data>> {
-	const toArray = (constraint: string | string[] | undefined) =>
-		constraint === undefined ? [] :
-		typeof constraint === 'string' ? [ constraint ] : constraint;
+	const toArray = (constraint: string | string[] | undefined) => {
+		if (constraint === undefined) {
+			return [];
+		} else if (typeof constraint === 'string') {
+			return [ constraint ];
+		} else {
+			return constraint;
+		}
+	};
 	intentProcessors.push({
 		constraints: {
 			after: toArray(constraints.after),

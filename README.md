@@ -90,8 +90,7 @@ First step is make sure nodejs v24.x is installed, older versions will probably 
 ```
 mkdir xxscreeps
 cd xxscreeps
-# note: we use @screeps/launcher to generate terrain
-npm install xxscreeps @screeps/launcher
+npm install xxscreeps
 npx xxscreeps import
 npx xxscreeps start
 ```
@@ -119,12 +118,21 @@ If you're using VS Code and you have the [YAML extension](https://marketplace.vi
 autocomplete. If not you can read the [config
 schema](src/config/config.ts).
 
-If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
-
 ### Adding bots
 
-`import --overwrite-code` replaces the built-in bots. To add a *named* bot — and optionally place
-its first spawn — without touching the built-ins, use the `manage` subcommand:
+`import` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example bot
+the vanilla private server ships when you don't name a directory. These four commands rebuild the
+lineup that server starts with, in the corner rooms it uses:
+
+```
+npx xxscreeps manage bot add AliceBot   --spawn W1N9 36,5
+npx xxscreeps manage bot add EmmaBot    --spawn W1N1 37,31
+npx xxscreeps manage bot add JackBot    --spawn W9N1 33,6
+npx xxscreeps manage bot add MichaelBot --spawn W9N9 17,40
+```
+
+Drop the coordinates to have a spawn placed at random, or pass a directory to run your own bot
+instead:
 
 ```
 npx xxscreeps manage bot add <name> <dir> --spawn <room>
@@ -182,7 +190,12 @@ and a prebuilt extractor. `terrainType` picks one of 28 wall layouts and
 omitted. Like `npx xxscreeps import`, it is an offline operation — stop the
 server before running it so cached world state in the backend, processor, and
 runner workers doesn't go stale. Exits are read from any already-generated
-neighbor, so adjacent generated rooms connect.
+neighbor, so adjacent generated rooms connect. A border facing a room the
+world doesn't have is walled off instead — no room ever opens an exit onto
+nothing — and generating that neighbor later punches the seal open in place,
+re-deciding the border at the live world's rate. A punch only removes wall:
+every other tile, swamp patch, and object stays exactly where it was, so a
+player-held room is punched like any other.
 
 Also available as `npx xxscreeps generate-room W12N5`, which takes the room
 shape as flags — `--shard`, `--terrain-type 1-28`, `--swamp-type 0-14`,
@@ -196,11 +209,13 @@ template: highway rooms on the boundary rings, the central room and its 3×3
 source-keeper core, and normal rooms elsewhere. Highway terrain is an open
 travel lane flanked by wall masses that flow continuously across room borders,
 and some borders between normal and highway rooms seal at random, like the
-live world's. Rooms that already exist are skipped, so adjacent sectors share
-their boundary rings and a partially built sector can be re-entered. The same
-options apply to the sector's normal rooms. Also available as
-`npx xxscreeps generate-sector W20N20`, taking the same flags as
-`generate-room`.
+live world's. Rooms that already exist are not re-generated, so adjacent
+sectors share their boundary rings and a partially built sector can be
+re-entered; a ring room sealed toward the void is punched open as the next
+sector generates beside it, its seal mass giving way to the border the room
+would have grown open. The same options apply to the sector's normal rooms.
+Also available as `npx xxscreeps generate-sector W20N20`, taking the same
+flags as `generate-room`.
 
 ## Docker
 

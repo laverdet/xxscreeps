@@ -8,14 +8,19 @@ export interface ProviderRegistration<Type extends object> {
 	/**
 	 * Replace the default implementation with `provider`. Throws if a provider was already registered,
 	 * so two mods fighting over the same domain fail loudly instead of one silently shadowing the
-	 * other. Disposing the result restores the default, which is how a test holds the slot for its
-	 * own scope rather than for the whole run.
+	 * other.
 	 */
-	register: (provider: Type) => Disposable;
+	register: (provider: Type) => void;
 	/** The active implementation: the registered override if any, otherwise the default. */
 	readonly current: Type;
 	/** Whether anything replaced the default, for callers which must know there is nobody home. */
 	readonly registered: boolean;
+	/**
+	 * Shadow the active implementation until the returned handle is disposed. Registration is
+	 * permanent by contract, so tests scope a stand-in with `using` instead.
+	 * @internal
+	 */
+	overrideForTesting: (provider: Type) => Disposable;
 }
 
 /**
@@ -29,16 +34,25 @@ export interface ProviderRegistration<Type extends object> {
  */
 export function makeProviderRegistration<Type extends object>(name: string, fallback: Type): ProviderRegistration<Type> {
 	let override: Type | undefined;
+	let testOverride: Type | undefined;
 	return {
 		register(provider) {
 			if (override !== undefined) {
 				throw new Error(`Provider '${name}' is already registered`);
 			}
 			override = provider;
-			return { [Symbol.dispose]() { override = undefined; } };
+		},
+		overrideForTesting(provider) {
+			const previous = testOverride;
+			testOverride = provider;
+			return {
+				[Symbol.dispose]() {
+					testOverride = previous;
+				},
+			};
 		},
 		get current() {
-			return override ?? fallback;
+			return testOverride ?? override ?? fallback;
 		},
 		get registered() {
 			return override !== undefined;

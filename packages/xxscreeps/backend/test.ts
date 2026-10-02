@@ -22,8 +22,7 @@ interface MailFixture {
 	transport?: boolean;
 }
 
-// Stands in for the transport a server installs, capturing what it was handed. A provider takes one
-// implementation, so a test holds the slot for its own scope rather than for the whole run.
+// Stands in for the transport a server installs, capturing what it was handed.
 function backendMail(fixture: MailFixture = {}) {
 	const { refusal, transport = true } = fixture;
 	const sent: EmailMessage[] = [];
@@ -32,7 +31,7 @@ function backendMail(fixture: MailFixture = {}) {
 	stack.use(backendConfigForTesting('publicUrl',
 		'publicUrl' in fixture ? fixture.publicUrl : 'https://screeps.test/'));
 	if (transport) {
-		stack.use(mailer.register({
+		stack.use(mailer.overrideForTesting({
 			send(message) {
 				if (refusal !== undefined) {
 					return refusal;

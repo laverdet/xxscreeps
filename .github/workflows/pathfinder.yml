@@ -33,9 +33,6 @@ jobs:
           - runs-on: ubuntu-24.04
             container: alpine:edge
             triplet: x86_64-alpine-linux-musl
-          - runs-on: macos-15-intel
-            platform: darwin
-            triplet: x86_64-apple-darwin
           - runs-on: windows-2025
             platform: windows
             triplet: x86_64-pc-windows
@@ -82,6 +79,7 @@ jobs:
             cmake
             libboost-all-dev
             libclang-rt-22-dev
+            libstdc++-16-dev
             lld-22
             llvm-22
             ninja-build
@@ -195,6 +193,7 @@ jobs:
             ;
             if ninja -C build; then
               pnpm -C ../xxscreeps install '@xxscreeps/pathfinder@workspace:^'
+              pnpm -C ../xxscreeps install "@isolated-vm/experimental@$(jq -r .version node_modules/@isolated-vm/experimental/package.json)"
               npx xxscreeps import
               cp screeps/shard0/terrain .
               # classic v8 + isolated-vm module
@@ -262,9 +261,6 @@ jobs:
           - runs-on: ubuntu-24.04
             container: alpine:3
             triplet: x86_64-alpine-linux-musl
-          - runs-on: macos-15-intel
-            platform: darwin
-            triplet: x86_64-apple-darwin
           - runs-on: windows-2025
             platform: windows
             triplet: x86_64-pc-windows
@@ -290,7 +286,10 @@ jobs:
 
       # Setup
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
+      - if: matrix.host.container == 'alpine:3'
+        run: npm install -g pnpm@11.20.0
+      - if: matrix.host.container != 'alpine:3'
+        uses: pnpm/action-setup@v6
         with:
           cache: true
       - shell: sh
@@ -333,10 +332,7 @@ jobs:
           # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
           # standard.
           node-version: 24
-      - if: matrix.host.container == 'alpine:edge'
-        run: npm install -g pnpm@11.20.0
-      - if: matrix.host.container != 'alpine:edge'
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - shell: sh

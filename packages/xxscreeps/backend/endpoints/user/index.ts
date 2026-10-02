@@ -3,7 +3,6 @@ import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import badge from './badge.js';
 import './auth.js';
 import './code.js';
-import './email.js';
 import './profile.js';
 import './world.js';
 

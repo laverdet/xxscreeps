@@ -5,8 +5,8 @@ import { hooks, registerGlobal } from './symbols.js';
 const { apply } = Reflect;
 
 declare global {
-	function cached(target: object, key: string, descriptor: PropertyDescriptor): void;
-	function enumerable(target: object, key: string, descriptor: PropertyDescriptor): void;
+	function cached(target: object, key: string, descriptor: PropertyDescriptor): PropertyDescriptor;
+	function enumerable(target: object, key: string, descriptor: PropertyDescriptor): PropertyDescriptor;
 }
 
 globalThis.cached = (target: object, key: string, descriptor: PropertyDescriptor) => {

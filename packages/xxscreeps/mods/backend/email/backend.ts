@@ -1,9 +1,56 @@
 import type { JSONSchemaType } from 'ajv';
-import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail, validateEmail } from 'xxscreeps/backend/auth/email.js';
-import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
+import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { mailer } from 'xxscreeps/backend/mail.js';
 import { config } from 'xxscreeps/config/index.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
+import { checkEmail, emailForUser, findUserByEmail, pendingEmailForUser, verifyPendingEmail } from 'xxscreeps/engine/db/user/index.js';
+
+interface EmailRequest {
+	email: string;
+}
+
+const emailRequestSchema: JSONSchemaType<EmailRequest> = {
+	type: 'object',
+	properties: {
+		email: { type: 'string' },
+	},
+	required: [ 'email' ],
+};
+
+// Tells the registration form whether an address is free before it is submitted
+hooks.register('route', {
+	method: 'get',
+	path: '/api/register/check-email',
+
+	execute: makeValidatedQueryRoute(emailRequestSchema, async context => {
+		const { email } = context.request.query;
+		if (!checkEmail(email)) {
+			return { error: 'invalid' };
+		}
+		if (await findUserByEmail(context.db, email) !== null) {
+			return { error: 'exists' };
+		}
+		return { ok: 1 };
+	}),
+});
+
+// Report the address back to the account which owns it, and to nobody else. An address still
+// awaiting confirmation is reported in place of the confirmed one, flagged: the client shows `email`
+// as the address on file and reads `emailDirty` as "not confirmed yet".
+hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
+	if (privateSelf) {
+		const [ email, pendingEmail ] = await Promise.all([
+			emailForUser(db, userId),
+			pendingEmailForUser(db, userId),
+		]);
+		if (pendingEmail !== null) {
+			userInfo.email = pendingEmail;
+			userInfo.emailDirty = true;
+		} else if (email !== null) {
+			userInfo.email = email;
+		}
+	}
+});
 
 // Report the outcome as a query parameter, ahead of any fragment: the client routes on the hash, so
 // a destination like `/#!/account` has to keep its fragment last.
@@ -24,23 +71,11 @@ hooks.register('route', {
 		const { token } = context.request.query;
 		const link = typeof token === 'string' ? await checkEmailVerificationToken(token) : undefined;
 		const verified = link !== undefined &&
-			await User.verifyPendingEmail(context.db, link.userId, link.email);
+			await verifyPendingEmail(context.db, link.userId, link.email);
 		context.redirect(redirectTarget(verified));
 		return true;
 	},
 });
-
-interface SetEmailRequest {
-	email: string;
-}
-
-const setEmailRequestSchema: JSONSchemaType<SetEmailRequest> = {
-	type: 'object',
-	properties: {
-		email: { type: 'string' },
-	},
-	required: [ 'email' ],
-};
 
 // Change (or set) the logged-in user's email address. Per `backend.autoVerifyEmail` the address is
 // either confirmed immediately or held pending — `pending` in the response tells the client which.
@@ -49,16 +84,16 @@ hooks.register('route', {
 	method: 'post',
 	path: '/api/user/email',
 
-	execute: makeValidatedPayloadRoute(setEmailRequestSchema, async context => {
+	execute: makeValidatedPayloadRoute(emailRequestSchema, async context => {
 		const { userId } = context.state;
 		if (userId === undefined) {
 			return { error: 'not authenticated' };
 		}
 		const { email } = context.request.body;
-		if (!validateEmail(email)) {
+		if (!checkEmail(email)) {
 			return { error: 'invalid' };
 		}
-		const owner = await User.findUserByProvider(context.db, 'email', email);
+		const owner = await findUserByEmail(context.db, email);
 		if (owner !== null && owner !== userId) {
 			return { error: 'exists' };
 		}
@@ -78,7 +113,7 @@ hooks.register('route', {
 		if (userId === undefined) {
 			return { error: 'not authenticated' };
 		}
-		if (await User.pendingEmailForUser(context.db, userId) === null) {
+		if (await pendingEmailForUser(context.db, userId) === null) {
 			// Nothing to confirm: no address at all, or it is confirmed already.
 			return { ok: 1, pending: false };
 		}

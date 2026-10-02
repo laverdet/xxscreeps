@@ -1,4 +1,4 @@
-import type { NotificationType } from './model.js';
+import type { NotificationType } from './transport.js';
 import { intents } from 'xxscreeps/game/index.js';
 import * as C from 'xxscreeps:mods/constants';
 

@@ -4,8 +4,8 @@ import type { Endpoint } from 'xxscreeps/backend/index.js';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { sendNotification } from 'xxscreeps/mods/meta/notifications/model.js';
 import { getNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
+import { kCoalesceForever, sendNotification } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { getConversation, getConversationIndex, getMessageChannel, getNewMessageChannel, getUnreadCount, markRead, sendMessage } from './model.js';
 
 // Longer payloads are rejected rather than truncated.
@@ -114,12 +114,13 @@ const SendEndpoint: Endpoint = {
 
 		await sendMessage(context.db, userId, respondent, text);
 
-		// Best-effort message notification, gated by the recipient's notify prefs.
+		// Best-effort message notification. `disabled` is `sendNotification`'s to enforce; this mod
+		// owns only the message-specific pref.
 		try {
 			const prefs = await getNotifyPrefs(context.db, respondent);
-			if (!prefs.disabled && !prefs.disabledOnMessages) {
+			if (!prefs.disabledOnMessages) {
 				const sender = await context.db.data.hmGet(User.infoKey(userId), [ 'username' ]);
-				await sendNotification(context.shard, respondent, 'msg', `You have a new message from ${sender.username ?? 'a player'}`);
+				await sendNotification(context.shard, respondent, 'msg', `You have a new message from ${sender.username ?? 'a player'}`, kCoalesceForever);
 			}
 		} catch (err) {
 			console.error('Failed to enqueue message notification', err);

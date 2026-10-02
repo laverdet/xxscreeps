@@ -5,7 +5,8 @@ import { iterateAllPositions, iterateNeighbors } from 'xxscreeps/game/position.j
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { hooks } from 'xxscreeps/scripts/symbols.js';
 import * as C from 'xxscreeps:mods/constants';
-import { create as createKeeperLair } from './keeper-lair.js';
+import { kSourceKeeperUserId } from './game.js';
+import { StructureKeeperLair, create as createKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
 // Rooms with three or more sources (keeper and center rooms) spread their sources across the room
@@ -105,6 +106,18 @@ hooks.register('payload', {
 			? C.SOURCE_ENERGY_KEEPER_CAPACITY
 			: C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 		return source;
+	},
+});
+
+// The lair's '#nextSpawnTime' is an absolute tick, which a payload has no baseline for, so a
+// reconstructed lair spawns its first keeper as a fresh one would.
+hooks.register('payload', {
+	marker: 'K',
+	encode: object => object instanceof StructureKeeperLair ? {} : undefined,
+	decode() {
+		const keeperLair = new StructureKeeperLair();
+		keeperLair['#user'] = kSourceKeeperUserId;
+		return keeperLair;
 	},
 });
 

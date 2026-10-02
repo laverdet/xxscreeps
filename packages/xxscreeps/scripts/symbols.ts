@@ -72,13 +72,18 @@ export interface PayloadCodec {
 	 * object occupies. May not be one the terrain alphabet spells, and that tile reads back as wall.
 	 */
 	marker: string;
-	/** The fields this codec encodes for `object`, or undefined when it doesn't own the object. */
-	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | undefined;
 	/**
-	 * Rebuilds the object `meta` describes. The engine stamps its id and position and inserts it
-	 * into `room`, which is passed only for the room-level state an object implies.
+	 * The fields this codec encodes for `object`, null when it owns `object` but folds it into a
+	 * companion's entry, or undefined when it doesn't own the object.
 	 */
-	decode: (meta: PayloadObject, room: Room) => RoomObject;
+	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | null | undefined;
+	/**
+	 * Rebuilds the object `meta` describes, plus any companions sharing its tile. The engine
+	 * stamps every object's position and the first one's id -- companions carry ids of their
+	 * own -- and inserts them into `room`, which is passed only for the room-level state an
+	 * object implies.
+	 */
+	decode: (meta: PayloadObject, room: Room) => RoomObject | [ RoomObject, ...RoomObject[] ];
 }
 
 export const hooks = makeHookRegistration<{
