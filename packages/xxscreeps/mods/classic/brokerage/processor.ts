@@ -38,7 +38,7 @@ const intents = [
 						terminal.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
 						terminal.store['#subtract'](resourceType, sent);
 					}
-					terminal['#cooldownTime'] = Game.time + C.TERMINAL_COOLDOWN - 1;
+					terminal['#cooldownTime'] = Game.time + C.TERMINAL_COOLDOWN;
 					context.didUpdate();
 
 					// Send intent to destination room
@@ -50,7 +50,7 @@ const intents = [
 							amount: sent,
 							from: terminal.room.name,
 							resourceType,
-							time: Game.time - 1,
+							time: Game.time,
 							to: destination,
 						});
 						transaction['#description'] = description ?? undefined;

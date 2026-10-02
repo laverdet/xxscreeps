@@ -8,11 +8,13 @@
 // so it works whether or not the server is running (a running server hands off the mutex between ticks).
 // Code saves are picked up by the runner on the next tick via the code channel. `remove` deletes
 // records only — owned room objects are left alone — and is safe for inactive users; pause the
-// engine first if the user is live.
+// engine first if the user is live. Users are shared by every shard, so `--shard` matters only to
+// what is stored per shard: the game verbs, `--spawn`, and the memory that `show` and `remove` touch.
 
 import * as fs from 'node:fs/promises';
 import * as nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
@@ -47,8 +49,14 @@ import * as C from 'xxscreeps:mods/constants';
 
 import 'xxscreeps:mods/game';
 
+const argv = checkArguments({
+	argv: true,
+	array: [ 'spawn' ] as const,
+	string: [ 'shard' ] as const,
+});
+
 await using db = await Database.connect();
-await using shard = await Shard.connect(db, config.shards[0]!.name);
+await using shard = await Shard.connect(db, argv.shard ?? config.shards[0]!.name);
 
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const save = () => Promise.all([ db.save(), shard.save() ]);
@@ -378,7 +386,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 	// intent performs (drop neutral objects, claim the controller, insert the spawn), but without the
 	// processor. `claim` queues its scratch writes through a minimal context we drain afterwards.
 	const room = await shard.loadRoom(roomName, time);
-	const state = new GameState(world, time + 1, [ room ]);
+	const state = new GameState(world, time, [ room ]);
 	const tasks: Promise<unknown>[] = [];
 	const context = {
 		shard,
@@ -425,7 +433,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 }
 
 function usage(): never {
-	process.stderr.write(`Usage:
+	process.stderr.write(`Usage: xxscreeps manage <command> [--shard <name>]
 	game pause
 	game pause-tick [count]
 	game unpause
@@ -444,11 +452,12 @@ function usage(): never {
   bot  add    <name> [codeDir [branch]] [--spawn <room> [x,y]]
   bot  update <name|id> <codeDir> [branch]
   bot  remove <name|id>
+A value which starts with '-' goes after '--': user password <name|id> -- <password>
 `);
 	process.exit(2);
 }
 
-const [ noun, verb, ...rest ] = process.argv.slice(2);
+const [ noun, verb, ...rest ] = argv.argv;
 try {
 	switch (`${noun} ${verb}`) {
 		case 'game pause': await getServiceChannel(shard).publish({ type: 'pause' }); break;
@@ -472,14 +481,12 @@ try {
 		case 'decoration revoke': if (rest[0] === undefined || rest[1] === undefined) usage(); await decorationRevoke(rest[0], rest[1]); break;
 		case 'decoration cleanup': await decorationCleanup(rest[0]); break;
 		case 'bot add': {
-			const spawnIndex = rest.indexOf('--spawn');
-			const args = spawnIndex === -1 ? rest : rest.slice(0, spawnIndex);
-			const spawnArgs = spawnIndex === -1 ? undefined : rest.slice(spawnIndex + 1);
-			if (args[0] === undefined) usage();
-			const userId = await botSave(args[0], args[1] ?? bundledBotDir, args[2], true);
-			if (spawnArgs !== undefined) {
-				if (spawnArgs[0] === undefined) usage();
-				await botSpawn(userId, spawnArgs[0], spawnArgs[1]);
+			if (rest[0] === undefined) usage();
+			const userId = await botSave(rest[0], rest[1] ?? bundledBotDir, rest[2], true);
+			if (argv.spawn !== undefined) {
+				const [ roomName, coords ] = argv.spawn;
+				if (roomName === undefined) usage();
+				await botSpawn(userId, roomName, coords);
 			}
 			break;
 		}

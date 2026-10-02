@@ -40,10 +40,10 @@ const intents = [
 		const ghodiumCapacity = C.NUKER_GHODIUM_CAPACITY;
 		nuker.store['#subtract'](C.RESOURCE_ENERGY, energyCapacity);
 		nuker.store['#subtract'](C.RESOURCE_GHODIUM, ghodiumCapacity);
-		nuker['#cooldownTime'] = Game.time + C.NUKER_COOLDOWN - 1;
+		nuker['#cooldownTime'] = Game.time + C.NUKER_COOLDOWN;
 
 		context.sendRoomIntent(target.roomName, 'nukeArrive',
-			target.x, target.y, nuker.room.name, Game.time + C.NUKE_LAND_TIME - 1);
+			target.x, target.y, nuker.room.name, Game.time + C.NUKE_LAND_TIME);
 
 		// TODO: notify the launching player (`Game.notify`); requires processor-side
 		// notification queueing once a shard tick processor lands.
@@ -61,12 +61,12 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 	// Two-tick lifecycle: impact at landTime keeps the nuke visible with `timeToLand === 0` for the
 	// player to observe; removal happens on the following tick.
 	const { timeToLand } = nuke;
-	if (timeToLand > 0) {
+	if (timeToLand > 1) {
 		context.wakeAt(nuke['#landTime']);
-	} else if (timeToLand === 0) {
+	} else if (timeToLand === 1) {
 		applyNukeImpact(nuke, context);
 		context.setActive();
-	} else if (timeToLand === -1) {
+	} else {
 		nuke.room['#removeObject'](nuke);
 		context.didUpdate();
 	}

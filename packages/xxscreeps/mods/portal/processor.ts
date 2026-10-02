@@ -1,10 +1,11 @@
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
 import { StructurePortal } from './portal.js';
 
 registerObjectTickProcessor(StructurePortal, (portal, context) => {
-	if (portal.ticksToDecay === 0) {
+	if (expiresNextTick(portal['#decayTime'])) {
 		portal.room['#removeObject'](portal);
 		context.didUpdate();
 		return;

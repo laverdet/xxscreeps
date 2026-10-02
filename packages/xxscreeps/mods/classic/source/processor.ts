@@ -4,6 +4,7 @@ import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js
 import { mappedInvertedNumericComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
 import * as Creep from 'xxscreeps/mods/classic/creep/creep.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -36,9 +37,9 @@ registerObjectTickProcessor(Source, (source, context) => {
 	if (source.energy < source.energyCapacity) {
 		const { ticksToRegeneration } = source;
 		if (ticksToRegeneration === undefined) {
-			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
+			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME;
 			context.didUpdate();
-		} else if (ticksToRegeneration === 0) {
+		} else if (expiresNextTick(source['#nextRegenerationTime'])) {
 			source.energy = source.energyCapacity;
 			source['#nextRegenerationTime'] = 0;
 			context.didUpdate();
@@ -59,10 +60,10 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 	if (ticksToSpawn === undefined) {
 		// Start respawn timer
 		if (!keeper || keeper.hits < 5000) {
-			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
+			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME;
 			context.didUpdate();
 		}
-	} else if (ticksToSpawn === 0) {
+	} else if (expiresNextTick(keeperLair['#nextSpawnTime'])) {
 		// Respawn keeper
 		if (keeper) {
 			keeperLair.room['#removeObject'](keeper);
@@ -73,7 +74,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 			...Fn.transform(Fn.range(10), () => [ C.ATTACK, C.RANGED_ATTACK ]),
 		];
 		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, kSourceKeeperUserId);
-		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;
+		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME;
 		keeperLair.room['#insertObject'](newKeeper);
 		keeperLair['#nextSpawnTime'] = 0;
 		activateNPC(keeperLair.room, kSourceKeeperUserId);

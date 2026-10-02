@@ -15,7 +15,7 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Deposit } from './deposit.js';
 import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './main.js';
-import { scheduleSector } from './model.js';
+import { dueSectors } from './model.js';
 
 interface DepositSimOptions {
 	body?: PartType[];
@@ -113,7 +113,7 @@ describe('mods/modern/deposit', () => {
 			await tick();
 			await player('100', Game => {
 				const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0];
-				assert.strictEqual(deposit?.ticksToDecay, C.DEPOSIT_DECAY_TIME);
+				assert.strictEqual(deposit?.ticksToDecay, C.DEPOSIT_DECAY_TIME - 1);
 			});
 		}));
 	});
@@ -154,7 +154,7 @@ describe('mods/modern/deposit', () => {
 			const { roomName, deposit } = found[0]!;
 			// Round-trip: the type survives intent serialization and the schema enum write/read.
 			assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
-			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME);
+			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME - 1);
 			// Ported placement predicates: wall terrain, inside the sector's 250-square radius.
 			const world = await shard.loadWorld();
 			const terrain = world.map.getRoomTerrain(roomName);
@@ -173,7 +173,7 @@ describe('mods/modern/deposit', () => {
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 			// Force a sector re-eval by bumping its score to 0 (= due immediately); `earliest` matches
 			// the decay path's bump-down semantics.
-			await scheduleSector(shard, 'W5N5', 0, { earliest: true });
+			await dueSectors.schedule(shard, 'W5N5', 0, { earliest: true });
 			await tick(2);
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1,
 				'saturated sector should not gain a second deposit');

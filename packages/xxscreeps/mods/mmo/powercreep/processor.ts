@@ -1,10 +1,11 @@
+import type { PowerInfo } from './powercreep.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
+import { createRoomObject, expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
@@ -20,6 +21,15 @@ import * as C from 'xxscreeps:mods/constants';
 import * as Model from './model.js';
 import { PowerCreep, checkEnableRoom, checkRenew, checkUsePower, createSpawnedPowerCreep, powerInfoTable, powerOpsCost } from './powercreep.js';
 
+// Per-power processor arms. A mod implementing a power registers its arm here; the shared
+// cost/cooldown/event tail runs only when the handler reports the power applied.
+type PowerProcessor = (creep: PowerCreep, context: ProcessorContext, info: PowerInfo, level: number, target: RoomObject | undefined) => boolean;
+const powerProcessors = new Map<number, PowerProcessor>();
+
+export function registerPowerProcessor(power: number, processor: PowerProcessor) {
+	powerProcessors.set(power, processor);
+}
+
 function buryPowerCreep(creep: PowerCreep) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
 	tombstone.deathTime = Game.time;
@@ -32,7 +42,7 @@ function buryPowerCreep(creep: PowerCreep) {
 		body: [],
 		id: creep.id,
 		name: creep.name,
-		saying: saying?.isPublic && saying.time === Game.time ? saying.message : undefined,
+		saying: saying?.isPublic && saying.time === Game.time + 1 ? saying.message : undefined,
 		ticksToLive: creep.ticksToLive ?? 0,
 		user: creep['#user'],
 	};
@@ -62,10 +72,10 @@ const intents = [
 		if (checkMyStructure(spawn, StructurePowerSpawn) !== C.OK || checkIsActive(spawn) !== C.OK) {
 			return;
 		}
-		if (spawn['#spawnTime'] === Game.time) {
+		if (spawn['#spawnTime'] === Game.time + 1) {
 			return;
 		}
-		spawn['#spawnTime'] = Game.time;
+		spawn['#spawnTime'] = Game.time + 1;
 		const ageTime = Game.time + C.POWER_CREEP_LIFE_TIME;
 		context.task(Model.claimSpawn(context.shard.db, spawn['#user']!, id, ageTime), entry => {
 			if (entry) {
@@ -136,9 +146,13 @@ const intents = [
 				}
 				break;
 			}
-			default:
-				// Powers land one at a time; an unimplemented power's intent drops without cost.
-				return;
+			default: {
+				// An unimplemented or unapplied power's intent drops without cost.
+				const processor = powerProcessors.get(power);
+				if (!processor?.(creep, context, info, entry.level, target)) {
+					return;
+				}
+			}
 		}
 		creep.store['#subtract'](C.RESOURCE_OPS, powerOpsCost(info, entry.level));
 		entry.cooldownTime = Game.time + info.cooldown;
@@ -157,7 +171,7 @@ registerObjectPreTickProcessor(PowerCreep, (creep, context) => {
 	flushActionLog(creep['#actionLog'], context);
 	const saying = creep['#saying'];
 	if (saying) {
-		if (saying.time <= Game.time - kRetainActionsTime) {
+		if (saying.time <= Game.time - kRetainActionsTime + 1) {
 			creep['#saying'] = undefined;
 			context.didUpdate();
 		} else {
@@ -178,7 +192,7 @@ registerObjectTickProcessor(PowerCreep, (creep, context) => {
 		creep.tickRawDamage = 0;
 		context.didUpdate();
 	}
-	if (creep.ticksToLive === 0 || creep.hits <= 0) {
+	if (expiresNextTick(creep['#ageTime']) || creep.hits <= 0) {
 		killPowerCreep(creep, context);
 	} else if (isBorder(creep.pos.x, creep.pos.y)) {
 		teleportCreep(creep, borderExitPosition(creep.pos), context);

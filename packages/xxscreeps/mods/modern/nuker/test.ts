@@ -184,7 +184,7 @@ describe('mods/modern/nuker', () => {
 			assert.strictEqual(Game.spawns.Spawn1?.spawning, null);
 			assert.strictEqual(room.controller?.safeMode, undefined);
 			assert.strictEqual(room.controller?.safeModeCooldown, undefined);
-			assert.strictEqual(room.controller?.upgradeBlocked, C.CONTROLLER_NUKE_BLOCKED_UPGRADE);
+			assert.strictEqual(room.controller?.upgradeBlocked, C.CONTROLLER_NUKE_BLOCKED_UPGRADE - 1);
 
 			const wall = lookForStructures(room, C.STRUCTURE_WALL)[0]!;
 			assert.strictEqual(wall.hits, 75);

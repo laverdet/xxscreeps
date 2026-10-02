@@ -84,6 +84,7 @@ async function main() {
 	const argv = checkArguments({
 		argv: true,
 		boolean: [ 'dont-overwrite', 'shard-only' ] as const,
+		string: [ 'shard' ] as const,
 	});
 	const file = argv.argv[0] ?? new URL('../../scripts/data/shard.json', import.meta.url);
 
@@ -97,7 +98,7 @@ async function main() {
 		console.log('Found existing data, exiting');
 		return;
 	}
-	const shardName = config.shards[0]!.name;
+	const shardName = argv.shard ?? config.shards[0]!.name;
 	await using shard = await Shard.connect(db, shardName);
 	await Promise.all([
 		argv['shard-only'] ? undefined : db.data.flushdb(),

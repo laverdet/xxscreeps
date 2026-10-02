@@ -1,4 +1,5 @@
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import * as ResourceIntent from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Ruin } from './ruin.js';
@@ -16,7 +17,7 @@ const intents = [
 ];
 
 registerObjectTickProcessor(Ruin, (ruin, context) => {
-	if (ruin.ticksToDecay === 0) {
+	if (expiresNextTick(ruin['#decayTime'])) {
 		for (const [ resourceType, amount ] of ruin.store['#entries']()) {
 			ResourceIntent.drop(ruin.pos, resourceType, amount);
 		}

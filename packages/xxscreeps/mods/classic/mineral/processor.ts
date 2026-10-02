@@ -1,6 +1,7 @@
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/processor.js';
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
@@ -18,7 +19,7 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 		Resource.drop(creep.pos, mineral.mineralType, overflow);
 	}
 	const extractor = lookForStructureAt(mineral.room, mineral.pos, C.STRUCTURE_EXTRACTOR)!;
-	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN;
+	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN + 1;
 	return amount;
 });
 
@@ -29,7 +30,7 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 		if (mineral.ticksToRegeneration === undefined) {
 			mineral['#nextRegenerationTime'] = Game.time + C.MINERAL_REGEN_TIME;
 			context.didUpdate();
-		} else if (mineral.ticksToRegeneration === 0) {
+		} else if (expiresNextTick(mineral['#nextRegenerationTime'])) {
 			mineral['#nextRegenerationTime'] = 0;
 			mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density] ?? 0;
 			if (

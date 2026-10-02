@@ -81,12 +81,11 @@ export class RoomProcessor implements ProcessorContext {
 	readonly room;
 	readonly shard;
 	readonly state: GameState;
-	readonly time;
-	readonly nextTime;
 	receivedUpdate = false;
 
 	private tasks: ProcessorTask[] = [];
-
+	private readonly time;
+	private readonly nextTime;
 	private readonly intents = new Map<string, RoomIntentPayload>();
 	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
 
@@ -95,7 +94,7 @@ export class RoomProcessor implements ProcessorContext {
 		this.room = room;
 		this.time = time;
 		this.nextTime = time + 1;
-		this.state = new GameState(world, this.nextTime, [ room ]);
+		this.state = new GameState(world, time, [ room ]);
 	}
 
 	async process(isFinalization = false) {
