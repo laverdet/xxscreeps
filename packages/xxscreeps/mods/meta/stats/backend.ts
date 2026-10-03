@@ -3,7 +3,7 @@ import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { mappedInvertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { isStatInterval, parseStatLayer, pendingBucketOffset, readCompleteRoomPunchcard, readRoomLayer, readUserTotals, removeAllForUser } from './model.js';
+import { isStatInterval, parseStatLayer, pendingBucketOffset, readCompleteRoomPunchcard, readRoomLayer, readUserTotals } from './model.js';
 
 // `GET /api/user/stats?id=<userId>&interval=8|180|1440` — aggregated per-interval totals for the
 // profile page. The profile can show any user, so an explicit `id` wins over the logged-in user.
@@ -141,6 +141,3 @@ hooks.register('mapStats', async (context, payload) => {
 	});
 	payload.response.statsMax = { [statName]: max };
 });
-
-// Tear down a removed user's account-level stat series
-User.hooks.register('remove', removeAllForUser);

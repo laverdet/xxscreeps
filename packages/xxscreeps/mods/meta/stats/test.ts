@@ -1,3 +1,4 @@
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
@@ -6,7 +7,7 @@ import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { parseStatLayer, pendingBucketOffset, readRoomLayer, readRoomPunchcard, readUserTotals, removeAllForUser, statIntervals, writeRoomBucket } from './model.js';
+import { parseStatLayer, pendingBucketOffset, readRoomLayer, readRoomPunchcard, readUserTotals, statIntervals, writeRoomBucket } from './model.js';
 import { statNames } from './schema.js';
 
 const alice = '100';
@@ -210,11 +211,11 @@ describe('mods/meta/stats', () => {
 		}
 	});
 
-	test('removeAllForUser drops the account-level series', async () => {
+	test('removing a user drops the account-level series', async () => {
 		await using testShard = await instantiateTestShard();
 		const { shard } = testShard;
 		await writeRoomBucket(shard, 'W1N1', [ { amount: 100, stat: 'energyHarvested', userId: alice } ], t0);
-		await removeAllForUser(shard.db, alice);
+		await User.remove(shard.db, alice);
 		assert.strictEqual((await readUserTotals(shard.db, alice, 1440, t0)).energyHarvested, 0);
 	});
 

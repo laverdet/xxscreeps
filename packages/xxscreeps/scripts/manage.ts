@@ -33,16 +33,10 @@ import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
 import * as ControllerProc from 'xxscreeps/mods/classic/controller/processor.js';
-// Side-effect imports: register the `User.remove` hooks which tear down per-user state owned by
-// mods — private messages, leaderboard standings.
-// TODO: These should not live in model, which should generally not have top-level effects.
-import 'xxscreeps/mods/meta/leaderboard/model.js';
-import 'xxscreeps/mods/meta/messages/model.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { catalog } from 'xxscreeps/mods/meta/decorations/catalog.js';
-// Also a side-effect import: registers the `User.remove` hook for owned decorations.
 import * as Decorations from 'xxscreeps/mods/meta/decorations/model.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import * as C from 'xxscreeps:mods/constants';
