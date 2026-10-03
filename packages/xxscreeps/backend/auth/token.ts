@@ -6,114 +6,104 @@ import { runOnce } from 'xxscreeps/utility/memoize.js';
 const secret = runOnce(() => {
 	const { secret } = config.backend;
 	if (secret) {
-		return Crypto.createHmac('sha3-224', secret).digest().subarray(0, 16);
+		return secret;
 	} else {
 		console.error('`backend.secret` is not set, this will cause login issues when restarting the server');
-		return Crypto.randomBytes(16);
+		return Crypto.randomBytes(16).toString('hex');
 	}
 });
 
-const kTokenExpiry = 120;
-
-async function encrypt(data: string | Buffer) {
-	const key = secret();
-	const iv = Crypto.randomBytes(16);
-	const cipher = Crypto.createCipheriv('aes-128-cbc', key, iv);
-	cipher.end(data);
-	const encrypted = await Consumers.buffer(cipher);
-	const hmac = Crypto.createHmac('sha3-224', key);
-	hmac.update(iv);
-	hmac.update(encrypted);
-	return Buffer.concat([
-		hmac.digest().subarray(0, 8),
-		iv,
-		encrypted,
-	]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+interface TokenSigner {
+	/** Mint a token carrying `payload`, which `read` hands back until `expires` (ms, as `Date.now()`). */
+	make: (payload: string, expires: number) => Promise<string>;
+	/** Read back a token minted by `make`, or `undefined` if it is forged, expired, or someone else's. */
+	read: (token?: string) => Promise<string | undefined>;
 }
 
-async function decrypt(data: string) {
-	const key = secret();
-	const buffer = Buffer.from(data.replace(/-/g, '+').replace('_', '/'), 'base64');
-	const hmac = Crypto.createHmac('sha3-224', key);
-	hmac.update(buffer.subarray(8));
-	if (!hmac.digest().subarray(0, 8).equals(buffer.subarray(0, 8))) {
-		return;
+/**
+ * Tokens for one `purpose`, signed with a key derived from `backend.secret` and the purpose, so a
+ * token minted for one purpose never reads as another's. Deriving from the one secret is what lets
+ * every kind of token survive a restart and work across backend replicas without shared storage.
+ *
+ * The purpose is a key, not a namespace: it is folded into the key material, so there is no way to
+ * tell *which* purpose a foreign token was minted for, only that it was not this one.
+ */
+export function makeTokenSigner(purpose: string): TokenSigner {
+	const key = runOnce(() => Crypto.createHmac('sha3-224', secret()).update(purpose).digest().subarray(0, 16));
+
+	async function encrypt(data: Buffer) {
+		const iv = Crypto.randomBytes(16);
+		const cipher = Crypto.createCipheriv('aes-128-cbc', key(), iv);
+		cipher.end(data);
+		const encrypted = await Consumers.buffer(cipher);
+		const hmac = Crypto.createHmac('sha3-224', key());
+		hmac.update(iv);
+		hmac.update(encrypted);
+		return Buffer.concat([
+			hmac.digest().subarray(0, 8),
+			iv,
+			encrypted,
+		]).toString('base64url');
 	}
-	const iv = buffer.subarray(8, 24);
-	const cipher = Crypto.createDecipheriv('aes-128-cbc', key, iv);
-	cipher.end(buffer.subarray(24));
-	return Consumers.buffer(cipher);
+
+	async function decrypt(data: string) {
+		const buffer = Buffer.from(data, 'base64url');
+		const hmac = Crypto.createHmac('sha3-224', key());
+		hmac.update(buffer.subarray(8));
+		if (!hmac.digest().subarray(0, 8).equals(buffer.subarray(0, 8))) {
+			return;
+		}
+		const iv = buffer.subarray(8, 24);
+		const cipher = Crypto.createDecipheriv('aes-128-cbc', key(), iv);
+		cipher.end(buffer.subarray(24));
+		return Consumers.buffer(cipher);
+	}
+
+	return {
+		make(payload, expires) {
+			const expiresInSeconds = Math.floor(expires / 1000);
+			if (/^[a-f0-9]+$/.test(payload)) {
+				const buffer = Buffer.alloc(5 + (payload.length + 1 >>> 1), 0);
+				const odd = payload.length % 2;
+				buffer.writeInt32LE(expiresInSeconds);
+				buffer[4] = odd;
+				buffer.write(`${odd === 0 ? '' : '0'}${payload}`, 5, 'hex');
+				return encrypt(buffer);
+			} else {
+				const buffer = Buffer.alloc(4 + Buffer.byteLength(payload, 'utf8'));
+				buffer.writeInt32LE(-expiresInSeconds);
+				buffer.write(payload, 4, 'utf8');
+				return encrypt(buffer);
+			}
+		},
+
+		async read(token) {
+			const buffer = await decrypt(token ?? '');
+			if (!buffer) {
+				return;
+			}
+			const time = buffer.readInt32LE();
+			if (Date.now() / 1000 > Math.abs(time)) {
+				return;
+			}
+			if (time > 0) {
+				// Hex only id
+				const str = buffer.toString('hex', 5);
+				return buffer[4] === 0 ? str : str.slice(1);
+			} else {
+				// Any string
+				return buffer.toString('utf8', 4);
+			}
+		},
+	};
 }
 
-// Purpose tag separator. Login payloads are a user id or a `new:...` triplet, neither of which can
-// contain a nul byte, so the tag is what keeps the two token kinds apart in one key space.
-const kPurposeSeparator = '\0';
-
-function makeStringToken(payload: string, expiresInSeconds: number) {
-	const expires = Math.floor(Date.now() / 1000) + expiresInSeconds;
-	const buffer = Buffer.alloc(4 + Buffer.byteLength(payload, 'utf8'));
-	buffer.writeInt32LE(-expires);
-	buffer.write(payload, 4, 'utf8');
-	return encrypt(buffer);
-}
+// Session tokens. These are short-lived because the client refreshes them on every response.
+const kTokenExpiry = 120 * 1000;
+const { make, read } = makeTokenSigner('auth');
 
 export function makeToken(id: string) {
-	if (/^[a-f0-9]+$/.test(id)) {
-		// Hex only id
-		const expires = Math.floor(Date.now() / 1000) + kTokenExpiry;
-		const buffer = Buffer.alloc(5 + (id.length + 1 >>> 1), 0);
-		const odd = id.length % 2;
-		buffer.writeInt32LE(expires);
-		buffer[4] = odd;
-		buffer.write(`${odd === 0 ? '' : '0'}${id}`, 5, 'hex');
-		return encrypt(buffer);
-	} else {
-		// Any string
-		return makeStringToken(id, kTokenExpiry);
-	}
+	return make(id, Date.now() + kTokenExpiry);
 }
 
-async function readToken(token?: string) {
-	const buffer = await decrypt(token ?? '');
-	if (!buffer) {
-		return;
-	}
-	const time = buffer.readInt32LE();
-	if (Date.now() / 1000 > Math.abs(time)) {
-		return;
-	}
-	if (time > 0) {
-		// Hex only id
-		const str = buffer.toString('hex', 5);
-		return buffer[4] === 0 ? str : str.substr(1);
-	} else {
-		// Any string
-		return buffer.toString('utf8', 4);
-	}
-}
-
-export async function checkToken(token?: string) {
-	const value = await readToken(token);
-	// Purpose-tagged tokens share the signing key but must never authenticate a request.
-	return value?.includes(kPurposeSeparator) ? undefined : value;
-}
-
-/**
- * Mint a token which carries `payload` for a named `purpose` other than authentication — e.g. the
- * address confirmation link mailed to a user. Signed with the same key as login tokens, so links
- * survive a restart and work across backend replicas without shared storage, but tagged with the
- * purpose so the two can never be exchanged for one another.
- */
-export function makeSignedToken(purpose: string, payload: string, expiresInSeconds: number) {
-	return makeStringToken(`${purpose}${kPurposeSeparator}${payload}`, expiresInSeconds);
-}
-
-/**
- * Read back a token minted by `makeSignedToken`, or `undefined` if it's invalid, expired, or was
- * minted for another purpose.
- */
-export async function checkSignedToken(purpose: string, token?: string) {
-	const value = await readToken(token);
-	const prefix = `${purpose}${kPurposeSeparator}`;
-	return value?.startsWith(prefix) ? value.slice(prefix.length) : undefined;
-}
+export const checkToken = read;

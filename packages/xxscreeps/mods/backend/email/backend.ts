@@ -1,9 +1,10 @@
 import type { JSONSchemaType } from 'ajv';
-import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
-import { mailer } from 'xxscreeps/backend/mail.js';
 import { config } from 'xxscreeps/config/index.js';
-import { checkEmail, emailForUser, findUserByEmail, pendingEmailForUser, verifyPendingEmail } from 'xxscreeps/engine/db/user/index.js';
+import { checkEmail, emailForUser, findUserByEmail } from 'xxscreeps/engine/db/user/index.js';
+import { mailer } from './mail.js';
+import { pendingEmailForUser, verifyPendingEmail } from './model.js';
+import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail } from './verify.js';
 
 interface EmailRequest {
 	email: string;
@@ -55,7 +56,7 @@ hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 // Report the outcome as a query parameter, ahead of any fragment: the client routes on the hash, so
 // a destination like `/#!/account` has to keep its fragment last.
 function redirectTarget(verified: boolean) {
-	const base = config.backend.emailVerifyRedirect ?? '/';
+	const base = config.email?.verifyRedirect ?? '/';
 	const hash = base.indexOf('#');
 	const [ path, fragment ] = hash === -1 ? [ base, '' ] : [ base.slice(0, hash), base.slice(hash) ];
 	return `${path}${path.includes('?') ? '&' : '?'}emailVerified=${verified ? 1 : 0}${fragment}`;
@@ -77,7 +78,7 @@ hooks.register('route', {
 	},
 });
 
-// Change (or set) the logged-in user's email address. Per `backend.autoVerifyEmail` the address is
+// Change (or set) the logged-in user's email address. Per `email.autoVerify` the address is
 // either confirmed immediately or held pending — `pending` in the response tells the client which.
 // Any previously-confirmed address stays active until a pending one is confirmed.
 hooks.register('route', {
@@ -132,10 +133,10 @@ hooks.register('route', {
 hooks.register('backendReady', () => {
 	if (holdsPendingEmail()) {
 		if (!mailer.registered) {
-			console.error('`backend.autoVerifyEmail` is off but no mod delivers mail — addresses will be held pending with no confirmation link to open');
+			console.error('`email.autoVerify` is off but no mod delivers mail — addresses will be held pending with no confirmation link to open');
 		}
 		if (config.backend.publicUrl === undefined) {
-			console.error('`backend.autoVerifyEmail` is off but `backend.publicUrl` is not set — there is no address to root a confirmation link at');
+			console.error('`email.autoVerify` is off but `backend.publicUrl` is not set — there is no address to root a confirmation link at');
 		}
 	}
 });

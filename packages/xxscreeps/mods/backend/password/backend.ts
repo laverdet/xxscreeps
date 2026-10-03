@@ -1,10 +1,10 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/mods/backend/email/verify.js';
 import { checkPassword, setPassword } from './model.js';
 
 const { allowEmailRegistration } = config.backend;

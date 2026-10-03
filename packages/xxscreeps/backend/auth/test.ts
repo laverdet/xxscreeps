@@ -1,38 +1,36 @@
 import { assert, describe, test } from 'xxscreeps/test/index.js';
-import { checkEmailVerificationToken } from './email.js';
-import { checkSignedToken, checkToken, makeSignedToken, makeToken } from './token.js';
+import { checkToken, makeToken, makeTokenSigner } from './token.js';
 
-describe('auth tokens', () => {
+describe('backend/auth', () => {
 	test('a login token round-trips', async () => {
 		assert.strictEqual(await checkToken(await makeToken('abc123')), 'abc123');
 		assert.strictEqual(await checkToken(await makeToken('new:abc123:steam:76561')), 'new:abc123:steam:76561');
 	});
 
 	test('a signed token round-trips for its own purpose only', async () => {
-		const token = await makeSignedToken('greeting', 'hello', 60);
-		assert.strictEqual(await checkSignedToken('greeting', token), 'hello');
-		assert.strictEqual(await checkSignedToken('farewell', token), undefined);
+		const greeting = makeTokenSigner('greeting');
+		const farewell = makeTokenSigner('farewell');
+		const token = await greeting.make('hello', Date.now() + 60_000);
+		assert.strictEqual(await greeting.read(token), 'hello');
+		assert.strictEqual(await farewell.read(token), undefined);
 	});
 
 	test('an expired token is refused', async () => {
-		assert.strictEqual(await checkSignedToken('greeting', await makeSignedToken('greeting', 'hello', -1)), undefined);
+		const signer = makeTokenSigner('greeting');
+		assert.strictEqual(await signer.read(await signer.make('hello', Date.now() - 1000)), undefined);
 	});
 
 	test('a signed token can never authenticate', async () => {
-		// Both kinds share the signing key, so this is what keeps a token minted for some other
+		// Every purpose signs under its own key, so this is what keeps a token minted for some other
 		// purpose from being presented as a session token.
-		assert.strictEqual(await checkToken(await makeSignedToken('greeting', 'hello', 60)), undefined);
+		const signer = makeTokenSigner('greeting');
+		assert.strictEqual(await checkToken(await signer.make('hello', Date.now() + 60_000)), undefined);
+		assert.strictEqual(await checkToken(await signer.make('abc123', Date.now() + 60_000)), undefined);
 	});
 
 	test('garbage is refused rather than thrown at', async () => {
+		const signer = makeTokenSigner('greeting');
 		assert.strictEqual(await checkToken('not-a-token'), undefined);
-		assert.strictEqual(await checkSignedToken('greeting', ''), undefined);
-	});
-});
-
-describe('email verification links', () => {
-	// The round trip through a real mailed link is exercised in `backend/test.ts`.
-	test('a login token is not a verification link', async () => {
-		assert.strictEqual(await checkEmailVerificationToken(await makeToken('100')), undefined);
+		assert.strictEqual(await signer.read(''), undefined);
 	});
 });

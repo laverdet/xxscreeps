@@ -1,16 +1,17 @@
-import type { MailRefusal } from 'xxscreeps/backend/mail.js';
+import type { MailRefusal } from './mail.js';
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { mailer } from 'xxscreeps/backend/mail.js';
+import { makeTokenSigner } from 'xxscreeps/backend/auth/token.js';
 import { config } from 'xxscreeps/config/index.js';
-import { pendingEmailForUser, setEmail } from 'xxscreeps/engine/db/user/index.js';
-import { checkSignedToken, makeSignedToken } from './token.js';
+import { mailer } from './mail.js';
+import { pendingEmailForUser, setEmail } from './model.js';
 
 // Route which confirms an address; also the path baked into the link mailed to the user.
 export const emailVerifyPath = '/api/auth/email/verify';
 
-// Distinguishes these from login tokens, which share the signing key.
-const kPurpose = 'email-verify';
-const kDefaultTtlHours = 24;
+// Signed under its own key, so a login token and a confirmation link are never good for one another.
+const { make, read } = makeTokenSigner('email-verify');
+// One hour
+const kTtl = 60 * 60 * 1000;
 
 // The token binds the exact address as well as the user, so a link only ever confirms what it was
 // minted for, and never a later address the user has since asked for. `userId` never contains the
@@ -22,17 +23,16 @@ const kSeparator = ':';
  * origin of the request which triggered the mail: that origin is the `Host` header, so a forged one
  * would have us mail a link pointing at somebody else's server.
  *
- * The link stays valid for `backend.emailVerifyTtlHours`.
+ * The link stays valid for an hour.
  */
 async function makeEmailVerificationLink(base: string, userId: string, email: string) {
-	const ttl = (config.backend.emailVerifyTtlHours ?? kDefaultTtlHours) * 60 * 60;
-	const token = await makeSignedToken(kPurpose, `${userId}${kSeparator}${email}`, ttl);
+	const token = await make(`${userId}${kSeparator}${email}`, Date.now() + kTtl);
 	return `${base.replace(/\/+$/, '')}${emailVerifyPath}?token=${encodeURIComponent(token)}`;
 }
 
 /** Read back the user and address a confirmation link was minted for, or `undefined`. */
 export async function checkEmailVerificationToken(token: string) {
-	const payload = await checkSignedToken(kPurpose, token);
+	const payload = await read(token);
 	if (payload === undefined) {
 		return;
 	}
@@ -48,7 +48,7 @@ export async function checkEmailVerificationToken(token: string) {
 
 /** Whether an address given to the backend is parked until the user proves the inbox is theirs. */
 export function holdsPendingEmail() {
-	return config.backend.autoVerifyEmail === false;
+	return config.email?.autoVerify === false;
 }
 
 /**

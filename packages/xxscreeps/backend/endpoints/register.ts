@@ -1,8 +1,8 @@
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/backend/auth/email.js';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/mods/backend/email/verify.js';
 
 interface CheckUsernameRequest {
 	username: string;

@@ -14,7 +14,7 @@ export interface BackendConfig {
 	/**
 	 * Whether to allow users sign up without steam with only their email address.
 	 * Note: xxscreeps itself does not send a confirmation mail; install a mod which does and set
-	 * `autoVerifyEmail: false` to require one.
+	 * `email.autoVerify: false` to require one.
 	 * @default false
 	 */
 	allowEmailRegistration?: boolean;
@@ -29,36 +29,11 @@ export interface BackendConfig {
 	assetBaseUrl?: string;
 
 	/**
-	 * Whether email addresses are trusted immediately on registration/change, rather than held
-	 * pending until the user opens a confirmation link. Turning this off needs `publicUrl` set and a
-	 * mod which delivers mail; without either, addresses are held pending with no way to confirm
-	 * them. Note that an address held pending is not yet a sign-in identity — until it is confirmed
-	 * the user signs in by username.
-	 * @default true
-	 */
-	autoVerifyEmail?: boolean;
-
-	/**
 	 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
 	 * to all interfaces: "*:port". Port is 21025, if not specified.
 	 * @default *
 	 */
 	bind?: string;
-
-	/**
-	 * Where the backend sends a user's browser after they open an address confirmation link. The
-	 * outcome is appended as `emailVerified=1` or `emailVerified=0`, so the destination can report
-	 * it. Defaults to the server root, which is the client on a stock install; point it elsewhere
-	 * when the client is served from another origin.
-	 * @default /
-	 */
-	emailVerifyRedirect?: string;
-
-	/**
-	 * How long an address confirmation link stays valid, in hours.
-	 * @default 24
-	 */
-	emailVerifyTtlHours?: number;
 
 	/**
 	 * Reverse proxy configuration. TODO: mTLS, otherwise publicly-accessible backends on the public
