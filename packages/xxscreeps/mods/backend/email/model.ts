@@ -35,23 +35,23 @@ export function pendingEmailForUser(db: Database, userId: string) {
 
 /**
  * Confirm a user's pending address, promoting it to their `email` provider. `email` must match the
- * currently-pending address (guards against a stale/superseded link). Returns `false` when it
- * doesn't match, or when the address was meanwhile confirmed by another account.
+ * currently-pending address, so a link minted for an address the user has since replaced reports
+ * `stale` and changes nothing. An address another account confirmed in the meantime reports `taken`.
  *
- * Confirming an address the user has *already* confirmed succeeds without writing, so opening a
- * still-valid confirmation link a second time is idempotent rather than an error.
+ * Confirming an address the user has *already* confirmed reports `confirmed` without writing, so
+ * opening a still-valid confirmation link a second time is idempotent rather than an error.
  */
 export async function verifyPendingEmail(db: Database, userId: string, rawEmail: string) {
 	const email = flattenEmail(rawEmail);
 	const pending = await pendingEmailForUser(db, userId);
 	if (pending !== email) {
 		const confirmed = await emailForUser(db, userId);
-		return confirmed === email;
+		return confirmed === email ? 'confirmed' : 'stale';
 	}
 	// A different account may have confirmed the same address while this one was pending.
 	if (!await associateProvider(db, userId, emailProvider, email)) {
-		return false;
+		return 'taken';
 	}
 	await db.data.hDel(infoKey(userId), [ pendingEmailField ]);
-	return true;
+	return 'confirmed';
 }

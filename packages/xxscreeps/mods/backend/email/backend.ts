@@ -3,8 +3,8 @@ import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscr
 import { config } from 'xxscreeps/config/index.js';
 import { checkEmail, emailForUser, findUserByEmail } from 'xxscreeps/engine/db/user/index.js';
 import { mailer } from './mail.js';
-import { pendingEmailForUser, verifyPendingEmail } from './model.js';
-import { checkEmailVerificationToken, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail } from './verify.js';
+import { pendingEmailForUser } from './model.js';
+import { confirmEmailVerificationLink, emailVerifyPath, holdsPendingEmail, sendPendingEmailVerification, setAndVerifyEmail } from './verify.js';
 
 interface EmailRequest {
 	email: string;
@@ -53,27 +53,37 @@ hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	}
 });
 
-// Report the outcome as a query parameter, ahead of any fragment: the client routes on the hash, so
-// a destination like `/#!/account` has to keep its fragment last.
-function redirectTarget(verified: boolean) {
-	const base = config.email?.verifyRedirect ?? '/';
-	const hash = base.indexOf('#');
-	const [ path, fragment ] = hash === -1 ? [ base, '' ] : [ base.slice(0, hash), base.slice(hash) ];
-	return `${path}${path.includes('?') ? '&' : '?'}emailVerified=${verified ? 1 : 0}${fragment}`;
-}
+const verifyMessages = {
+	success: 'Your email address is confirmed.',
+	expired: 'This confirmation link has expired. You can ask for a new one from your account settings.',
+	stale: 'This confirmation link is for an address you have since changed. Open the link in the most recent confirmation mail instead.',
+	failed: 'This email address could not be confirmed.',
+};
 
 // The target of the confirmation link mailed to the user. A human opens this in a browser, so every
-// outcome — a good link, a forged or expired one, a superseded address — ends in a redirect rather
-// than an error payload; the destination reads `emailVerified` to tell the user what happened.
+// outcome — a good link, a forged or expired one, a superseded address — ends on a page saying so
+// rather than an error payload.
 hooks.register('route', {
 	path: emailVerifyPath,
 
 	async execute(context) {
 		const { token } = context.request.query;
-		const link = typeof token === 'string' ? await checkEmailVerificationToken(token) : undefined;
-		const verified = link !== undefined &&
-			await verifyPendingEmail(context.db, link.userId, link.email);
-		context.redirect(redirectTarget(verified));
+		const outcome = await confirmEmailVerificationLink(context.db, typeof token === 'string' ? token : undefined);
+		context.type = 'html';
+		context.body =
+			`<!doctype html>
+			<html>
+				<head>
+					<meta charset="utf-8">
+					<meta name="viewport" content="width=device-width, initial-scale=1">
+					<title>Email confirmation</title>
+					<style>:root{background:#131520;color:#ccc;font-family:sans-serif}body{max-width:32em;margin:4em auto;padding:0 1em}a{color:#8af}</style>
+				</head>
+				<body>
+					<p>${verifyMessages[outcome]}</p>
+					<p><a href="/">Continue to the game</a></p>
+				</body>
+			</html>`;
 		return true;
 	},
 });

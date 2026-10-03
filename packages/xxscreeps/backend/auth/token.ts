@@ -13,9 +13,21 @@ const secret = runOnce(() => {
 	}
 });
 
+interface OpenedToken {
+	payload: string;
+	/** When the token stops reading back (ms, as `Date.now()`). */
+	expires: number;
+}
+
 interface TokenSigner {
 	/** Mint a token carrying `payload`, which `read` hands back until `expires` (ms, as `Date.now()`). */
 	make: (payload: string, expires: number) => Promise<string>;
+	/**
+	 * Open a token minted by `make` whether or not it has expired, or `undefined` if it is forged or
+	 * someone else's. For telling a user their link is merely out of date; anything granting access
+	 * goes through `read`.
+	 */
+	open: (token?: string) => Promise<OpenedToken | undefined>;
 	/** Read back a token minted by `make`, or `undefined` if it is forged, expired, or someone else's. */
 	read: (token?: string) => Promise<string | undefined>;
 }
@@ -59,6 +71,25 @@ export function makeTokenSigner(purpose: string): TokenSigner {
 		return Consumers.buffer(cipher);
 	}
 
+	async function open(token?: string) {
+		const buffer = await decrypt(token ?? '');
+		if (!buffer) {
+			return;
+		}
+		const time = buffer.readInt32LE();
+		const payload = function() {
+			if (time > 0) {
+				// Hex only id
+				const str = buffer.toString('hex', 5);
+				return buffer[4] === 0 ? str : str.slice(1);
+			} else {
+				// Any string
+				return buffer.toString('utf8', 4);
+			}
+		}();
+		return { payload, expires: Math.abs(time) * 1000 };
+	}
+
 	return {
 		make(payload, expires) {
 			const expiresInSeconds = Math.floor(expires / 1000);
@@ -77,22 +108,12 @@ export function makeTokenSigner(purpose: string): TokenSigner {
 			}
 		},
 
+		open,
+
 		async read(token) {
-			const buffer = await decrypt(token ?? '');
-			if (!buffer) {
-				return;
-			}
-			const time = buffer.readInt32LE();
-			if (Date.now() / 1000 > Math.abs(time)) {
-				return;
-			}
-			if (time > 0) {
-				// Hex only id
-				const str = buffer.toString('hex', 5);
-				return buffer[4] === 0 ? str : str.slice(1);
-			} else {
-				// Any string
-				return buffer.toString('utf8', 4);
+			const opened = await open(token);
+			if (opened !== undefined && Date.now() <= opened.expires) {
+				return opened.payload;
 			}
 		},
 	};

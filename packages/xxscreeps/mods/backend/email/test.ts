@@ -1,11 +1,12 @@
 import type { EmailMessage, MailRefusal } from './mail.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { mailer } from './mail.js';
 import { pendingEmailForUser, setEmail, verifyPendingEmail } from './model.js';
-import { checkEmailVerificationToken, sendPendingEmailVerification } from './verify.js';
+import { checkEmailVerificationToken, confirmEmailVerificationLink, sendPendingEmailVerification } from './verify.js';
 
 /** Override one `backend` config value for the lifetime of the binding. */
 function backendConfigForTesting<Key extends keyof typeof config.backend>(key: Key, value: typeof config.backend[Key]): Disposable {
@@ -44,6 +45,11 @@ function backendMail(fixture: MailFixture = {}) {
 	return { sent, [Symbol.dispose]: () => stack.dispose() };
 }
 
+/** The token carried by the confirmation link in a mail the backend sent. */
+function tokenFromMail(message: EmailMessage) {
+	return new URL(/https:\/\/\S+/.exec(message.text)![0]).searchParams.get('token')!;
+}
+
 describe('mods/backend/email', () => {
 	test('a pending address is mailed a link which confirms it', async () => {
 		await using testShard = await instantiateTestShard();
@@ -62,11 +68,44 @@ describe('mods/backend/email', () => {
 		assert.deepStrictEqual(await checkEmailVerificationToken(url.searchParams.get('token')!), {
 			userId: '400',
 			email: 'pending@test.dev',
+			expired: false,
 		});
 
 		// And opening it is what promotes the address.
-		assert.strictEqual(await verifyPendingEmail(db, '400', 'pending@test.dev'), true);
+		assert.strictEqual(await confirmEmailVerificationLink(db, url.searchParams.get('token')!), 'success');
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'pending@test.dev'), '400');
+	});
+
+	test('a forged or missing link fails', async () => {
+		await using testShard = await instantiateTestShard();
+		assert.strictEqual(await confirmEmailVerificationLink(testShard.db, 'forged'), 'failed');
+		assert.strictEqual(await confirmEmailVerificationLink(testShard.db, undefined), 'failed');
+	});
+
+	test('an expired link is reported as such and confirms nothing', async () => {
+		await using testShard = await instantiateTestShard();
+		using clock = new DeterministicClockForTesting();
+		using mail = backendMail();
+		const { db } = testShard;
+		await User.create(db, '405', 'Late');
+		await setEmail(db, '405', 'late@test.dev', true);
+		await sendPendingEmailVerification(db, '405');
+		clock.increment(2 * 60 * 60 * 1000);
+		assert.strictEqual(await confirmEmailVerificationLink(db, tokenFromMail(mail.sent[0]!)), 'expired');
+		assert.strictEqual(await pendingEmailForUser(db, '405'), 'late@test.dev');
+	});
+
+	test('a link for a replaced address is stale and confirms nothing', async () => {
+		await using testShard = await instantiateTestShard();
+		using mail = backendMail();
+		const { db } = testShard;
+		await User.create(db, '406', 'Fickle');
+		await setEmail(db, '406', 'first@test.dev', true);
+		await sendPendingEmailVerification(db, '406');
+		await setEmail(db, '406', 'second@test.dev', true);
+		assert.strictEqual(await confirmEmailVerificationLink(db, tokenFromMail(mail.sent[0]!)), 'stale');
+		assert.strictEqual(await User.findUserByProvider(db, 'email', 'first@test.dev'), null);
+		assert.strictEqual(await pendingEmailForUser(db, '406'), 'second@test.dev');
 	});
 
 	test('nothing is mailed to a user with no pending address', async () => {
@@ -123,14 +162,14 @@ describe('mods/backend/email', () => {
 		assert.strictEqual(await pendingEmailForUser(db, '301'), 'gated@test.dev');
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'gated@test.dev'), null);
 		// A mismatched address is rejected and changes nothing.
-		assert.strictEqual(await verifyPendingEmail(db, '301', 'wrong@test.dev'), false);
+		assert.strictEqual(await verifyPendingEmail(db, '301', 'wrong@test.dev'), 'stale');
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'gated@test.dev'), null);
 		// Confirming the pending address promotes it to the `email` provider and clears pending.
-		assert.strictEqual(await verifyPendingEmail(db, '301', 'gated@test.dev'), true);
+		assert.strictEqual(await verifyPendingEmail(db, '301', 'gated@test.dev'), 'confirmed');
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'gated@test.dev'), '301');
 		assert.strictEqual(await pendingEmailForUser(db, '301'), null);
 		// Opening a still-valid link again confirms what is already confirmed, rather than failing.
-		assert.strictEqual(await verifyPendingEmail(db, '301', 'gated@test.dev'), true);
+		assert.strictEqual(await verifyPendingEmail(db, '301', 'gated@test.dev'), 'confirmed');
 	});
 
 	test('a pending address another account confirmed first is refused', async () => {
@@ -141,8 +180,8 @@ describe('mods/backend/email', () => {
 			setEmail(db, '302', 'contested@test.dev', true),
 			setEmail(db, '303', 'contested@test.dev', true),
 		]);
-		assert.strictEqual(await verifyPendingEmail(db, '302', 'contested@test.dev'), true);
-		assert.strictEqual(await verifyPendingEmail(db, '303', 'contested@test.dev'), false);
+		assert.strictEqual(await verifyPendingEmail(db, '302', 'contested@test.dev'), 'confirmed');
+		assert.strictEqual(await verifyPendingEmail(db, '303', 'contested@test.dev'), 'taken');
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'contested@test.dev'), '302');
 	});
 });

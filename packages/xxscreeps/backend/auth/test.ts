@@ -20,6 +20,15 @@ describe('backend/auth', () => {
 		assert.strictEqual(await signer.read(await signer.make('hello', Date.now() - 1000)), undefined);
 	});
 
+	test('an expired token still opens, but not another purpose\'s', async () => {
+		const greeting = makeTokenSigner('greeting');
+		const farewell = makeTokenSigner('farewell');
+		const expires = Math.floor(Date.now() / 1000) * 1000 - 1000;
+		const token = await greeting.make('hello', expires);
+		assert.deepStrictEqual(await greeting.open(token), { payload: 'hello', expires });
+		assert.strictEqual(await farewell.open(token), undefined);
+	});
+
 	test('a signed token can never authenticate', async () => {
 		// Every purpose signs under its own key, so this is what keeps a token minted for some other
 		// purpose from being presented as a session token.

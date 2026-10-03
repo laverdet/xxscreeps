@@ -3,13 +3,13 @@ import type { Database } from 'xxscreeps/engine/db/index.js';
 import { makeTokenSigner } from 'xxscreeps/backend/auth/token.js';
 import { config } from 'xxscreeps/config/index.js';
 import { mailer } from './mail.js';
-import { pendingEmailForUser, setEmail } from './model.js';
+import { pendingEmailForUser, setEmail, verifyPendingEmail } from './model.js';
 
 // Route which confirms an address; also the path baked into the link mailed to the user.
 export const emailVerifyPath = '/api/auth/email/verify';
 
 // Signed under its own key, so a login token and a confirmation link are never good for one another.
-const { make, read } = makeTokenSigner('email-verify');
+const { make, open } = makeTokenSigner('email-verify');
 // One hour
 const kTtl = 60 * 60 * 1000;
 
@@ -30,12 +30,16 @@ async function makeEmailVerificationLink(base: string, userId: string, email: st
 	return `${base.replace(/\/+$/, '')}${emailVerifyPath}?token=${encodeURIComponent(token)}`;
 }
 
-/** Read back the user and address a confirmation link was minted for, or `undefined`. */
+/**
+ * Read back the user and address a confirmation link was minted for, or `undefined` for one which
+ * is forged. An expired link still reads back, flagged, so the user can be told to ask for another.
+ */
 export async function checkEmailVerificationToken(token: string) {
-	const payload = await read(token);
-	if (payload === undefined) {
+	const opened = await open(token);
+	if (opened === undefined) {
 		return;
 	}
+	const { payload, expires } = opened;
 	const separator = payload.indexOf(kSeparator);
 	if (separator === -1) {
 		return;
@@ -43,7 +47,27 @@ export async function checkEmailVerificationToken(token: string) {
 	return {
 		userId: payload.slice(0, separator),
 		email: payload.slice(separator + 1),
+		expired: Date.now() > expires,
 	};
+}
+
+/**
+ * Act on a confirmation link the user opened, and say how it went: `success` for an address now
+ * confirmed, `expired` for a link past its hour, `stale` for one minted for an address the user has
+ * since replaced, and `failed` for a forged link or an address another account confirmed first.
+ */
+export async function confirmEmailVerificationLink(db: Database, token: string | undefined) {
+	const link = token === undefined ? undefined : await checkEmailVerificationToken(token);
+	if (link === undefined) {
+		return 'failed';
+	} else if (link.expired) {
+		return 'expired';
+	}
+	switch (await verifyPendingEmail(db, link.userId, link.email)) {
+		case 'confirmed': return 'success';
+		case 'stale': return 'stale';
+		case 'taken': return 'failed';
+	}
 }
 
 /** Whether an address given to the backend is parked until the user proves the inbox is theirs. */
