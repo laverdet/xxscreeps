@@ -3,6 +3,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { UpdateSchemaBlob, loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps:mods/constants';
 import { Order, orderAmountOffsetOf, orderSchemaVersion, readOrder, upgradeOrder, writeOrder } from './order.js';
 
@@ -133,6 +134,12 @@ export function deleteOrder(shard: Shard, orderId: string, userId?: string) {
 		shard.data.zRem(allOrdersKey, [ orderId ]),
 		shard.data.del(orderBlobKey(orderId)),
 	]);
+}
+
+// Deletes every order a user owns. No refund takes place.
+export async function deleteOrdersForUser(shard: Shard, userId: string) {
+	const orderIds = await shard.data.sMembers(userOrdersKey(userId));
+	await Fn.mapAwait(orderIds, orderId => deleteOrder(shard, orderId, userId));
 }
 
 // Expire an aged order, refunding the unspent share of the listing fee.

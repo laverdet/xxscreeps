@@ -1,17 +1,24 @@
 import type { Badge } from './badge.js';
-import type { Database } from 'xxscreeps/engine/db/index.js';
+import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
 
-// Lifecycle hooks for users. Mods register `remove` handlers to tear down their own per-user,
-// db-scoped state (e.g. private messages, stats) when a user is deleted, so `remove` below stays
-// self-contained for every caller rather than each call site enumerating mod cleanups.
+// Lifecycle hooks for users. Mods register handlers to tear down their own per-user state when a
+// user is deleted, so the functions below stay self-contained for every caller rather than each
+// call site enumerating mod cleanups: `remove` for db-scoped state (e.g. private messages, stats),
+// and `removeFromShard` for state each shard keeps (e.g. memory).
 export const hooks = makeHookRegistration<{
 	remove: (db: Database, userId: string) => MaybePromise<void>;
+	removeFromShard: (shard: Shard, userId: string) => Promise<void>;
 }>();
 const removeHooks = hooks.makeMapped('remove');
+const removeFromShardHooks = hooks.makeMapped('removeFromShard');
+
+// Mods register their handlers from a `user` provide, loaded here rather than relied on from the
+// caller: `manage` loads no `backend` provide.
+const loadRemoveHandlers = () => import('xxscreeps:mods/user');
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
@@ -119,15 +126,14 @@ export async function associateProvider(db: Database, userId: string, provider: 
 
 /**
  * Deletes a user's database records: lookup entries, info, and code. Room objects owned by the
- * user are unaffected.
+ * user are unaffected. Run `removeFromShard` on every shard first; once this record is gone nothing
+ * finds the user's per-shard state.
  */
 export async function remove(db: Database, userId: string) {
 	const [ providers, branches ] = await Promise.all([
 		findProvidersForUser(db, userId),
 		db.data.sMembers(branchManifestKey(userId)),
-		// Mods register their handlers from a `user` provide, loaded here rather than relied on from
-		// the caller: `manage` loads no `backend` provide.
-		import('xxscreeps:mods/user'),
+		loadRemoveHandlers(),
 	]);
 	await Promise.all([
 		db.data.sRem('users', [ userId ]),
@@ -142,6 +148,15 @@ export async function remove(db: Database, userId: string) {
 		]),
 		...removeHooks(db, userId),
 	]);
+}
+
+/**
+ * Deletes a user's records on one shard. Run it on every shard before `remove`, which deletes the
+ * record that finds the user.
+ */
+export async function removeFromShard(shard: Shard, userId: string) {
+	await loadRemoveHandlers();
+	await Promise.all(removeFromShardHooks(shard, userId));
 }
 
 export function findProvidersForUser(db: Database, userId: string) {

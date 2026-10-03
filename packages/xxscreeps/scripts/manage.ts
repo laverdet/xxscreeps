@@ -9,7 +9,8 @@
 // Code saves are picked up by the runner on the next tick via the code channel. `remove` deletes
 // records only — owned room objects are left alone — and is safe for inactive users; pause the
 // engine first if the user is live. Users are shared by every shard, so `--shard` matters only to
-// what is stored per shard: the game verbs, `--spawn`, and the memory that `show` and `remove` touch.
+// what is stored per shard: the game verbs, `--spawn`, and the memory that `show` reads. `remove`
+// clears every shard.
 
 import * as fs from 'node:fs/promises';
 import * as nodePath from 'node:path';
@@ -38,7 +39,7 @@ import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { catalog } from 'xxscreeps/mods/meta/decorations/catalog.js';
 import * as Decorations from 'xxscreeps/mods/meta/decorations/model.js';
-import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
+import { loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import * as C from 'xxscreeps:mods/constants';
 
 import 'xxscreeps:mods/game';
@@ -137,10 +138,13 @@ async function userCreate(name: string, email?: string) {
 
 async function userRemove(who: string) {
 	const id = await resolveUserId(who);
-	await Promise.all([
-		User.remove(db, id),
-		deleteUserMemoryBlob(shard, id),
-	]);
+	// Every shard before the user record, which is what finds them again if one of these fails
+	await Fn.mapAwait(config.shards, async info => {
+		await using target = await Shard.connectWith(db, info);
+		await User.removeFromShard(target, id);
+		await target.save();
+	});
+	await User.remove(db, id);
 	await save();
 	out(`Removed user ${who} (${id}).`);
 }

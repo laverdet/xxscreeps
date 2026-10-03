@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import * as Spawn from 'xxscreeps/mods/classic/spawn/spawn.js';
-import { publicSegmentChannel, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
+import { isPublicSegment, loadDefaultPublicSegment, loadMemorySegmentBlob, loadUserMemoryBlob, publicSegmentChannel, saveDefaultPublicSegment, saveMemoryBlob, saveMemorySegmentBlob, savePublicSegments } from 'xxscreeps/mods/meta/memory/model.js';
 import { describe, simulate, test } from 'xxscreeps/test/index.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 // nb: Try not to include too much in this file because `sandbox` uses a fake function that gets
@@ -169,5 +170,19 @@ describe('mods/meta/memory', () => {
 		await saveMemorySegmentBlob(shard, '200', 0, utf16ToBuffer('foo'));
 		await publicSegmentChannel(shard, '200').publish({ type: 'segment', id: 0 });
 		await tick(2);
+	}));
+
+	test('removing a user from a shard drops their memory and segments', () => sim(async ({ shard }) => {
+		await Promise.all([
+			saveMemoryBlob(shard, '100', utf16ToBuffer('{}')),
+			saveMemorySegmentBlob(shard, '100', 5, utf16ToBuffer('segment')),
+			saveDefaultPublicSegment(shard, '100', 5),
+			savePublicSegments(shard, '100', [ 5 ]),
+		]);
+		await User.removeFromShard(shard, '100');
+		assert.equal(await loadUserMemoryBlob(shard, '100'), null);
+		assert.equal(await loadMemorySegmentBlob(shard, '100', 5), null);
+		assert.equal(await loadDefaultPublicSegment(shard, '100'), null);
+		assert.equal(await isPublicSegment(shard, '100', 5), false);
 	}));
 });

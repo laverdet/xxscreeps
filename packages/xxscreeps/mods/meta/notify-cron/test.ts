@@ -1,10 +1,11 @@
 import type { NotificationRow } from './model.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { sendNotification } from 'xxscreeps/mods/meta/notifications/transport.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { consumeDueUsers, getAllRowsForTesting, hooks, upsertNotification } from './model.js';
+import { consumeDueUsers, getAllRowsForTesting, getLastNotifyDate, hooks, setLastNotifyDate, upsertNotification } from './model.js';
 
 const userA = '100';
 const userB = '101';
@@ -186,6 +187,18 @@ describe('mods/meta/notify-cron', () => {
 		assert.strictEqual(delivered.length, 2, 'long group fires once its deadline elapses');
 		assert.strictEqual(delivered[1]?.message, 'long');
 		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
+	}));
+
+	test('removing a user drops their rows, pending drain and cadence', () => empty(async ({ shard }) => {
+		await Promise.all([
+			seedRow(shard, userA, 'hi'),
+			setLastNotifyDate(shard.db, userA, 1),
+		]);
+		await User.removeFromShard(shard, userA);
+		await User.remove(shard.db, userA);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
+		assert.deepStrictEqual(await consumeDueUsers(shard, Infinity), []);
+		assert.strictEqual(await getLastNotifyDate(shard.db, userA), 0);
 	}));
 
 });

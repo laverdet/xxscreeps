@@ -2,7 +2,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
-import { isValidSegmentId, kMaxMemoryLength, kMaxMemorySegmentLength } from './memory.js';
+import { isValidSegmentId, kMaxMemoryLength, kMaxMemorySegmentId, kMaxMemorySegmentLength } from './memory.js';
 
 const kMaxMemorySize = kMaxMemoryLength * 2;
 const kMaxMemorySegmentSize = kMaxMemorySegmentLength * 2;
@@ -39,10 +39,6 @@ export function saveMemoryBlob(shard: Shard, userId: string, blob: Readonly<Uint
 	if (blob.byteLength < kMaxMemorySize) {
 		return shard.data.set(`user/${userId}/memory`, blob, { retain: true });
 	}
-}
-
-export function deleteUserMemoryBlob(shard: Shard, userId: string) {
-	return shard.data.vDel(`user/${userId}/memory`);
 }
 
 const memorySegmentKey = (userId: string, segmentId: number) => `user/${userId}/segments/${segmentId}`;
@@ -109,4 +105,16 @@ export async function savePublicSegments(shard: Shard, userId: string, ids: numb
 
 export function isPublicSegment(shard: Shard, userId: string, id: number) {
 	return shard.data.sIsMember(publicSegmentsKey(userId), String(id));
+}
+
+// Everything a user keeps on this shard: Memory, its segments, and which of them are public
+export async function deleteUserMemory(shard: Shard, userId: string) {
+	await Promise.all([
+		shard.data.vDel(`user/${userId}/memory`),
+		...Fn.map(Fn.range(kMaxMemorySegmentId), id => saveMemorySegmentBlob(shard, userId, id, null)),
+		saveDefaultPublicSegment(shard, userId, null),
+		// Players reading these segments drop them on the empty `publicSet` this publishes, rather than
+		// holding the last copy
+		savePublicSegments(shard, userId, []),
+	]);
 }

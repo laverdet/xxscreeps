@@ -93,6 +93,19 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
 	]);
 }
 
+// Drop a user's rows, and the drain which would otherwise deliver them
+export async function removeUserNotifications(shard: Shard, userId: string) {
+	const [ ids ] = await Promise.all([
+		shard.data.zRange(userIndexKey(userId), -Infinity, Infinity, { by: 'SCORE' }),
+		shard.data.zRem(dueUsersKey, [ userId ]),
+	]);
+	await removeNotifications(shard, userId, ids);
+}
+
+export async function removeLastNotifyDate(db: Database, userId: string) {
+	await db.data.del(lastNotifyDateKey(userId));
+}
+
 // Pop users whose scheduled drain time has elapsed. Caller owns rescheduling via `scheduleUserDrain`.
 export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<string[]> {
 	const [ userIds ] = await Promise.all([
