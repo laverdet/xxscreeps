@@ -151,7 +151,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			this.remove(key);
 			return true;
 		} else {
-			return this.blob.del(key) satisfies Promise<boolean> as unknown as boolean;
+			return this.blob.del(key);
 		}
 	}
 
@@ -173,8 +173,8 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			$$ => Fn.accumulate($$));
 	}
 
-	vDel(key: string) {
-		this.del(key);
+	async vDel(key: string) {
+		await this.del(key);
 	}
 
 	get(key: string, options: Pr.AsBlob): Promise<Readonly<Uint8Array> | null>;
