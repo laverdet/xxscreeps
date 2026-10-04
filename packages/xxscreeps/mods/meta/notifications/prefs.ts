@@ -42,3 +42,7 @@ export async function setNotifyPrefs(db: Database, userId: string, prefs: Partia
 		await db.data.hmSet(prefsKey(userId), fields);
 	}
 }
+
+export async function removeNotifyPrefs(db: Database, userId: string) {
+	await db.data.del(prefsKey(userId));
+}

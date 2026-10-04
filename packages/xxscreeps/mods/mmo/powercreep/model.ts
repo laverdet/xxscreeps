@@ -41,6 +41,11 @@ export function loadPowerCreepsBlob(db: Database, userId: string) {
 	);
 }
 
+/** Drop the whole roster, for `User.remove`. Creeps already spawned into rooms are left alone. */
+export async function removeRoster(db: Database, userId: string) {
+	await db.data.del(powerCreepsKey(userId));
+}
+
 // Apply `fn` to the live roster and commit it with a compare-and-swap, retrying if a concurrent
 // mutation slipped in between the read and the write. `fn` runs the shared check and returns its result
 // code; the roster is written only when the check passes.

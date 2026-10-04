@@ -5,7 +5,6 @@ import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { hooks as badgeHooks } from 'xxscreeps/engine/db/user/badge.js';
-import { hooks as userHooks } from 'xxscreeps/engine/db/user/index.js';
 import { generateId } from 'xxscreeps/engine/schema/id.js';
 import { mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -399,7 +398,7 @@ export async function deactivateStranded(db: Database, userId: string) {
 	return stranded;
 }
 
-async function removeAllForUser(db: Database, userId: string) {
+export async function removeAllForUser(db: Database, userId: string) {
 	const [ ids, placed ] = await Promise.all([
 		db.data.sMembers(inventoryKey(userId)),
 		db.data.sMembers(activeIndexKey(userId)),
@@ -412,9 +411,6 @@ async function removeAllForUser(db: Database, userId: string) {
 		...Fn.map(ids, id => db.data.del(itemKey(userId, id))),
 	]);
 }
-
-// Tear down a removed user's decorations as part of `User.remove`.
-userHooks.register('remove', removeAllForUser);
 
 // The symbols a user's badge decorations grant them. The account badge editor offers these beside
 // the numbered shapes, and a badge naming one is only stored if it shows up here — so a symbol stops

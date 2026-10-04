@@ -1,6 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
-import { hooks as userHooks } from 'xxscreeps/engine/db/user/index.js';
 import { generateId } from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
@@ -269,6 +268,3 @@ export function markRead(db: Database, userId: string, messageId: string): Promi
 export function removeAllForUser(db: Database, userId: string): Promise<void> {
 	return messageStore.current.removeAllForUser(db, userId);
 }
-
-// Tear down a removed user's messages as part of `User.remove`.
-userHooks.register('remove', removeAllForUser);
