@@ -31,7 +31,7 @@ jobs:
           pnpm run -s test --private-transform=isolated-vm
 
       # Publish to npm
-      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
+      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'pf' && github.event_name == 'push'
         id: publish
         shell: sh
         env:
