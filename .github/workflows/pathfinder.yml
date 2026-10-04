@@ -377,7 +377,7 @@ jobs:
         working-directory: packages/pathfinder
         shell: sh
         run: |
-          pnpm publish --dry-run --filter . --no-git-checks
+          pnpm publish --dry-run --filter . --ignore-scripts --no-git-checks
           for ii in $(ls npm); do
             pnpm -C "npm/$ii" pack
           done
