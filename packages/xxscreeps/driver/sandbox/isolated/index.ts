@@ -21,7 +21,7 @@ const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
 const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
-const getRuntimeSource = runOnce(() => {
+const getRuntimeSource = runOnce(async () => {
 	const runtime = import.meta.resolve('xxscreeps/driver/sandbox/isolated/runtime.js');
 	return compile(runtime, {
 		babel: [ Privates ],
@@ -47,9 +47,9 @@ const getRuntimeSource = runOnce(() => {
 				resource.request = '/' + resource.request;
 			}),
 			new VirtualModulesPlugin({
-				'/xxscreeps:mods/constants': makeModSourceText(mods, 'constants'),
-				'/xxscreeps:mods/game': makeModSourceText(mods, 'game'),
-				'/xxscreeps:mods/schema': makeModSourceText(mods, 'schema'),
+				'/xxscreeps:mods/constants': await makeModSourceText(mods, 'constants'),
+				'/xxscreeps:mods/game': await makeModSourceText(mods, 'game'),
+				'/xxscreeps:mods/schema': await makeModSourceText(mods, 'schema'),
 				'/xxscreeps:packages': makePackagesModule(),
 			}),
 		],
