@@ -253,3 +253,11 @@ export function checkActivateSafeMode(controller: StructureController) {
 export function checkUnclaim(controller: StructureController) {
 	return checkMyStructure(controller, StructureController);
 }
+
+export function checkUpgradeBlocked<Error extends number>(controller: StructureController, error: Error) {
+	if (controller.upgradeBlocked === undefined) {
+		return C.OK;
+	} else {
+		return error;
+	}
+}

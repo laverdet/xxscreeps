@@ -5,7 +5,7 @@ import { checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
-import { StructureController } from './controller.js';
+import { StructureController, checkUpgradeBlocked } from './controller.js';
 
 // Creep extension declaration
 declare module 'xxscreeps/mods/classic/creep/creep.js' {
@@ -155,10 +155,9 @@ export function checkAttackController(creep: Creep, target: StructureController)
 			// Owned controllers use #user; reserved controllers only set room #user
 			if (target['#user'] === null && !target['#reservationEndTime']) {
 				return C.ERR_INVALID_TARGET;
-			} else if (target.upgradeBlocked !== undefined) {
-				return C.ERR_TIRED;
 			}
-		});
+		},
+		() => checkUpgradeBlocked(target, C.ERR_TIRED));
 }
 
 export function checkClaimController(creep: Creep, target: StructureController) {
@@ -202,7 +201,11 @@ export function checkReserveController(creep: Creep, target: StructureController
 		() => {
 			const user = target['#user'];
 			const roomUser = target.room['#user'];
-			if ((user !== null && user !== me) || (roomUser !== null && roomUser !== me) || target.level !== 0) {
+			if (
+				target.level !== 0 ||
+				(user !== null && user !== me) ||
+				(roomUser !== null && roomUser !== me)
+			) {
 				return C.ERR_INVALID_TARGET;
 			}
 		},
@@ -223,7 +226,7 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 		() => checkCommon(creep, C.WORK),
 		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, StructureController),
-		() => target.upgradeBlocked === undefined ? C.OK : C.ERR_INVALID_TARGET,
+		() => checkUpgradeBlocked(target, C.ERR_INVALID_TARGET),
 		() => checkRange(creep, target, 3),
 		() => target.my ? C.OK : C.ERR_NOT_OWNER);
 }

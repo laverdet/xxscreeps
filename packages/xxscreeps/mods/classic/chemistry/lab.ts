@@ -1,11 +1,11 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown, checkNotSelf, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import { intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
-import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { Creep, checkNotSpawning } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -190,11 +190,7 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 		() => checkMyStructure(lab, StructureLab),
 		() => checkIsActive(lab),
 		() => checkTarget(creep, Creep),
-		() => {
-			if (creep!.spawning) {
-				return C.ERR_INVALID_TARGET;
-			}
-		},
+		() => checkNotSpawning(creep!),
 		() => checkRange(lab, creep!, 1),
 		() => {
 			const mineralType = lab.mineralType;
@@ -230,24 +226,25 @@ export function getReactionVariants(compound: string): [ResourceType, ResourceTy
 	return result;
 }
 
-export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
+/**
+ * The prefix shared by both reaction verbs: a ready, owned lab and two other labs within reach.
+ */
+function checkReactionLabs(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
-		() => {
-			if (lab.cooldown) {
-				return C.ERR_TIRED;
-			}
-		},
+		() => checkCooldown(lab),
 		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
-		() => {
-			if (lab1!.id === lab.id || lab2!.id === lab.id) {
-				return C.ERR_INVALID_TARGET;
-			}
-		},
+		() => checkNotSelf(lab, lab1!),
+		() => checkNotSelf(lab, lab2!),
 		() => checkRange(lab, lab1!, 2),
-		() => checkRange(lab, lab2!, 2),
+		() => checkRange(lab, lab2!, 2));
+}
+
+export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
+	return chainIntentChecks(
+		() => checkReactionLabs(lab, lab1, lab2),
 		() => {
 			if (lab1!.id === lab2!.id) {
 				return C.ERR_INVALID_ARGS;
@@ -295,11 +292,7 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 			}
 		},
 		() => checkIsActive(lab),
-		() => {
-			if (lab.cooldown) {
-				return C.ERR_TIRED;
-			}
-		},
+		() => checkCooldown(lab),
 		() => {
 			if (creep?.body.every(part => part.boost === undefined)) {
 				return C.ERR_NOT_FOUND;
@@ -323,37 +316,22 @@ export function calcTotalReactionsTime(mineral: string): number {
 	return calcStep(mineral);
 }
 
-export function checkRunReaction(lab: StructureLab, left: StructureLab, right: StructureLab) {
+export function checkRunReaction(lab: StructureLab, left: StructureLab | null | undefined, right: StructureLab | null | undefined) {
 	return chainIntentChecks(
-		() => checkMyStructure(lab, StructureLab),
-		() => {
-			if (lab.cooldown) {
-				return C.ERR_TIRED;
-			}
-		},
-		() => checkIsActive(lab),
-		() => checkTarget(left, StructureLab),
-		() => checkTarget(right, StructureLab),
-		() => {
-			if (left.id === lab.id || right.id === lab.id) {
-				return C.ERR_INVALID_TARGET;
-			}
-		},
-		() => checkRange(lab, left, 2),
-		() => checkRange(lab, right, 2),
+		() => checkReactionLabs(lab, left, right),
 		() => {
 			if (lab.mineralAmount > lab.mineralCapacity - C.LAB_REACTION_AMOUNT) {
 				return C.ERR_FULL;
 			}
 		},
 		() => {
-			if (left.mineralAmount < C.LAB_REACTION_AMOUNT || right.mineralAmount < C.LAB_REACTION_AMOUNT) {
+			if (left!.mineralAmount < C.LAB_REACTION_AMOUNT || right!.mineralAmount < C.LAB_REACTION_AMOUNT) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 		},
 		() => {
-			const leftMineral = left.mineralType;
-			const rightMineral = right.mineralType;
+			const leftMineral = left!.mineralType;
+			const rightMineral = right!.mineralType;
 			if (leftMineral === undefined || rightMineral === undefined) {
 				return C.ERR_INVALID_ARGS;
 			}

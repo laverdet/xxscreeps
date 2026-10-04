@@ -2,7 +2,7 @@ import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscr
 import { intents } from 'xxscreeps/game/index.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/classic/creep/creep.js';
+import { Creep, calculatePower, checkCommon, checkNotSpawning } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -186,8 +186,7 @@ export function checkRangedHeal(creep: Creep, target: Creep) {
 }
 
 export function checkDestructible(target: Creep | Structure) {
-	if (target instanceof Creep && target.spawning) {
-		return C.ERR_INVALID_TARGET;
-	}
-	return target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK;
+	return chainIntentChecks(
+		() => checkNotSpawning(target),
+		() => target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK);
 }

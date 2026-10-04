@@ -1,7 +1,7 @@
 import type { QueuedNotification } from './notifications.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { hooks, intents } from 'xxscreeps/game/index.js';
-import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { Creep, checkCarrier } from 'xxscreeps/mods/classic/creep/creep.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps:mods/constants';
 import { flush, notify } from './notifications.js';
@@ -43,14 +43,9 @@ declare module 'xxscreeps/mods/classic/structure/structure.js' {
 
 /** @internal */
 export function checkCreepNotifyWhenAttacked(creep: Creep, enabled: unknown) {
-	if (!creep.my) {
-		return C.ERR_NOT_OWNER;
-	} else if (creep.spawning) {
-		return C.ERR_BUSY;
-	} else if (typeof enabled !== 'boolean') {
-		return C.ERR_INVALID_ARGS;
-	}
-	return C.OK;
+	return chainIntentChecks(
+		() => checkCarrier(creep),
+		() => typeof enabled === 'boolean' ? C.OK : C.ERR_INVALID_ARGS);
 }
 
 /** @internal */

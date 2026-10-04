@@ -10,7 +10,7 @@ import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
 import type { PolyStyle } from 'xxscreeps/mods/meta/visual/visual.js';
 import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkDirection, checkNotSelf, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, createRoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
@@ -654,6 +654,11 @@ function checkFatigue(creep: Creep) {
 	return creep.fatigue > 0 ? C.ERR_TIRED : C.OK;
 }
 
+/** A creep still inside its spawn is not a valid target for anyone else's action. */
+export function checkNotSpawning(target: RoomObject) {
+	return target instanceof Creep && target.spawning ? C.ERR_INVALID_TARGET : C.OK;
+}
+
 export function checkDrop(creep: Carrier, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCarrier(creep),
@@ -661,33 +666,32 @@ export function checkDrop(creep: Carrier, resourceType: ResourceType, amount: nu
 }
 
 export function checkMove(creep: Creep, target: Direction | Creep | null) {
-	return chainIntentChecks(
-		target instanceof Creep
-			? () => chainIntentChecks(
-				() => checkCommon(creep),
-				() => checkRange(creep, target, 1)) :
-			() => chainIntentChecks(
-				() => checkCommon(creep, C.MOVE),
-				() => checkFatigue(creep),
-				() => Number.isInteger(target) && target! >= 1 && target! <= 8
-					? C.OK : C.ERR_INVALID_ARGS));
+	if (target instanceof Creep) {
+		return chainIntentChecks(
+			() => checkCommon(creep),
+			() => checkRange(creep, target, 1));
+	} else {
+		return chainIntentChecks(
+			() => checkCommon(creep, C.MOVE),
+			() => checkFatigue(creep),
+			() => checkDirection(target!));
+	}
 }
 
 export function checkPull(creep: Creep, target: Creep | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Creep),
-		() => target === creep ? C.ERR_INVALID_TARGET : C.OK,
+		() => checkNotSelf(creep, target!),
 		() => checkRange(creep, target!, 1),
-		() => target!.spawning ? C.ERR_INVALID_TARGET : C.OK);
+		() => checkNotSpawning(target!));
 }
 
 export function checkPickup(creep: Carrier, target: Resource) {
 	return chainIntentChecks(
 		() => checkCarrier(creep),
 		() => checkTarget(target, Resource),
-		() => creep.store.getFreeCapacity(target.resourceType) > 0
-			? C.OK : C.ERR_FULL,
+		() => creep.store.getFreeCapacity(target.resourceType) > 0 ? C.OK : C.ERR_FULL,
 		() => checkRange(creep, target, 1));
 }
 
@@ -695,7 +699,7 @@ function checkTransferTarget(target: RoomObject & WithStore, resourceType: Resou
 	return chainIntentChecks(
 		() => checkTarget(target, RoomObject),
 		() => target.store instanceof Store ? C.OK : C.ERR_INVALID_TARGET,
-		() => target instanceof Creep && target.spawning ? C.ERR_INVALID_TARGET : C.OK,
+		() => checkNotSpawning(target),
 		() => checkStoreAccepts(target, resourceType));
 }
 
