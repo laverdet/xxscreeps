@@ -92,6 +92,7 @@ to information about game APIs.
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
 First step is make sure nodejs v24.x is installed, older versions will probably not work.
+TODO: v24 is the npm version, v26 is the git version.
 ```
 mkdir xxscreeps
 cd xxscreeps

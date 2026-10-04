@@ -33,7 +33,7 @@
 		"ghcr.io/devcontainers/features/node:2": {
 			"nodeGypDependencies": false,
 			"pnpmVersion": "latest",
-			"version": "24"
+			"version": "26"
 		}
 	},
 	// '_devcontainer_init' may be defined by dotfiles. this is different than the 'install' script

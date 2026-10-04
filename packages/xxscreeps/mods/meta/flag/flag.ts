@@ -1,5 +1,5 @@
 import type { FlagIntent } from './model.js';
-import type { InspectOptionsStylized } from 'node:util';
+import type { InspectContext } from 'node:util';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
@@ -101,7 +101,7 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 		);
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectContext) {
 		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const { stylize } = options;
 		try {

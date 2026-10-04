@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/jszip": "^3.4.1",
-    "@types/node": "~24.12.2"
+    "@types/node": "~26.6.4"
   },
   "peerDependencies": {
     "xxscreeps": "workspace:~"

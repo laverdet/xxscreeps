@@ -1,7 +1,7 @@
 import type { GameConstructor } from './index.js';
 import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
-import type { InspectOptionsStylized } from 'node:util';
+import type { InspectContext } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import type { ActionLogSchema } from 'xxscreeps:mods/game';
 import * as Id from 'xxscreeps/engine/schema/id.js';
@@ -161,7 +161,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		return this.room['#removeObject'](this);
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized): unknown {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectContext): unknown {
 		if (BufferObject.check(this)) {
 			return expandGetters(this);
 		} else {
