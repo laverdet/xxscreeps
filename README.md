@@ -1,3 +1,8 @@
+[![npm version](https://img.shields.io/npm/v/xxscreeps)](https://www.npmjs.com/package/xxscreeps)
+[![github action](https://github.com/laverdet/xxscreeps/actions/workflows/xxscreeps.yml/badge.svg)](https://github.com/laverdet/xxscreeps/actions/workflows/xxscreeps.yml)
+[![isc license](https://img.shields.io/npm/l/xxscreeps)](https://github.com/laverdet/xxscreeps/blob/main/LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/xxscreeps)](https://www.npmjs.com/package/xxscreeps)
+
 # xxscreeps
 
 This is a from-scratch rewrite of the Screeps backend services, brought to you by the author of
