@@ -10,6 +10,6 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/powerbank',
 		'xxscreeps/mods/modern/powerspawn',
 	],
-	provides: [ 'backend', 'constants', 'driver', 'game', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'driver', 'game', 'processor', 'schema', 'test', 'user' ],
 	types,
 };

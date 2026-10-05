@@ -94,6 +94,13 @@ describe('mods/mmo/powercreep', () => {
 		assert.strictEqual((await Model.loadRoster(shard.db, owner))[0]!.deleteTime, 0);
 	}));
 
+	test('removing a user drops their roster', () => sim(async ({ shard }) => {
+		await setPower(shard.db, 1000);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		await User.remove(shard.db, owner);
+		assert.strictEqual((await Model.loadRoster(shard.db, owner)).length, 0);
+	}));
+
 	test('the driver blob materializes an unspawned roster member', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 4000);
 		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);

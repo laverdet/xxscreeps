@@ -125,6 +125,9 @@ export async function remove(db: Database, userId: string) {
 	const [ providers, branches ] = await Promise.all([
 		findProvidersForUser(db, userId),
 		db.data.sMembers(branchManifestKey(userId)),
+		// Mods register their handlers from a `user` provide, loaded here rather than relied on from
+		// the caller: `manage` loads no `backend` provide.
+		import('xxscreeps:mods/user'),
 	]);
 	await Promise.all([
 		db.data.sRem('users', [ userId ]),

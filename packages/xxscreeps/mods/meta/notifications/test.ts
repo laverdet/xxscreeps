@@ -1,8 +1,9 @@
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { dispatchQueuedNotifications } from './driver.js';
 import { flush } from './notifications.js';
-import { setNotifyPrefs } from './prefs.js';
+import { getNotifyPrefs, setNotifyPrefs } from './prefs.js';
 import { captureNotificationsForTesting, sendNotification } from './transport.js';
 
 const userA = '100';
@@ -142,6 +143,12 @@ describe('mods/meta/notifications', () => {
 		await setNotifyPrefs(shard.db, userA, { disabled: false });
 		await sendNotification(shard, userA, 'msg', 'hi');
 		assert.strictEqual(capture.sent.length, 1, 'the same call lands once the pref clears');
+	}));
+
+	test('removing a user drops their notifyPrefs', () => empty(async ({ shard }) => {
+		await setNotifyPrefs(shard.db, userA, { disabled: true });
+		await User.remove(shard.db, userA);
+		assert.strictEqual((await getNotifyPrefs(shard.db, userA)).disabled, false);
 	}));
 
 });
