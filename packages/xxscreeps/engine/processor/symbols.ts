@@ -1,6 +1,7 @@
 import type { IntentProcessorInfo } from './index.js';
 import type { RoomProcessor } from './room.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { GameState } from 'xxscreeps/game/game.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
@@ -12,10 +13,10 @@ export const Tick = Symbol('tick');
 export type RoomTickProcessor = (room: Room, context: RoomProcessor) => void;
 export const roomTickProcessors: RoomTickProcessor[] = [];
 
-export type ShardTickProcessor = (shard: Shard, time: number) => Promise<void> | void;
+export type ShardTickProcessor = (shard: Shard, state: GameState) => Promise<void> | void;
 export const shardTickProcessors: ShardTickProcessor[] = [];
 
-export type ShardInitializer = (shard: Shard) => Promise<void>;
+export type ShardInitializer = (shard: Shard, state: GameState) => Promise<void>;
 export const shardInitializers: ShardInitializer[] = [];
 
 export const hooks = makeHookRegistration<{

@@ -2,7 +2,6 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/room.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
@@ -139,15 +138,13 @@ describe('mods/modern/deposit', () => {
 
 	// All test world rooms (W0..W10 × N0..N10) carry the sector W5N5 — the only central room. Each
 	// `tick()` runs the shard tick processor once, which can place at most one deposit.
-	const emptySector = simulate({});
+	const emptySector = simulate({}, () => withFixedPlacement());
 
 	describe('placement', () => {
-		test('seeds a deposit on first tick below threshold', () => emptySector(async ({ shard, tick }) => {
-			using placement = withFixedPlacement();
+		test('seeds a deposit on first tick below threshold', () => emptySector(async ({ shard, tick, world }) => {
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
-			// The initializer queues W5N5; tick 1's evaluator picks a candidate and pushes a placement
+			// The initializer queued W5N5; tick 1's evaluator picks a candidate and pushes a placement
 			// intent; tick 2's room processor receives it and inserts the Deposit.
-			await runShardInitializers(shard);
 			await tick(2);
 			const found = await findDepositsInSector(shard, 'W5N5');
 			assert.strictEqual(found.length, 1, 'exactly one deposit per evaluator pass');
@@ -156,7 +153,6 @@ describe('mods/modern/deposit', () => {
 			assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
 			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME - 1);
 			// Ported placement predicates: wall terrain, inside the sector's 250-square radius.
-			const world = await shard.loadWorld();
 			const terrain = world.map.getRoomTerrain(roomName);
 			assert.strictEqual(terrain.get(deposit.pos.x, deposit.pos.y), C.TERRAIN_MASK_WALL,
 				'deposit is placed on wall terrain');
@@ -165,10 +161,8 @@ describe('mods/modern/deposit', () => {
 		}));
 
 		test('saturated sector does not place more', () => emptySector(async ({ shard, tick }) => {
-			using placement = withFixedPlacement();
 			// Throughput from one fresh deposit (harvested=0): 20/max(1, M·0^P) = 20. A single deposit
 			// blows past the 2.5 threshold, so re-evaluation should stop placing.
-			await runShardInitializers(shard);
 			await tick(2); // first deposit is placed
 			assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 			// Force a sector re-eval by bumping its score to 0 (= due immediately); `earliest` matches
@@ -197,9 +191,7 @@ describe('mods/modern/deposit', () => {
 				room['#insertObject'](deposit);
 			} ]));
 
-		test('occupied rooms are excluded from placement candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
-			using placement = withFixedPlacement();
-			await runShardInitializers(shard);
+		test('occupied rooms are excluded from placement candidates', () => simulate(occupiedRing, () => withFixedPlacement())(async ({ shard, tick }) => {
 			await tick(2);
 			const found = await findDepositsInSector(shard, 'W5N5');
 			assert.strictEqual(found.length, 40);
@@ -219,9 +211,10 @@ describe('mods/modern/deposit', () => {
 			},
 		})(async ({ shard, tick }) => {
 			using rng = deterministicRandomForTesting();
-			// No bootstrap: the decay path is the sole scheduler of W5N5. Decay fires this tick and marks
-			// W5N5 due immediately (score 0); the shard processor drains it the same tick, tallies the
-			// sector without the corpse, and pushes a refill intent.
+			// The bootstrap seeds W5N5 its scatter ahead on the wall clock, so the decay path is what
+			// brings it due. Decay fires this tick and marks W5N5 due immediately (score 0); the shard
+			// processor drains it the same tick, tallies the sector without the corpse, and pushes a
+			// refill intent.
 			await tick(1);
 			// The refill intent lands next tick.
 			await tick(1);

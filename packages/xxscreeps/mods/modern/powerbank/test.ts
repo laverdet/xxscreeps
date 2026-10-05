@@ -1,6 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
-import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -144,15 +143,13 @@ describe('mods/modern/powerbank', () => {
 		return Fn.find(room['#objects'], instanceOfPredicate(StructurePowerBank));
 	}
 
-	const emptyWorld = simulate({});
+	// The bootstrap rolls each highway room's first countdown
+	const emptyWorld = simulate({}, () => deterministicRandomForTesting());
 
 	describe('placement', () => {
-		test('bootstrap seeds every highway room without placing', () => emptyWorld(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
+		test('bootstrap seeds every highway room without placing', () => emptyWorld(async ({ shard, world }) => {
 			const seededAt = shard.time;
-			await runShardInitializers(shard);
 			const due = await dueRooms.entriesForTest(shard);
-			const world = await shard.loadWorld();
 			const highways = new Set(Fn.transform(iterateSectors(world), ([ , sector ]): Iterable<string> => sector.edges));
 			assert.strictEqual(due.length, highways.size, 'every sector edge room was seeded exactly once');
 			for (const [ score, roomName ] of due) {
@@ -198,8 +195,6 @@ describe('mods/modern/powerbank', () => {
 		}));
 
 		test('non-highway rooms are never seeded', () => emptyWorld(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
-			await runShardInitializers(shard);
 			const seeded = new Set((await dueRooms.entriesForTest(shard)).map(([ , roomName ]) => roomName));
 			assert.ok(!seeded.has('W5N5'), 'sector center is not seeded');
 			assert.ok(!seeded.has('W3N3'), 'interior room is not seeded');
@@ -220,9 +215,7 @@ describe('mods/modern/powerbank', () => {
 			// A future deadline below the respawn window's floor — impossible to reach by a fresh roll, so
 			// a match proves the schedule was repopulated from the room rather than rolled from scratch.
 			W0N0: room => { room['#nextPowerBankTime'] = 12345; },
-		})(async ({ shard }) => {
-			using rng = deterministicRandomForTesting();
-			await runShardInitializers(shard);
+		}, () => deterministicRandomForTesting())(async ({ shard }) => {
 			const due = await dueRooms.entriesForTest(shard);
 			const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
 			assert.ok(entry, 'W0N0 was seeded');

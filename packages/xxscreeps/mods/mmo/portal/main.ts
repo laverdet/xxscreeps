@@ -1,121 +1,137 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { GameState } from 'xxscreeps/game/game.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { runWithState } from 'xxscreeps/game/index.js';
+import { expiresNextTick } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { iterateSectors } from 'xxscreeps/mods/modern/sector/sector.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
 import { shuffle, shuffledSquare } from 'xxscreeps/utility/random.js';
 import * as C from 'xxscreeps:mods/constants';
-import { dueSweep } from './model.js';
+import { isSweepDue, scheduleSweep } from './model.js';
 
-// Center rooms hold portals in reciprocal pairs of rings, each ring leading into the other. A
-// periodic sweep counts the rings standing and, while the world holds fewer pairs than its target,
-// places one more. A ring stays stable for `PORTAL_UNSTABLE`, after which the sweep starts its
-// `PORTAL_DECAY`, so a later sweep places a replacement somewhere.
+// Places portals in sector center rooms. Portals rings come in linked pairs, and each portal is eight
+// `StructurePortal`s around an open tile. The world keeps one pair per `kCentersPerPair` center rooms.
+//
+// A portal is stable for `PORTAL_UNSTABLE` ms of wall time, then decays for `PORTAL_DECAY` ticks and
+// disappears. Once it's gone a new pair is placed somewhere else.
 
-// Cadence of the sweep, in wall-clock ms. Tick speeds vary, so the schedule runs on the same clock as
-// the stable window it spaces pairs across.
-export const kSweepInterval = 5 * 60_000;
-const kSweepMember = 'world';
+// How long to wait before trying again when no room has space for a portal, in ms of wall time.
+const kPlacementRetryInterval = 5 * 60_000;
 
 // One pair per eight center rooms, so a world under eight holds none. The live world has measured
-// anywhere from 4% to 28% of its center rooms holding a ring, and this puts one in a quarter of them.
-const kCentersPerPair = 8;
+// anywhere from 4% to 28% of its center rooms holding a portal, and this puts one in a quarter of
+// them.
+const kSectorsPerPair = 8;
 
-// A portal still standing. One decaying this tick is still in the room blob at `shard.time + 1`.
-function isStandingPortal(shard: Shard, object: RoomObject): object is StructurePortal {
-	return object instanceof StructurePortal &&
-		(object['#decayTime'] === 0 || object['#decayTime'] > shard.time + 1);
+// True for portals which will still exist after this tick. A portal on its last tick is still in the
+// loaded room, but the room processor removes it this tick. This reads `Game.time`, so it must be
+// called inside `runWithState`.
+function isStandingPortal(object: RoomObject): object is StructurePortal {
+	return object instanceof StructurePortal && !expiresNextTick(object['#decayTime']);
 }
 
 // The first position in 4..44, in random order, with no wall under it or any of its eight neighbours
 // and no room object in range 1.
-function findRingCenter(world: World, room: Room) {
+function selectPlacement(world: World, room: Room) {
 	const terrain = world.map.getRoomTerrain(room.name);
 	return Fn.pipe(
 		shuffledSquare(4, 41),
 		$$ => Fn.map($$, ([ xx, yy ]) => new RoomPosition(xx, yy, room.name)),
-		$$ => Fn.filter($$, center => Fn.every(iterateInRangeTo(center, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL)),
-		$$ => Fn.find($$, center => Fn.every(room['#objects'], object => object.pos.getRangeTo(center) > 1)));
+		$$ => Fn.filter($$, placement => Fn.every(iterateInRangeTo(placement, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL)),
+		$$ => Fn.find($$, placement => Fn.every(room['#objects'], object => object.pos.getRangeTo(placement) > 1)));
 }
 
-// Any id of length <= 2 is a system user, keeping these intents off the player pipeline.
-function pushPlaceRing(shard: Shard, center: RoomPosition, partner: RoomPosition, unstableTime: number) {
-	return pushIntentsForRoomNextTick(shard, center.roomName, '1', {
-		local: { placePortalRing: [ [ center['#id'], partner['#id'], unstableTime ] ] },
+function pushPlacement(shard: Shard, placement: RoomPosition, partner: RoomPosition, unstableTime: number) {
+	return pushIntentsForRoomNextTick(shard, placement.roomName, '1', {
 		internal: true,
+		local: { placePortalRing: [ [ placement['#id'], partner['#id'], unstableTime ] ] },
 	});
 }
 
-function pushDestabilizeRing(shard: Shard, roomName: string) {
+function pushDestabilization(shard: Shard, roomName: string) {
 	return pushIntentsForRoomNextTick(shard, roomName, '1', {
-		local: { destabilizePortalRing: [ [] ] },
 		internal: true,
+		local: { destabilizePortalRing: [ [] ] },
 	});
 }
 
-// Starts the decay of each ring whose stable window has passed, then, while the world is short of its
-// target and the newest pair has had its share of the window, pushes one more pair.
-async function sweep(shard: Shard, now: number) {
+// Starts decay on portals whose unstable time has arrived, then places a new pair if the world is below
+// its target. Returns the wall time of the next sweep, or `Infinity` if there is nothing to wait for.
+async function sweep(shard: Shard, state: GameState, now: number) {
 	const world = await shard.loadWorld();
-	const centerNames = Fn.pipe(
+	// Load participating sector center rooms
+	const sectorRooms = await Fn.pipe(
 		iterateSectors(world),
 		$$ => Fn.map($$, ([ center ]) => center),
 		// Out-of-borders and closed rooms take no portals
 		$$ => Fn.filter($$, roomName => world.map.getRoomStatus(roomName).status === 'normal'),
-		$$ => [ ...$$ ]);
-	// Only raw `#objects` are read, so the find/look indices are never built
-	const centers = await Fn.mapAwait(centerNames, roomName => shard.loadRoom(roomName, shard.time, true));
-	const standing = [ ...Fn.transform(centers, room => Fn.filter(room['#objects'], object => isStandingPortal(shard, object))) ];
-	// Both rings of a pair share one window, so the same sweep starts them decaying on the same tick
-	const lapsed = new Set(Fn.pipe(
-		standing,
-		$$ => Fn.filter($$, portal => portal['#unstableTime'] !== 0 && now > portal['#unstableTime']),
-		$$ => Fn.map($$, portal => portal.pos.roomName)));
-	await Fn.mapAwait(lapsed, roomName => pushDestabilizeRing(shard, roomName));
-	const targetPairs = Math.floor(centerNames.length / kCentersPerPair);
-	const held = new Set(Fn.map(standing, portal => portal.pos.roomName));
-	if (held.size >= 2 * targetPairs) {
-		return;
+		$$ => Fn.mapAwait($$, roomName => shard.loadRoom(roomName, shard.time, true)));
+	// Extract all non-decayed portals
+	const standingPortals = runWithState(state, () => Fn.pipe(
+		sectorRooms,
+		$$ => Fn.transform($$, room => room['#objects']),
+		$$ => Fn.filter($$, isStandingPortal),
+		$$ => [ ...$$ ]));
+	// Start destabilization (decay game timer) of portals
+	await Fn.pipe(
+		standingPortals,
+		$$ => Fn.filter($$, portal => portal['#unstableTime'] !== 0 && now >= portal['#unstableTime']),
+		$$ => Fn.map($$, portal => portal.pos.roomName),
+		$$ => new Set($$),
+		$$ => Fn.mapAwait($$, roomName => pushDestabilization(shard, roomName)));
+	// Check if world has desired count of portal pairs
+	const targetRooms = Math.floor(sectorRooms.length / kSectorsPerPair) * 2;
+	const activeRooms = new Set(Fn.map(standingPortals, portal => portal.pos.roomName));
+	const nextUnstableTime = Fn.pipe(
+		standingPortals,
+		$$ => Fn.map($$, portal => portal['#unstableTime']),
+		$$ => Fn.filter($$, unstableTime => now < unstableTime),
+		$$ => Math.min(Infinity, ...$$));
+	if (activeRooms.size >= targetRooms) {
+		return nextUnstableTime;
 	}
-	// Each pair waits for its share of the window after the one placed before it, which spreads the
-	// pairs' windows across the whole of `PORTAL_UNSTABLE` rather than letting them all run out at once.
-	const newestUnstableTime = Math.max(0, ...standing.map(portal => portal['#unstableTime']));
-	if (now < newestUnstableTime - C.PORTAL_UNSTABLE + C.PORTAL_UNSTABLE / targetPairs) {
-		return;
+	// Stagger placements so that portals don't all expire at the same time. A new pair waits
+	// `PORTAL_UNSTABLE` divided by the target number of pairs after the previous pair was placed.
+	const placementInterval = 2 * C.PORTAL_UNSTABLE / targetRooms;
+	const placementTime =
+		Math.max(0, ...Fn.map(standingPortals, portal => portal['#unstableTime'])) - C.PORTAL_UNSTABLE + placementInterval;
+	if (now < placementTime) {
+		return Math.min(nextUnstableTime, placementTime);
 	}
-	const free = [ ...Fn.reject(centers, room => held.has(room.name)) ];
+	const freeRooms = [ ...Fn.reject(sectorRooms, room => activeRooms.has(room.name)) ];
 	const [ first, second ] = Fn.pipe(
-		shuffle(free),
-		$$ => Fn.map($$, room => findRingCenter(world, room)),
+		shuffle(freeRooms),
+		$$ => Fn.map($$, room => selectPlacement(world, room)),
 		$$ => Fn.filter($$),
 		$$ => Fn.take($$, 2),
 		$$ => [ ...$$ ]);
-	if (first !== undefined && second !== undefined) {
-		const unstableTime = now + C.PORTAL_UNSTABLE;
-		await Promise.all([
-			pushPlaceRing(shard, first, second, unstableTime),
-			pushPlaceRing(shard, second, first, unstableTime),
-		]);
+	if (!first || !second) {
+		return Math.min(nextUnstableTime, now + kPlacementRetryInterval);
 	}
+	const unstableTime = now + C.PORTAL_UNSTABLE;
+	await Promise.all([
+		pushPlacement(shard, first, second, unstableTime),
+		pushPlacement(shard, second, first, unstableTime),
+	]);
+	// Sweep again when the next pair can be placed. If the world is now full then nothing happens until
+	// this pair goes unstable.
+	const nextPlacement = activeRooms.size + 2 < targetRooms ? now + placementInterval : Infinity;
+	return Math.min(nextUnstableTime, unstableTime, nextPlacement);
 }
 
-// Seed the schedule once when the shard's services start, due at once.
 registerShardInitializer(async shard => {
-	await dueSweep.seed(shard, [ [ Date.now(), kSweepMember ] ]);
+	await scheduleSweep(shard, Date.now());
 });
 
-// Peek-and-reschedule, as deposits do: a crash between the two leaves the row due for a retry.
-registerShardTickProcessor(async shard => {
+registerShardTickProcessor(async (shard, state) => {
 	const now = Date.now();
-	const due = await dueSweep.due(shard, now);
-	if (due.length === 0) {
-		return;
+	if (await isSweepDue(shard, now)) {
+		await scheduleSweep(shard, await sweep(shard, state, now));
 	}
-	await sweep(shard, now);
-	await dueSweep.schedule(shard, kSweepMember, now + kSweepInterval);
 });

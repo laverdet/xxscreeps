@@ -43,7 +43,7 @@ registerShardInitializer(async shard => {
 });
 
 // Peek-and-reschedule (no zrem): a crash between peek and reschedule leaves the entry for retry.
-registerShardTickProcessor(async (shard, time) => {
+registerShardTickProcessor(async (shard, { time }) => {
 	const due = await dueRooms.due(shard, time);
 	if (due.length === 0) return;
 	await Fn.mapAwait(due, async roomName => {

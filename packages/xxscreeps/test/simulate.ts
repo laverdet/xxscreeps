@@ -4,6 +4,7 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RawMemory } from 'xxscreeps/mods/meta/memory/memory.js';
+import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import * as assert from 'node:assert';
 import { config } from 'xxscreeps/config/index.js';
 import { kFdStdError } from 'xxscreeps/driver/runtime/print.js';
@@ -13,7 +14,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { initializeIntentConstraints, makeInitializeRoomForProcessor } from 'xxscreeps/engine/processor/index.js';
 import { acquireIntentsForRoom, activeRoomsKey, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
-import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
+import { runShardInitializers, runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { PlayerInstance, acquireRunnerContext, makeTickPayloadForTesting } from 'xxscreeps/engine/runner/instance.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
@@ -100,20 +101,21 @@ export function simulate(
 	rooms: Record<string, (room: Room) => void>,
 
 	/**
-	 * Optional shard initialization for global state
+	 * Optional shard initialization for global state. It runs before the shard initializers. A
+	 * disposable returned from here is held until the simulation ends.
 	 */
-	initialize?: (shard: Shard) => Promise<void>,
+	initialize?: (shard: Shard) => MaybePromise<AsyncDisposable | Disposable | undefined>,
 ) {
 	return async <Type>(body: (refs: Simulation) => Promise<Type>) => {
 
 		Memory.initialize(null);
 		await using testShard = await instantiateTestShard();
-		const { db, shard, world } = testShard;
+		const { db, shard } = testShard;
 
 		// Initialize world
 		await Promise.all(Fn.map(Object.entries(rooms), async ([ roomName, callback ]) => {
 			const room = await shard.loadRoom(roomName, shard.time);
-			runOneShot(world, room, shard.time, '', () => callback(room));
+			runOneShot(testShard.world, room, shard.time, '', () => callback(room));
 			room['#flushObjects'](null);
 			const previousUsers = flushUsers(room);
 			await Promise.all([
@@ -129,7 +131,11 @@ export function simulate(
 					shard.scratch.zAdd(activeRoomsKey, [ [ 0, roomName ] ]),
 			]);
 		}));
-		await initialize?.(shard);
+		await using fixture = await initialize?.(shard);
+		// The test shard's own world predates any rooms which `initialize` generated
+		const world = initialize ? await shard.loadWorld() : testShard.world;
+		// The main service runs these once before its first tick
+		await runShardInitializers(shard, world);
 
 		// Run simulation
 		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
@@ -260,7 +266,7 @@ export function simulate(
 					}
 
 					// Shard phase
-					await runShardTickProcessors(shard, time);
+					await runShardTickProcessors(shard, world, time);
 
 					// Increment time
 					const nextTime = time + 1;
