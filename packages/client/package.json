@@ -1,6 +1,6 @@
 {
   "name": "@xxscreeps/client",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "type": "module",
   "xxscreeps": true,
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/jszip": "^3.4.1",
-    "@types/node": "~24.12.2"
+    "@types/node": "~26.6.4"
   },
   "peerDependencies": {
     "xxscreeps": "workspace:~"

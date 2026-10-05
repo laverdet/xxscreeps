@@ -86,8 +86,8 @@ assert.ok(xxpackage);
 const virtualFiles = Fn.pipe(
 	Object.entries({
 		'main.ts': 'import "xxscreeps/game/index.js";',
-		'constants.d.ts': makeModTypeScriptText(mods, 'constants'),
-		'game.d.ts': makeModTypeScriptText(mods, 'game'),
+		'constants.d.ts': await makeModTypeScriptText(mods, 'constants'),
+		'game.d.ts': await makeModTypeScriptText(mods, 'game'),
 	}),
 	$$ => Fn.map($$, ([ name, text ]) => [ fileURLToPath(new URL(name, xxpackage.root)), text ] as const),
 	$$ => new Map($$));

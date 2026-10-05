@@ -56,11 +56,13 @@ export const load: LoadHook = (urlString, context, nextLoad) => {
 		if (!isProvide(provide)) {
 			throw new Error(`Cannot find package '${provide}'`);
 		}
-		return {
-			format: 'module',
-			shortCircuit: true,
-			source: makeModSourceText(mods, provide),
-		};
+		return async function() {
+			return {
+				format: 'module',
+				shortCircuit: true,
+				source: await makeModSourceText(mods, provide),
+			};
+		}();
 	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase) && context.importAttributes.type === undefined) {
 		return async function() {
 			return {

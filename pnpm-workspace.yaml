@@ -20,6 +20,7 @@ minimumReleaseAgeExclude:
   - '@xxscreeps/pathfinder-linux-x64-musl'
   - '@xxscreeps/pathfinder-win32-x64'
   - '@xxscreeps/pathfinder'
+  - 'ivm-inspect@6.0.0'
 
 patchedDependencies:
   lodash-es: patches/lodash-es.patch

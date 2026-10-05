@@ -1,4 +1,4 @@
-FROM node:24-trixie AS build
+FROM node:26-trixie AS build
 WORKDIR /xxscreeps
 COPY patches ./patches
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc .
@@ -15,7 +15,7 @@ RUN <<DONE
 	npx xxscreeps test
 DONE
 
-FROM node:24-trixie-slim
+FROM node:26-trixie-slim
 COPY --from=build /xxscreeps /xxscreeps
 WORKDIR /data
 EXPOSE 21025

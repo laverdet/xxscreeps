@@ -1,3 +1,8 @@
+[![npm version](https://img.shields.io/npm/v/xxscreeps)](https://www.npmjs.com/package/xxscreeps)
+[![github action](https://github.com/laverdet/xxscreeps/actions/workflows/xxscreeps.yml/badge.svg)](https://github.com/laverdet/xxscreeps/actions/workflows/xxscreeps.yml)
+[![isc license](https://img.shields.io/npm/l/xxscreeps)](https://github.com/laverdet/xxscreeps/blob/main/LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/xxscreeps)](https://www.npmjs.com/package/xxscreeps)
+
 # xxscreeps
 
 This is a from-scratch rewrite of the Screeps backend services, brought to you by the author of
@@ -87,6 +92,7 @@ to information about game APIs.
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
 First step is make sure nodejs v24.x is installed, older versions will probably not work.
+TODO: v24 is the npm version, v26 is the git version.
 ```
 mkdir xxscreeps
 cd xxscreeps

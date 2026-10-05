@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown } from 'xxscreeps/game/checks.js';
 import { intents, registerGlobal } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject, untilTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -120,11 +120,7 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 	let recipe: CommodityRecipe | undefined;
 	return chainIntentChecks(
 		() => checkMyStructure(factory, StructureFactory),
-		() => {
-			if (factory.cooldown > 0) {
-				return C.ERR_TIRED;
-			}
-		},
+		() => checkCooldown(factory),
 		() => {
 			recipe = getCommodityRecipe(resourceType);
 			if (recipe === undefined) {

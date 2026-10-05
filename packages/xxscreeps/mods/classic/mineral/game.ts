@@ -1,10 +1,10 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { registerHarvestable } from 'xxscreeps/mods/classic/harvestable/game.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps:mods/constants';
-import { lookForStructureAt } from '../structure/structure.js';
+import { checkIsActive, lookForStructureAt } from '../structure/structure.js';
 import { StructureExtractor } from './extractor.js';
 import { Mineral } from './mineral.js';
 import { extractorShape, mineralShape } from './schema.js';
@@ -45,13 +45,11 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 			const extractor = lookForStructureAt(this.room, this.pos, C.STRUCTURE_EXTRACTOR);
 			if (!extractor) {
 				return C.ERR_NOT_FOUND;
-			} else if (extractor.my === false || !creep.my) {
-				return C.ERR_NOT_OWNER;
-			} else if (!extractor.isActive()) {
-				return C.ERR_RCL_NOT_ENOUGH;
-			} else if (extractor.cooldown !== 0) {
-				return C.ERR_TIRED;
 			}
+			return chainIntentChecks(
+				() => extractor.my === false || !creep.my ? C.ERR_NOT_OWNER : C.OK,
+				() => checkIsActive(extractor),
+				() => checkCooldown(extractor));
 		});
 });
 

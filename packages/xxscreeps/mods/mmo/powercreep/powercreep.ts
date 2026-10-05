@@ -5,7 +5,7 @@ import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown, checkDirection, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, me, userGame, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, cooldownTime, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
@@ -220,7 +220,7 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 		return chainIntentChecks(
 			() => checkSpawned(this),
 			() => checkCarrier(this),
-			() => Number.isInteger(direction) && direction >= 1 && direction <= 8 ? C.OK : C.ERR_INVALID_ARGS,
+			() => checkDirection(direction),
 			() => intents.save(this, 'move', direction));
 	}
 
@@ -313,11 +313,7 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 */
 	spawn(powerSpawn: StructurePowerSpawn) {
 		return chainIntentChecks(
-			() => isSpawned(this) ? C.ERR_BUSY : C.OK,
-			() => checkMyStructure(powerSpawn, StructurePowerSpawn),
-			() => this.my ? C.OK : C.ERR_NOT_OWNER,
-			() => checkIsActive(powerSpawn),
-			() => this.spawnCooldownTime > Date.now() ? C.ERR_TIRED : C.OK,
+			() => checkSpawn(this, powerSpawn),
 			() => intents.save(powerSpawn, 'spawnPowerCreep', this.id));
 	}
 
@@ -396,9 +392,18 @@ function checkSpawned(creep: PowerCreep) {
 	return isSpawned(creep) ? C.OK : C.ERR_BUSY;
 }
 
+export function checkSpawn(creep: PowerCreep, powerSpawn: StructurePowerSpawn) {
+	return chainIntentChecks(
+		() => isSpawned(creep) ? C.ERR_BUSY : C.OK,
+		() => checkMyStructure(powerSpawn, StructurePowerSpawn),
+		() => checkCarrier(creep),
+		() => checkIsActive(powerSpawn),
+		() => creep.spawnCooldownTime > Date.now() ? C.ERR_TIRED : C.OK);
+}
+
 export function checkRenew(creep: PowerCreep, target: StructurePowerSpawn | StructurePowerBank) {
 	return chainIntentChecks(
-		() => creep.my ? C.OK : C.ERR_NOT_OWNER,
+		() => checkCarrier(creep),
 		() => checkTarget(target, StructurePowerSpawn, StructurePowerBank),
 		() => target instanceof StructurePowerSpawn ? checkIsActive(target) : C.OK,
 		() => checkRange(creep, target, 1));
@@ -406,7 +411,7 @@ export function checkRenew(creep: PowerCreep, target: StructurePowerSpawn | Stru
 
 export function checkEnableRoom(creep: PowerCreep, target: StructureController) {
 	return chainIntentChecks(
-		() => creep.my ? C.OK : C.ERR_NOT_OWNER,
+		() => checkCarrier(creep),
 		() => checkSpawned(creep),
 		() => checkTarget(target, Structure),
 		() => checkRange(creep, target, 1),
@@ -440,19 +445,19 @@ export function powerDuration(info: PowerInfo, level: number) {
 
 export function checkUsePower(creep: PowerCreep, power: number, target?: RoomObject) {
 	const info: PowerInfo | undefined = powerInfoTable[power];
-	const entry = creep['#powers'].find(entry => entry.power === power);
 	return chainIntentChecks(
-		() => creep.my ? C.OK : C.ERR_NOT_OWNER,
+		() => checkCarrier(creep),
 		() => checkSpawned(creep),
 		() => checkPowersEnabled(creep),
 		() => {
+			const entry = creep.powers[power];
 			if (info === undefined || entry === undefined) {
 				return C.ERR_NO_BODYPART;
 			}
 			const cost = powerOpsCost(info, entry.level);
 			const { range } = info;
 			return chainIntentChecks(
-				() => cooldownTime(entry.cooldownTime) > 0 ? C.ERR_TIRED : C.OK,
+				() => checkCooldown(entry),
 				() => cost > 0 ? checkHasResourceAmount(creep, C.RESOURCE_OPS, cost) : C.OK,
 				() => range === undefined ? C.OK : chainIntentChecks(
 					() => checkTarget(target, RoomObject),

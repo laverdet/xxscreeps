@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown, checkNotSelf, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -90,16 +90,8 @@ function checkAmount(amount: number | undefined) {
 	return amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK;
 }
 
-function checkNotSelf(source: StructureLink, target: StructureLink) {
-	return source === target ? C.ERR_INVALID_TARGET : C.OK;
-}
-
 function checkTargetOwner(target: StructureLink) {
 	return target.my ? C.OK : C.ERR_NOT_OWNER;
-}
-
-function checkCooldown(link: StructureLink) {
-	return link.cooldown ? C.ERR_TIRED : C.OK;
 }
 
 export function checkTransferEnergy(link: StructureLink, target: StructureLink, amount: number) {

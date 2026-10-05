@@ -22,7 +22,8 @@ export interface Manifest {
 // Types for mod `index.ts` manifest
 /** @internal */
 export interface ResolvedMod {
-	provides: Record<Provide, string>;
+	provides: readonly Provide[];
+	specifier: string;
 	types?: Manifest['types'];
 	url: string;
 }
@@ -100,7 +101,6 @@ export const mods = await async function() {
 				stack.push(specifier);
 				await load(dependencies ?? []);
 				stack.pop();
-				// Resolve providers within one mod
 				const providesSpecifiers = function() {
 					if (Array.isArray(provides)) {
 						return provides;
@@ -108,25 +108,9 @@ export const mods = await async function() {
 						return provides === null ? [] : [ provides ];
 					}
 				}();
-
-				const resolvedProvides = Fn.fromEntries(await Fn.mapAwait(
-					providesSpecifiers,
-					async (provide): Promise<[ Provide, string ]> => {
-						// Mods can export providers either as, for example, 'game.ts' or 'game/index.ts'
-						try {
-							const resolution = await resolve(defaultAsyncFileSystem, `./${provide}/index.js`, url);
-							return [ provide, resolution.url.href ];
-						} catch (suppressed) {
-							try {
-								const resolution = await resolve(defaultAsyncFileSystem, `./${provide}.js`, url);
-								return [ provide, resolution.url.href ];
-							} catch (error) {
-								throw new SuppressedError(error, suppressed, `Failed to resolve provider '${provide}' of mod '${specifier}'`);
-							}
-						}
-					}));
 				mods.push({
-					provides: resolvedProvides,
+					provides: providesSpecifiers,
+					specifier,
 					types,
 					url: url.href,
 				});

@@ -1,6 +1,6 @@
 import type { FindConstants, FindType, RoomFindOptions } from './find.js';
 import type { LookConstants, TypeOfLook } from './look.js';
-import type { InspectOptionsStylized } from 'node:util';
+import type { InspectContext } from 'node:util';
 import type { GameState } from 'xxscreeps/game/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
@@ -232,7 +232,7 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 		return `[Room ${this.name}]`;
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectContext) {
 		// Every object has a `room` property so flatten this reference out unless it's a direct
 		// inspection
 		if (depth === options.depth) {

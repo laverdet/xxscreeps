@@ -3,7 +3,7 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import type { StructureTerminalSchema } from 'xxscreeps:mods/game';
-import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown, checkString } from 'xxscreeps/game/checks.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -86,10 +86,6 @@ export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape
 // Divergence from Screeps, which accepts a send to the terminal's own room
 function checkDestination(range: number) {
 	return range < Infinity && range !== 0 ? C.OK : C.ERR_INVALID_ARGS;
-}
-
-function checkCooldown(terminal: StructureTerminal) {
-	return terminal.cooldown === 0 ? C.OK : C.ERR_TIRED;
 }
 
 export function checkSend(terminal: StructureTerminal, resourceType: ResourceType, amount: number, destination: string, description: string | null | undefined) {

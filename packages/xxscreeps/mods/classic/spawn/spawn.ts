@@ -3,7 +3,7 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkDirection, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
@@ -403,7 +403,7 @@ export function checkDirections(directions: Direction[] | null) {
 		Array.isArray(directions) &&
 		directions.length > 0 &&
 		directions.length <= 8 &&
-		directions.every(dir => Number.isInteger(dir) && dir >= 1 && dir <= 8)
+		directions.every(dir => checkDirection(dir) === C.OK)
 	);
 }
 

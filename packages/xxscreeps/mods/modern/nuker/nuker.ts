@@ -1,4 +1,4 @@
-import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { chainIntentChecks, checkCooldown } from 'xxscreeps/game/checks.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -116,13 +116,6 @@ function checkLaunchTarget(target: RoomPosition) {
 	return C.OK;
 }
 
-function checkLaunchCooldown(nuker: StructureNuker) {
-	if (nuker.cooldown > 0) {
-		return C.ERR_TIRED;
-	}
-	return C.OK;
-}
-
 function checkLaunchRange(nuker: StructureNuker, target: RoomPosition) {
 	if (Game.map.getRoomLinearDistance(nuker.room.name, target.roomName) > C.NUKE_RANGE) {
 		return C.ERR_NOT_IN_RANGE;
@@ -144,7 +137,7 @@ export function checkLaunchNuke(nuker: StructureNuker, target: RoomPosition) {
 	return chainIntentChecks(
 		() => checkMyStructure(nuker, StructureNuker),
 		() => checkLaunchTarget(target),
-		() => checkLaunchCooldown(nuker),
+		() => checkCooldown(nuker),
 		() => checkIsActive(nuker),
 		// TODO: Return ERR_INVALID_TARGET for novice and respawn-area source or
 		// destination rooms once room start areas are modeled.

@@ -1,5 +1,12 @@
 # @xxscreeps/client
 
+## 0.1.0
+
+### Patch Changes
+
+- Updated dependencies
+  - xxscreeps@0.1.0
+
 ## 0.0.8
 
 ### Patch Changes

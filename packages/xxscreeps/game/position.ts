@@ -3,7 +3,7 @@ import type { RoomObject } from './object.js';
 import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
 import type { LookConstants } from './room/look.js';
 import type { FindPathOptions, RoomPath } from './room/path.js';
-import type { InspectOptionsStylized } from 'node:util';
+import type { InspectContext } from 'node:util';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { iteratee } from 'xxscreeps/utility/lodash.js';
@@ -421,7 +421,7 @@ export class RoomPosition {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectContext) {
 		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const { stylize } = options;
 		return `[RoomPosition ${stylize(this.roomName, 'string')} {${stylize(`${this.x}`, 'number')}, ${stylize(`${this.y}`, 'number')}}]`;

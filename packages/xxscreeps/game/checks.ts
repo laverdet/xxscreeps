@@ -1,6 +1,11 @@
+import type { Direction } from './direction.js';
 import type { RoomObject } from './object.js';
 import type { Room } from './room/index.js';
 import * as C from './constants/index.js';
+
+export interface WithCooldown {
+	cooldown: number;
+}
 
 export function chainIntentChecks<
 	Results extends (() => unknown)[],
@@ -12,6 +17,27 @@ export function chainIntentChecks<
 		if (result !== undefined && result !== C.OK) {
 			return result as never;
 		}
+	}
+	return C.OK;
+}
+
+export function checkCooldown(object: WithCooldown) {
+	if (object.cooldown > 0) {
+		return C.ERR_TIRED;
+	}
+	return C.OK;
+}
+
+export function checkDirection(direction: Direction) {
+	if (Number.isInteger(direction) && direction >= 1 && direction <= 8) {
+		return C.OK;
+	}
+	return C.ERR_INVALID_ARGS;
+}
+
+export function checkNotSelf(actor: RoomObject, target: RoomObject) {
+	if (actor === target) {
+		return C.ERR_INVALID_TARGET;
 	}
 	return C.OK;
 }
