@@ -6,7 +6,7 @@
 		},
 		"skipLibCheck": false,
 	},
-	"include": [ "mods/mmo", "game/**/xx.d.ts", "mods/classic/**/xx.d.ts", "mods/modern/**/xx.d.ts" ],
+	"include": [ "mods/mmo", "config/declarations/effects.d.ts", "game/**/xx.d.ts", "mods/classic/**/xx.d.ts", "mods/modern/**/xx.d.ts", "mods/portal/xx.d.ts" ],
 	"references": [
 		{ "path": "./tsconfig.json" },
 	],
