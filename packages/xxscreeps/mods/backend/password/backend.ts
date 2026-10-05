@@ -4,6 +4,7 @@ import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { reportUnsentVerification, setAndVerifyEmail } from 'xxscreeps/mods/backend/email/verify.js';
 import { checkPassword, setPassword } from './model.js';
 
 const { allowEmailRegistration } = config.backend;
@@ -141,8 +142,12 @@ hooks.register('route', {
 			return { error: 'exists' };
 		}
 		const newUserId = Id.generateId(12);
-		await User.create(context.db, newUserId, username, [ { provider: User.emailProvider, id: email } ]);
+		await User.create(context.db, newUserId, username);
 		await setPassword(context.db, newUserId, password);
+		// Establishes the address, and mails the confirmation link when this server holds one
+		// pending rather than trusting it outright.
+		const { refusal } = await setAndVerifyEmail(context.db, newUserId, email);
+		reportUnsentVerification(newUserId, refusal);
 		return { ok: 1 };
 	}),
 });

@@ -5,7 +5,7 @@
       "properties": {
         "allowEmailRegistration": {
           "default": false,
-          "description": "Whether to allow users sign up without steam with only their email address. Note: there is currently no confirmation mail send to the user to verify the address.",
+          "description": "Whether to allow users sign up without steam with only their email address. Note: xxscreeps itself does not send a confirmation mail; install a mod which does and set `email.autoVerify: false` to require one.",
           "type": "boolean"
         },
         "allowGuestAccess": {
@@ -34,6 +34,10 @@
             "forwardedCount"
           ],
           "type": "object"
+        },
+        "publicUrl": {
+          "description": "Where this server is reachable from a browser, e.g. \"https://screeps.example.com\". Links the backend mails out are rooted here. It cannot be taken from the request which triggers the mail: that origin is the `Host` header, so a forged one would have us mail a link pointing somewhere else entirely.",
+          "type": "string"
         },
         "secret": {
           "description": "Secret used for session authentication. If not specified a new secret will be generated each restart.",
@@ -111,7 +115,7 @@
     "ProcessorConfig": {
       "properties": {
         "concurrency": {
-          "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
+          "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores available to this process (including hyper-threaded, respecting CPU affinity) + 1",
           "type": "number"
         },
         "intentAbandonTimeout": {
@@ -150,7 +154,7 @@
     "RunnerConfig": {
       "properties": {
         "concurrency": {
-          "description": "Total number of run tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
+          "description": "Total number of run tasks to run at a time. The default is the number of CPU cores available to this process (including hyper-threaded, respecting CPU affinity) + 1",
           "type": "number"
         },
         "cpu": {

@@ -6,7 +6,7 @@ import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
 
 // Lifecycle hooks for users. Mods register `remove` handlers to tear down their own per-user,
-// db-scoped state (e.g. private messages) when a user is deleted, so `remove` below stays
+// db-scoped state (e.g. private messages, stats) when a user is deleted, so `remove` below stays
 // self-contained for every caller rather than each call site enumerating mod cleanups.
 export const hooks = makeHookRegistration<{
 	remove: (db: Database, userId: string) => MaybePromise<void>;
@@ -52,7 +52,7 @@ function flattenUsername(username: string) {
 	return username.replace(/[-_ ]/g, '').toLowerCase();
 }
 
-function flattenEmail(email: string) {
+export function flattenEmail(email: string) {
 	return email.toLowerCase();
 }
 
@@ -89,6 +89,32 @@ export async function create(db: Database, userId: string, username: string, pro
 	]);
 
 	await saveContent(db, userId, 'main', new Map([ [ 'main', 'module.exports.loop = function () {};' ] ]));
+}
+
+/**
+ * Claim `id` under `provider` for a user, replacing whatever they held there before. The reverse
+ * lookup is claimed with `NX` so two accounts racing for the same id cannot both win it; returns
+ * `false` without writing when somebody else holds it. Claiming what the user already holds is a
+ * no-op which succeeds.
+ */
+export async function associateProvider(db: Database, userId: string, provider: string, id: string) {
+	const [ claimed, previous ] = await Promise.all([
+		db.data.hSet(providerMembersKey(provider), id, userId, { if: 'NX' }),
+		providerIdForUser(db, provider, userId),
+	]);
+	if (!claimed) {
+		// Somebody holds it — us, if this is a repeat, and otherwise not ours to take.
+		const holder = await db.data.hGet(providerMembersKey(provider), id);
+		if (holder !== userId) {
+			return false;
+		}
+	}
+	await Promise.all([
+		db.data.hSet(userProvidersKey(userId), provider, id),
+		// Free the reverse lookup for a replaced id so it can be reused.
+		...previous !== null && previous !== id ? [ db.data.hDel(providerMembersKey(provider), [ previous ]) ] : [],
+	]);
+	return true;
 }
 
 /**

@@ -13,6 +13,8 @@ export interface ProviderRegistration<Type extends object> {
 	register: (provider: Type) => void;
 	/** The active implementation: the registered override if any, otherwise the default. */
 	readonly current: Type;
+	/** Whether anything replaced the default, for callers which must know there is nobody home. */
+	readonly registered: boolean;
 	/**
 	 * Shadow the active implementation until the returned handle is disposed. Registration is
 	 * permanent by contract, so tests scope a stand-in with `using` instead.
@@ -51,6 +53,9 @@ export function makeProviderRegistration<Type extends object>(name: string, fall
 		},
 		get current() {
 			return testOverride ?? override ?? fallback;
+		},
+		get registered() {
+			return override !== undefined;
 		},
 	};
 }
