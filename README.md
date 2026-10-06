@@ -97,11 +97,14 @@ TODO: v24 is the npm version, v26 is the git version.
 mkdir xxscreeps
 cd xxscreeps
 npm install xxscreeps
-npx xxscreeps import
+npx xxscreeps generate
 npx xxscreeps start
 ```
 
-Now there is a Screeps server running at http://localhost:21025.
+Now there is a Screeps server running at http://localhost:21025. `generate` replaces any existing
+world with a fresh one of one sector, W0N0 through W10N10. Its room types match the default Steam
+map, but its terrain is new each time. To play on the Steam map itself, run `npx xxscreeps import`
+instead.
 
 If you want to use the Steam client you need to go here: https://steamcommunity.com/dev/apikey and
 get an API key. Then add it to `.screepsrc.yaml`:
@@ -126,18 +129,18 @@ schema](src/config/config.ts).
 
 ### Adding bots
 
-`import` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example bot
-the vanilla private server ships when you don't name a directory. These four commands rebuild the
-lineup that server starts with, in the corner rooms it uses:
+`generate` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example
+bot the vanilla private server ships when you don't name a directory. These four commands rebuild
+the lineup that server starts with, in the corner rooms it uses, each spawn placed at random:
 
 ```
-npx xxscreeps manage bot add AliceBot   --spawn W1N9 36,5
-npx xxscreeps manage bot add EmmaBot    --spawn W1N1 37,31
-npx xxscreeps manage bot add JackBot    --spawn W9N1 33,6
-npx xxscreeps manage bot add MichaelBot --spawn W9N9 17,40
+npx xxscreeps manage bot add AliceBot   --spawn W1N9
+npx xxscreeps manage bot add EmmaBot    --spawn W1N1
+npx xxscreeps manage bot add JackBot    --spawn W9N1
+npx xxscreeps manage bot add MichaelBot --spawn W9N9
 ```
 
-Drop the coordinates to have a spawn placed at random, or pass a directory to run your own bot
+Add `x,y` after the room to choose the spawn's position, or pass a directory to run your own bot
 instead:
 
 ```
@@ -152,7 +155,7 @@ published for vanilla servers work as-is:
 
 ```
 npm install screeps-bot-tooangel
-npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --spawn W5N5
+npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --spawn W7N7
 ```
 
 `manage` also has `user` verbs plus `bot update`/`bot remove`; run `xxscreeps manage` with no
@@ -230,7 +233,7 @@ If you want to run xxscreeps in Docker, you can do this:
 git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
 docker build . -t xxscreeps
-docker run -t -v .:/data xxscreeps import
+docker run -t -v .:/data xxscreeps generate
 docker run -t -v .:/data xxscreeps start
 ```
 

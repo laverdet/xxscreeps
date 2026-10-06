@@ -8,6 +8,7 @@ import * as fs from 'node:fs/promises';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { World } from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSignedRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
@@ -22,7 +23,7 @@ import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { describe, simulate, test } from 'xxscreeps/test/index.js';
 import { exportPayload, importPayload } from './payload.js';
-import { generateRoom, generateSector } from './room-gen.js';
+import { generateRoom, generateSector, generateWorld } from './room-gen.js';
 
 interface SideInfo {
 	dxx: number;
@@ -319,6 +320,19 @@ describe('scripts/room-gen', () => {
 		// The punched ring room sits on the edge of both sectors and carries both centers.
 		assert.deepStrictEqual([ ...terrain.get('W30N25')?.sectors ?? [] ].sort(), [ 'W25N25', 'W35N25' ]);
 		assert.ok(terrain.get('W25N25')?.sectorControl, 'the first sector keeps its control record');
+	});
+
+	test('generates a world from nothing', () => {
+		using rng = deterministicRandomForTesting();
+		const { rooms, terrain } = generateWorld('W0N0');
+		const world = new World('test', terrain);
+		assert.strictEqual(rooms.length, 121);
+		assert.strictEqual(world.terrain.size, 121);
+		assertClosedWorld(world.terrain);
+		// A crossing's sides are all lane ends, which never roll shut, so the corner opens into the
+		// world and seals only toward the void.
+		assert.strictEqual(world.terrain.get('W0N0')?.exits, kSideInfo.top.bit | kSideInfo.left.bit);
+		assert.ok(world.terrain.get('W5N5')?.sectorControl, 'the center carries its control record');
 	});
 });
 

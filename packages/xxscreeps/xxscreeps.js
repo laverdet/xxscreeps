@@ -13,6 +13,7 @@ const commands = {
 	cli: './dist/cli/cli.js',
 	eval: './dist/cli/eval.js',
 	export: './dist/scripts/export.js',
+	generate: './dist/scripts/generate.js',
 	import: './dist/scripts/import.js',
 	main: './dist/engine/service/main.js',
 	manage: './dist/scripts/manage.js',
