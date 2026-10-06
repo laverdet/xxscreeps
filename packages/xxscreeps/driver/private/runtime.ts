@@ -6,7 +6,7 @@ type Subject = Record<keyof any, unknown>;
 type Prototype = { prototype: Subject };
 type AnyFunction = (...args: unknown[]) => unknown;
 
-const { apply, defineProperty, get, getPrototypeOf, ownKeys, set } = Reflect;
+const { apply, get, getPrototypeOf, ownKeys, set } = Reflect;
 const inherits = function() {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.
 	const symbol = makeSymbol();
@@ -91,17 +91,7 @@ export function makeSetter(name: string): (object: Subject, value: unknown) => u
 					return value;
 				}
 			}
-			defineProperty(object, symbol, {
-				configurable: true,
-				get() { return value; },
-				set(this: object, value) {
-					defineProperty(this, symbol, {
-						value,
-						writable: true,
-					});
-				},
-			});
-			return value;
+			return object[symbol] = value;
 		};
 	}
 }
