@@ -337,8 +337,9 @@ describe('scripts/room-gen', () => {
 });
 
 describe('scripts/payload', () => {
-	// The world `xxscreeps import` ships is only as good as the codecs registered when it was
-	// exported. A codec that drops or renames its marker fails here instead of on a user's install.
+	// The world `xxscreeps initialize --preset=steam` ships is only as good as the codecs registered
+	// when it was exported. A codec that drops or renames its marker fails here instead of on a
+	// user's install.
 	test('decodes the bundled default shard', async () => {
 		const file = new URL('../../scripts/data/shard.json', import.meta.url);
 		const payload = JSON.parse(await fs.readFile(file, 'utf8')) as Payload;

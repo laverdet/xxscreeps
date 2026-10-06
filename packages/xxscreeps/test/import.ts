@@ -8,9 +8,8 @@ import * as MapSchema from 'xxscreeps/game/map.js';
 import { importPayload, seedShard } from 'xxscreeps/scripts/payload.js';
 import { testRedis } from './context.js';
 
-// Read file
-const root = new URL('../../test/', import.meta.url);
-const payload = JSON.parse(await fs.readFile(new URL('../test/data/shard.json', root), 'utf8')) as Payload;
+// The test world is the Steam map `xxscreeps initialize --preset=steam` seeds
+const payload = JSON.parse(await fs.readFile(new URL('../../scripts/data/shard.json', import.meta.url), 'utf8')) as Payload;
 
 const world = importPayload(payload);
 export const testWorld = new MapSchema.World('test', world.terrain);

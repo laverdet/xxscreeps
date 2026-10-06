@@ -84,10 +84,10 @@ interface Simulation {
 }
 
 /**
- * `simulate` creates a factory for a test shard. The shard terrain and initial objects are imported
- *  from `test/shard.json`. The test shard will match the results of `npx xxscreeps import` but
- *  without any bots. 4 users are created with ids '100' -> '103', but they do not own any objects
- *  by default.
+ * `simulate` creates a factory for a test shard. The shard terrain and initial objects are the
+ *  bundled Steam map, so the test shard matches the results of `npx xxscreeps initialize
+ *  --preset=steam` but without any bots. 4 users are created with ids '100' -> '103', but they do
+ *  not own any objects by default.
  *
  * The return value of `simulate` is a function which can be invoked as many times as needed. Each
  * time it is invoked it will create a fresh shard given the room instantiation code. It will invoke

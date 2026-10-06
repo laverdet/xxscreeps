@@ -1,5 +1,4 @@
 import type { Payload, PayloadWorld } from 'xxscreeps/scripts/payload.js';
-import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +11,12 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { kInvaderUserId } from 'xxscreeps/mods/classic/invader/game.js';
 import { importPayload, seedShard } from 'xxscreeps/scripts/payload.js';
+import { generateWorld } from 'xxscreeps/scripts/room-gen.js';
+
+// Seeds a new server. Writes a default `.screepsrc.yaml`, then stores a world in the configured
+// database and shard: a freshly generated sector by default, the bundled Steam map with
+// `--preset=steam`, or the payload in a file written by `export`.
+const usage = 'Usage: xxscreeps initialize [file.json] [--preset steam] [--shard shard] [--allow-overwrite] [--shard-only]';
 
 async function writeDefaultConfig() {
 	const hasConfigurationFile = await async function() {
@@ -81,31 +86,47 @@ async function writeDefaultConfig() {
 	await fs.writeFile(configPath, preamble + jsYaml.dump(defaultConfig));
 }
 
-// The flags shared between `import` and `generate`.
-export const worldArguments = {
-	boolean: [ 'dont-overwrite', 'shard-only' ],
-	string: [ 'shard' ],
-} as const;
+const argv = checkArguments({
+	argv: true,
+	boolean: [ 'allow-overwrite', 'shard-only' ] as const,
+	string: [ 'preset', 'shard' ] as const,
+});
 
-/**
- * The first-run steps shared between `import` and `generate`: writes a default `.screepsrc.yaml`,
- * then replaces the stored world with the one `makeWorld` builds.
- */
-export async function initializeWorld(
-	argv: Record<typeof worldArguments.boolean[number], boolean> & Partial<Record<typeof worldArguments.string[number], string>>,
-	makeWorld: () => MaybePromise<PayloadWorld>,
-) {
-	await writeDefaultConfig();
-
-	// Initialize and connect to database & shard
-	await using db = await Database.connect();
-	if (argv['dont-overwrite'] && await db.data.sCard('users') > 0) {
-		console.log('Found existing data, exiting');
-		return;
+// Build the world before touching any storage, so a bad invocation exits with nothing held
+const world = await async function(): Promise<PayloadWorld> {
+	const importFile = async (file: string | URL) => {
+		const payload = JSON.parse(await fs.readFile(file, 'utf8')) as Payload;
+		return importPayload(payload);
+	};
+	const file = argv.argv[0];
+	if (file !== undefined && argv.preset === undefined) {
+		return importFile(file);
+	} else if (file === undefined && argv.preset === undefined) {
+		return generateWorld('W0N0');
+	} else if (file === undefined && argv.preset === 'steam') {
+		return importFile(new URL('../../scripts/data/shard.json', import.meta.url));
+	} else {
+		console.log(usage);
+		process.exit(1);
 	}
-	const world = await makeWorld();
-	const shardName = argv.shard ?? config.shards[0]!.name;
-	await using shard = await Shard.connect(db, shardName);
+}();
+
+await writeDefaultConfig();
+
+// Initialize and connect to database & shard
+await using db = await Database.connect();
+const shardName = argv.shard ?? config.shards[0]!.name;
+await using shard = await Shard.connect(db, shardName);
+const occupied = await async function() {
+	if (await shard.data.sCard('rooms') > 0) {
+		return true;
+	}
+	return !argv['shard-only'] && await db.data.sCard('users') > 0;
+}();
+if (occupied && !argv['allow-overwrite']) {
+	console.error(`Found existing data in ${shardName}, pass --allow-overwrite to replace it`);
+	process.exitCode = 1;
+} else {
 	await Promise.all([
 		argv['shard-only'] ? undefined : db.data.flushdb(),
 		shard.data.flushdb(),
@@ -120,17 +141,4 @@ export async function initializeWorld(
 	await Promise.all([ db.save(), shard.save() ]);
 	const count = world.rooms.length;
 	console.log(`Seeded ${count} room${count === 1 ? '' : 's'} into ${shardName}`);
-}
-
-async function main() {
-	const argv = checkArguments({ argv: true, ...worldArguments });
-	const file = argv.argv[0] ?? new URL('../../scripts/data/shard.json', import.meta.url);
-	await initializeWorld(argv, async () => {
-		const payload = JSON.parse(await fs.readFile(file, 'utf8')) as Payload;
-		return importPayload(payload);
-	});
-}
-
-if (process.argv[1] === 'import') {
-	await main();
 }

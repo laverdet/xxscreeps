@@ -1,5 +1,5 @@
 // Ops tool for managing users and bots on a self-hosted xxscreeps server — connects to the
-// configured storage provider directly, like scripts/import.ts. Registered as the `manage`
+// configured storage provider directly, like scripts/initialize.ts. Registered as the `manage`
 // subcommand; run after `tsc -b`: `xxscreeps manage <user|bot> <verb> ...` (usage() lists commands).
 //
 // The running engine caches state: list/show/create read storage per request, but a new user isn't
