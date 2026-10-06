@@ -153,7 +153,7 @@ export class NodejsSandbox implements Sandbox {
 	private tick?: Tick;
 
 	constructor() {
-		this.context = vm.createContext();
+		this.context = vm.createContext(vm.constants.DONT_CONTEXTIFY);
 	}
 
 	createInspectorSession(): never {
