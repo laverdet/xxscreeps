@@ -1,6 +1,11 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
+import { World } from 'xxscreeps/game/map.js';
+import { RoomPosition, iterateAllPositions } from 'xxscreeps/game/position.js';
+import { isBorder } from 'xxscreeps/game/terrain.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { exportPayload, importPayload } from 'xxscreeps/scripts/payload.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructurePortal, create as createPortal } from './portal.js';
@@ -105,5 +110,45 @@ describe('mods/portal', () => {
 		await peekRoom('W1N1', room => {
 			assert.strictEqual(room.find(C.FIND_CREEPS).length, 0);
 		});
+	}));
+
+	// A permanent portal on plain, a stable one on swamp, and a decaying one.
+	const kUnstableTime = Date.UTC(2026, 9, 15);
+	const lifecycles = simulate({
+		W1N1: room => {
+			const terrain = room.getTerrain();
+			const interiorOn = (value: number) => Fn.filter(iterateAllPositions(room.name), pos =>
+				!isBorder(pos.x, pos.y) && terrain.get(pos.x, pos.y) === value);
+			const [ permanentPos, decayingPos ] = interiorOn(0);
+			const [ stablePos ] = interiorOn(C.TERRAIN_MASK_SWAMP);
+			assert.ok(permanentPos && decayingPos && stablePos);
+			room['#insertObject'](createPortal(permanentPos, new RoomPosition(30, 30, 'W2N2')));
+			room['#insertObject'](createPortal(decayingPos, new RoomPosition(31, 31, 'W2N2'), /* decayTime */ 100));
+			const stable = createPortal(stablePos, { shard: 'shard1', room: 'W5N5' });
+			stable['#unstableTime'] = kUnstableTime;
+			room['#insertObject'](stable);
+		},
+	});
+
+	test('payload round trip', () => lifecycles(async ({ shard }) => {
+		const { payload, dropped } = await exportPayload(shard);
+		// The decaying portal's tick means nothing in another world, so it stays behind.
+		assert.strictEqual(dropped.filter(instanceOfPredicate(StructurePortal)).length, 1);
+		const { rooms, terrain } = importPayload(payload);
+		const portals = rooms.find(room => room.name === 'W1N1')?.['#objects'].filter(instanceOfPredicate(StructurePortal)) ?? [];
+		assert.strictEqual(portals.length, 2);
+		// Each one stands on the ground it was exported from.
+		const roomTerrain = new World('test', terrain).map.getRoomTerrain('W1N1');
+
+		const permanent = portals.find(portal => portal.destination.shard === undefined);
+		assert.ok(permanent?.destination instanceof RoomPosition);
+		assert.ok(permanent.destination.isEqualTo(new RoomPosition(30, 30, 'W2N2')));
+		assert.strictEqual(permanent['#unstableTime'], 0);
+		assert.strictEqual(roomTerrain.get(permanent.pos.x, permanent.pos.y), 0);
+
+		const stable = portals.find(portal => portal.destination.shard !== undefined);
+		assert.deepStrictEqual(stable?.destination, { shard: 'shard1', room: 'W5N5' });
+		assert.strictEqual(stable['#unstableTime'], kUnstableTime);
+		assert.strictEqual(roomTerrain.get(stable.pos.x, stable.pos.y), C.TERRAIN_MASK_SWAMP);
 	}));
 });
