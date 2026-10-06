@@ -61,18 +61,23 @@ const codecs = function() {
 
 // Objects no codec claims -- creeps, roads, anything a payload doesn't carry -- yield undefined and
 // leave their tile's terrain showing. A codec's null is an object it carries in a companion's
-// entry: it earns no marker of its own, but the payload does bring it back.
-function encodeObject(object: RoomObject) {
+// entry: it earns no marker of its own, but the payload does bring it back. The marker replaces the
+// tile's terrain character, so an entry records the terrain under its object unless it's wall.
+function encodeObject(object: RoomObject, terrain: Terrain) {
+	const under = terrain.get(object.pos.x, object.pos.y);
 	return Fn.find(Fn.map(codecs.values(), codec => {
 		const fields = codec.encode(object);
-		return fields == null ? fields : { marker: codec.marker, meta: { id: object.id, ...fields } };
+		return fields == null ? fields : {
+			marker: codec.marker,
+			meta: { id: object.id, ...fields, ...under !== C.TERRAIN_MASK_WALL && { terrain: under } },
+		};
 	}), encoded => encoded !== undefined);
 }
 
 async function exportRoom(shard: Shard, roomName: string, terrain: Terrain) {
 	const room = await shard.loadRoom(roomName);
 	// The layout and the drop tally read one encode pass; a second would re-run every codec.
-	const encodings = room['#objects'].map(object => ({ object, encoded: encodeObject(object) }));
+	const encodings = room['#objects'].map(object => ({ object, encoded: encodeObject(object, terrain) }));
 	const objects = Fn.pipe(
 		encodings,
 		$$ => Fn.map($$, ({ object, encoded }) =>
@@ -152,7 +157,11 @@ function importRoom(roomName: string, info: PayloadRoom) {
 		if (meta === undefined) {
 			throw new Error(`Room ${roomName} holds more markers than metadata`);
 		}
-		terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
+		const under = terrainValues[meta.terrain ?? C.TERRAIN_MASK_WALL];
+		if (under === undefined) {
+			throw new Error(`Room ${roomName} holds terrain ${meta.terrain} under '${character}'`);
+		}
+		terrain.set(xx, yy, under);
 		const decoded = codec.decode(meta, room);
 		const objects = Array.isArray(decoded) ? decoded : [ decoded ] as const;
 		objects[0].id = meta.id;
