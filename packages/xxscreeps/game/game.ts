@@ -2,7 +2,6 @@ import type { GameMap, World } from './map.js';
 import type { RoomObject } from './object.js';
 import type { AnyRoomObject, Room } from './room/index.js';
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from './constants/index.js';
 import { hooks } from './symbols.js';
 
@@ -23,12 +22,15 @@ export class GameState {
 	constructor(world: World, time: number, rooms: Room[]) {
 		this.world = world;
 		this.time = time;
-		this.objects = Fn.pipe(
-			rooms,
-			$$ => Fn.transform($$, room => Fn.map(room['#objects'], object => [ object.id, object ] as const)),
-			$$ => new Map($$));
-		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
-		for (const room of Object.values(this.rooms)) {
+		this.objects = new Map();
+		this.rooms = {};
+		for (const room of rooms) {
+			for (const object of room['#objects']) {
+				this.objects.set(object.id, object);
+			}
+			this.rooms[room.name] = room;
+		}
+		for (const room of rooms) {
 			initializeRoom(room, this);
 		}
 	}

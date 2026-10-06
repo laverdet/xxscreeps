@@ -42,24 +42,24 @@ function align(address: number) {
  * object fields, and of course copying the entire object. This function aims to simulate some of
  * those effects without the cost of deserializing the whole memory payload.
 */
-function crunch(payload: unknown) {
-	if (typeof payload === 'object') {
-		if (Array.isArray(payload)) {
-			for (const [ key, value ] of payload.entries()) {
-				if (value === undefined) {
-					payload[key] = null;
-				} else {
-					crunch(value);
-				}
+function crunch(payload: object) {
+	if (Array.isArray(payload)) {
+		for (let ii = 0; ii < payload.length; ++ii) {
+			const value: unknown = payload[ii];
+			if (value === undefined) {
+				payload[ii] = null;
+			} else if (typeof value === 'object' && value !== null) {
+				crunch(value);
 			}
-		} else if (payload !== null) {
-			for (const [ key, value ] of Object.entries(payload)) {
-				if (value === undefined) {
-					// @ts-expect-error
-					delete payload[key];
-				} else {
-					crunch(value);
-				}
+		}
+	} else {
+		const record = payload as Record<string, unknown>;
+		for (const key of Object.keys(record)) {
+			const value = record[key];
+			if (value === undefined) {
+				delete record[key];
+			} else if (typeof value === 'object' && value !== null) {
+				crunch(value);
 			}
 		}
 	}
