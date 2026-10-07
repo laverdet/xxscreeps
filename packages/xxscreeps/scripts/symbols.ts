@@ -55,11 +55,13 @@ export interface RoomGeneratorContext {
 }
 
 /**
- * One entry of a room's `objects` array in a payload. The engine owns `id`; each codec augments
- * this interface with the fields it encodes.
+ * One entry of a room's `objects` array in a payload. The engine owns `id` and `terrain`; each codec
+ * augments this interface with the fields it encodes.
  */
 export interface PayloadObject {
 	id: string;
+	/** Terrain under the object, when it isn't wall. */
+	terrain?: number;
 }
 
 /**
@@ -69,14 +71,15 @@ export interface PayloadObject {
 export interface PayloadCodec {
 	/**
 	 * The layout character this codec owns, standing in for the terrain character of the tile its
-	 * object occupies. May not be one the terrain alphabet spells, and that tile reads back as wall.
+	 * object occupies. May not be one the terrain alphabet spells, and that tile reads back as the
+	 * entry's `terrain`, or as wall without one.
 	 */
 	marker: string;
 	/**
 	 * The fields this codec encodes for `object`, null when it owns `object` but folds it into a
 	 * companion's entry, or undefined when it doesn't own the object.
 	 */
-	encode: (object: RoomObject) => Omit<PayloadObject, 'id'> | null | undefined;
+	encode: (object: RoomObject) => Omit<PayloadObject, 'id' | 'terrain'> | null | undefined;
 	/**
 	 * Rebuilds the object `meta` describes, plus any companions sharing its tile. The engine
 	 * stamps every object's position and the first one's id -- companions carry ids of their

@@ -400,4 +400,19 @@ describe('scripts/payload', () => {
 		const room = { layout: plainLayout(), objects: [ { id: 'deadbeef' } ] };
 		assert.throws(() => importPayload({ W0N0: room }), /W0N0 holds more metadata than markers/);
 	});
+
+	test('restores the terrain under a marker', () => {
+		const layout = plainLayout();
+		layout[10] = `@${' '.repeat(49)}`;
+		const room = { layout, objects: [ { id: 'deadbeef', terrain: C.TERRAIN_MASK_SWAMP } ] };
+		const { terrain } = importPayload({ W0N0: room });
+		assert.strictEqual(new World('test', terrain).map.getRoomTerrain('W0N0').get(0, 10), C.TERRAIN_MASK_SWAMP);
+	});
+
+	test('rejects terrain no tile holds', () => {
+		const layout = plainLayout();
+		layout[10] = `@${' '.repeat(49)}`;
+		const room = { layout, objects: [ { id: 'deadbeef', terrain: 7 } ] };
+		assert.throws(() => importPayload({ W0N0: room }), /W0N0 holds terrain 7 under '@'/);
+	});
 });
