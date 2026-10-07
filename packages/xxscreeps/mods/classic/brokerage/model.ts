@@ -60,6 +60,14 @@ async function reference(shard: Shard, userId: string, direction: Direction, tim
 	]);
 }
 
+// Drop a user's references to their transfers. The other party's stay, and the blobs expire.
+export async function removeTransactionEntries(shard: Shard, userId: string) {
+	await Promise.all([
+		shard.data.del(setKey(userId, 'incoming')),
+		shard.data.del(setKey(userId, 'outgoing')),
+	]);
+}
+
 export async function recordTransaction(shard: Shard, senderId: string, recipientId: string, transaction: Transaction) {
 	const id = transaction.transactionId = Id.generateId();
 	transaction['#sender'] = senderId;

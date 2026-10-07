@@ -5,10 +5,10 @@ export const manifest: Manifest = {
 	dependencies: [
 		'xxscreeps/mods/classic/construction',
 		'xxscreeps/mods/classic/controller',
-		'xxscreeps/mods/meta/memory',
 		'xxscreeps/mods/classic/resource',
 		'xxscreeps/mods/classic/structure',
+		'xxscreeps/mods/meta/memory',
 	],
-	provides: [ 'backend', 'constants', 'game', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'game', 'processor', 'schema', 'test', 'user' ],
 	types,
 };

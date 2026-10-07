@@ -1,3 +1,4 @@
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
@@ -54,6 +55,18 @@ describe('mods/classic/brokerage', () => {
 		assert.strictEqual(transaction['#description'], 'gift <3');
 		// The getter escapes `<` for the runtime.
 		assert.strictEqual(transaction.description, 'gift &lt;3');
+	}));
+
+	test('removing a user from a shard drops their side of each transfer', () => storageSim(async ({ shard }) => {
+		using clock = new DeterministicClockForTesting();
+		await recordTransaction(shard, '100', '101', makeTransaction());
+		await User.removeFromShard(shard, '100');
+		const [ sender, recipient ] = await Promise.all([
+			loadTransactionEntries(shard, '100'),
+			loadTransactionEntries(shard, '101'),
+		]);
+		assert.deepStrictEqual(sender, { incoming: [], outgoing: [] });
+		assert.strictEqual(recipient.incoming.length, 1);
 	}));
 
 	test('transfers are ordered reverse chronologically', () => storageSim(async ({ player, shard }) => {

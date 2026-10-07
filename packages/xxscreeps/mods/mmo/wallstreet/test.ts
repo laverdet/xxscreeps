@@ -1,4 +1,5 @@
 import { Shard } from 'xxscreeps/engine/db/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -224,6 +225,15 @@ describe('mods/mmo/wallstreet', () => {
 		assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
 		const { terminal } = await shard.loadRoom('W1N1');
 		assert.strictEqual(terminal!['#orders'].length, 0);
+	}));
+
+	test('removing a user from a shard drops their orders', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+		});
+		await tick(2);
+		await User.removeFromShard(shard, '100');
+		assert.deepStrictEqual(await loadMarketOrderIds(shard), []);
 	}));
 
 	test('incrementUserCredits refuses an overdraft', () => sim(async ({ shard }) => {
