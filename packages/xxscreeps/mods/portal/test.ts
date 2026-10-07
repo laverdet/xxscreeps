@@ -5,6 +5,7 @@ import { World } from 'xxscreeps/game/map.js';
 import { RoomPosition, iterateAllPositions } from 'xxscreeps/game/position.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { exportPayload, importPayload } from 'xxscreeps/scripts/payload.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
@@ -135,7 +136,7 @@ describe('mods/portal', () => {
 		// The decaying portal's tick means nothing in another world, so it stays behind.
 		assert.strictEqual(dropped.filter(instanceOfPredicate(StructurePortal)).length, 1);
 		const { rooms, terrain } = importPayload(payload);
-		const portals = rooms.find(room => room.name === 'W1N1')?.['#objects'].filter(instanceOfPredicate(StructurePortal)) ?? [];
+		const portals = lookForStructures(rooms.find(room => room.name === 'W1N1'), C.STRUCTURE_PORTAL);
 		assert.strictEqual(portals.length, 2);
 		// Each one stands on the ground it was exported from.
 		const roomTerrain = new World('test', terrain).map.getRoomTerrain('W1N1');
