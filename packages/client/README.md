@@ -28,7 +28,7 @@ From scratch instructions for installing xxscreeps + this client follows:
 mkdir xxscreeps
 cd xxscreeps
 npm install xxscreeps @xxscreeps/client
-npx xxscreeps import
+npx xxscreeps initialize
 # Save .screepsrc.yaml (see below)
 npx xxscreeps start
 ```

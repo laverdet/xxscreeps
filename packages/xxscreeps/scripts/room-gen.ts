@@ -1,3 +1,4 @@
+import type { PayloadWorld } from './payload.js';
 import type { ExitMap, GenerateRoomOptions, HighwayOrientation, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomType } from 'xxscreeps/mods/modern/sector/terrain.js';
@@ -1371,23 +1372,29 @@ function *buildRooms(
 	}
 }
 
+// The inclusive 11x11 block from a sector's origin, so the sector is bounded by its full highway
+// ring on all four sides -- the origin-corner rings plus the rings shared with the next sectors.
+function sectorRoomNames(sectorName: string) {
+	const origin = parseSectorOrigin(sectorName);
+	return Fn.map(
+		iterateRoomsInRange(origin.rx + 5 * origin.xStep, origin.ry + 5 * origin.yStep, 5),
+		([ rx, ry ]) => makeSignedRoomName(rx, ry));
+}
+
 export async function generateSector(
 	shard: Shard,
 	sectorName: string,
 	options?: GenerateRoomOptions,
 ): Promise<Room[]> {
-	const origin = parseSectorOrigin(sectorName);
+	const roomNames = sectorRoomNames(sectorName);
 	await ensureWorldTerrain(shard);
 	const [ world, existingRooms ] = await Promise.all([ shard.loadWorld(), shard.data.sMembers('rooms') ]);
 	const terrainMap = new Map(world.terrain);
 	const existing = new Set(existingRooms);
-	// The inclusive 11x11 block from the origin, so the sector is bounded by its full highway ring
-	// on all four sides -- the origin-corner rings plus the rings shared with the next sectors.
 	// Already-existing rooms are skipped, so the shared rings are idempotent across adjacent sectors
 	// and partially-built sectors can be re-entered.
 	const planned = Fn.pipe(
-		iterateRoomsInRange(origin.rx + 5 * origin.xStep, origin.ry + 5 * origin.yStep, 5),
-		$$ => Fn.map($$, ([ rx, ry ]) => makeSignedRoomName(rx, ry)),
+		roomNames,
 		$$ => Fn.reject($$, roomName => existing.has(roomName)),
 		$$ => new Set($$));
 	reopenSealedBorders(terrainMap, planned);
@@ -1395,4 +1402,16 @@ export async function generateSector(
 	refreshRoomMeta(terrainMap, Fn.map(rooms, room => room.name));
 	await flushRooms(shard, terrainMap, rooms);
 	return rooms;
+}
+
+/**
+ * Builds a world of one sector from nothing, ready for `seedShard`. The whole world is one batch, so
+ * only its outer edge faces the void. Performs no storage I/O.
+ */
+export function generateWorld(sectorName: string): PayloadWorld {
+	const terrainMap: WorldTerrain = new Map();
+	const planned = new Set(sectorRoomNames(sectorName));
+	const rooms = [ ...buildRooms(planned, undefined, terrainMap, planned) ];
+	refreshRoomMeta(terrainMap, planned);
+	return { rooms, terrain: makeWriter(MapSchema.schema)(terrainMap) };
 }

@@ -93,15 +93,23 @@ to information about game APIs.
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
 First step is make sure nodejs v24.x is installed, older versions will probably not work.
 TODO: v24 is the npm version, v26 is the git version.
-```
+```sh
 mkdir xxscreeps
 cd xxscreeps
 npm install xxscreeps
-npx xxscreeps import
+npx xxscreeps initialize
 npx xxscreeps start
 ```
 
-Now there is a Screeps server running at http://localhost:21025.
+Or if you want the default Steam world, instead of a dynamic world you can do this:
+```sh
+npx xxscreeps initialize --preset=steam
+```
+
+Now there is a Screeps server running at http://localhost:21025. `initialize` seeds a fresh world of
+one sector, W0N0 through W10N10. Its room types match the default Steam map, but its terrain is new
+each time. To play on the Steam map itself, run `npx xxscreeps initialize --preset=steam` instead.
+Once a world exists `initialize` refuses to replace it; pass `--allow-overwrite` to start over.
 
 If you want to use the Steam client you need to go here: https://steamcommunity.com/dev/apikey and
 get an API key. Then add it to `.screepsrc.yaml`:
@@ -126,21 +134,21 @@ schema](src/config/config.ts).
 
 ### Adding bots
 
-`import` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example bot
-the vanilla private server ships when you don't name a directory. These four commands rebuild the
-lineup that server starts with, in the corner rooms it uses:
+`initialize` seeds an unowned world. Populate it with the `manage` subcommand, which uses the example
+bot the vanilla private server ships when you don't name a directory. These four commands rebuild
+the lineup that server starts with, in the corner rooms it uses, each spawn placed at random:
 
-```
-npx xxscreeps manage bot add AliceBot   --spawn W1N9 36,5
-npx xxscreeps manage bot add EmmaBot    --spawn W1N1 37,31
-npx xxscreeps manage bot add JackBot    --spawn W9N1 33,6
-npx xxscreeps manage bot add MichaelBot --spawn W9N9 17,40
+```sh
+npx xxscreeps manage bot add AliceBot   --spawn W1N9
+npx xxscreeps manage bot add EmmaBot    --spawn W1N1
+npx xxscreeps manage bot add JackBot    --spawn W9N1
+npx xxscreeps manage bot add MichaelBot --spawn W9N9
 ```
 
-Drop the coordinates to have a spawn placed at random, or pass a directory to run your own bot
+Add `x,y` after the room to choose the spawn's position, or pass a directory to run your own bot
 instead:
 
-```
+```sh
 npx xxscreeps manage bot add <name> <dir> --spawn <room>
 ```
 
@@ -150,9 +158,9 @@ or `dist`), not the source tree of a bot that still needs compiling. `--spawn` a
 first spawn, whether or not a server is running; drop it to just save the code. Open-source bots
 published for vanilla servers work as-is:
 
-```
+```sh
 npm install screeps-bot-tooangel
-npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --spawn W5N5
+npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --spawn W7N7
 ```
 
 `manage` also has `user` verbs plus `bot update`/`bot remove`; run `xxscreeps manage` with no
@@ -193,7 +201,7 @@ the shard's terrain blob and `rooms` set. The default loadout is a controller,
 same without the lairs — controller-less rooms hold keeper-capacity sources
 and a prebuilt extractor. `terrainType` picks one of 28 wall layouts and
 `swampType` one of 14 swamp layouts (0 for no swamp); both roll randomly when
-omitted. Like `npx xxscreeps import`, it is an offline operation — stop the
+omitted. Like `npx xxscreeps initialize`, it is an offline operation — stop the
 server before running it so cached world state in the backend, processor, and
 runner workers doesn't go stale. Exits are read from any already-generated
 neighbor, so adjacent generated rooms connect. A border facing a room the
@@ -226,11 +234,11 @@ flags as `generate-room`.
 ## Docker
 
 If you want to run xxscreeps in Docker, you can do this:
-```
+```sh
 git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
 docker build . -t xxscreeps
-docker run -t -v .:/data xxscreeps import
+docker run -t -v .:/data xxscreeps initialize
 docker run -t -v .:/data xxscreeps start
 ```
 

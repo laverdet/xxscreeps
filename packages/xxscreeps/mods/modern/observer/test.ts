@@ -1,5 +1,6 @@
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
 import { create } from './observer.js';
@@ -18,6 +19,11 @@ describe('mods/modern/observer', () => {
 			room['#user'] =
 				room.controller!['#user'] = '100';
 		},
+	}, async shard => {
+		// A room just past OBSERVER_RANGE from W1N1, beyond the sector the test world ships. Generation
+		// saves one room buffer, where a server's boot fills both.
+		await generateRoom(shard, 'W12N1');
+		await shard.copyRoomFromPreviousTick('W12N1', shard.time + 1);
 	});
 
 	test('visibility', () => simulation(async ({ player, tick, poke }) => {
@@ -68,7 +74,8 @@ describe('mods/modern/observer', () => {
 	test('range', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
-			// W12N1 exists in the world (distance 11 from W1N1) but exceeds OBSERVER_RANGE (10)
+			// W12N1 exists in the world (distance 11 from W1N1) but exceeds OBSERVER_RANGE (10), so the
+			// range check fires rather than the existence check
 			const result = observer?.observeRoom('W12N1');
 			assert.strictEqual(result, C.ERR_NOT_IN_RANGE, 'observeRoom return value should be ERR_NOT_IN_RANGE');
 		});

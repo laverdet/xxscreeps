@@ -10,7 +10,7 @@ install:
 script:
   - npm run eslint
   - npm run test
-  - npx xxscreeps import
+  - npx xxscreeps initialize --preset=steam
 
 notifications:
   email: false
