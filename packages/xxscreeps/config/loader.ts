@@ -111,30 +111,30 @@ const makeEffectsTypeScriptSource = makeMakeGenericSource(
  * Render source text module which imports the given `Provide` from each module
  * @internal
  */
-export function makeModSourceText(mods: readonly ResolvedMod[], provider: Provide) {
+export function makeModSourceText(mods: readonly ResolvedMod[], provide: Provide) {
 	const make = function() {
 		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-		switch (provider) {
+		switch (provide) {
 			case 'config': return makeConfigSource;
 			case 'constants': return makeConstantsSource;
 			case 'schema': return makeSchemaSource;
 			default: return makeSideEffectsSource;
 		}
 	}();
-	return make(mods, provider);
+	return make(mods, provide);
 }
 
 /**
  * Render TypeScript source text module representing a `.d.ts` file.
  * @internal
  */
-export function makeModTypeScriptText(mods: readonly ResolvedMod[], provider: Provide) {
+export function makeModTypeScriptText(mods: readonly ResolvedMod[], provide: Provide) {
 	const make = function() {
 		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-		switch (provider) {
+		switch (provide) {
 			case 'constants': return makeConstantsTypeScriptSource;
 			default: return makeEffectsTypeScriptSource;
 		}
 	}();
-	return make(mods, provider);
+	return make(mods, provide);
 }
