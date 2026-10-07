@@ -1,4 +1,5 @@
 import type { JSONSchemaType } from 'ajv';
+import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import type { AnyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
@@ -9,7 +10,9 @@ import { Game, runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
+import { getControlledRooms } from 'xxscreeps/mods/classic/controller/model.js';
 import { renderStore } from 'xxscreeps/mods/classic/resource/backend.js';
+import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/meta/flag/model.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
@@ -199,5 +202,38 @@ hooks.register('route', {
 		})));
 		await saveUserFlagBlobForNextTick(context.shard, userId, undefined);
 		return { ok: 1 };
+	},
+});
+
+/**
+ * Returns `empty` for a user with nothing in the world, `normal` while they own a spawn in a room
+ * they control, and `lost` otherwise.
+ */
+export async function worldStatus(shard: Shard, userId: string) {
+	const [ controlled, presence ] = await Promise.all([
+		getControlledRooms(shard, userId),
+		shard.scratch.sCard(userToPresenceRoomsSetKey(userId)),
+	]);
+	if (presence > 0) {
+		const rooms = await Fn.mapAwait(controlled, roomName => shard.loadRoom(roomName));
+		if (rooms.some(room => lookForStructures(room, C.STRUCTURE_SPAWN).some(spawn => spawn['#user'] === userId))) {
+			return 'normal';
+		} else {
+			return 'lost';
+		}
+	} else {
+		return 'empty';
+	}
+}
+
+hooks.register('route', {
+	path: '/api/user/world-status',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (userId == null) {
+			return { ok: 1, status: 'normal' };
+		}
+		return { ok: 1, status: await worldStatus(context.shard, userId) };
 	},
 });

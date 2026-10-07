@@ -5,6 +5,7 @@ import { Creep, create as createCreep } from 'xxscreeps/mods/classic/creep/creep
 import { Structure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { worldStatus } from './backend.js';
 import { create as createExtension } from './extension.js';
 import { StructureSpawn, create } from './spawn.js';
 
@@ -474,6 +475,29 @@ describe('mods/classic/spawn', () => {
 				assert.ok(structure instanceof MySpawn);
 				assert.strictEqual(structure.doubleHits(), original.hits! * 2);
 			});
+		}));
+	});
+
+	describe('world status', () => {
+		// W2N1's spawn outlived its controller, so it doesn't count
+		const sim = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+			W2N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W2N1'), '100', 'Spawn2'));
+			},
+		});
+
+		test('lost without a spawn in a controlled room', () => sim(async ({ player, shard, tick }) => {
+			assert.strictEqual(await worldStatus(shard, '100'), 'normal');
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.destroy(), C.OK);
+			});
+			await tick();
+			assert.strictEqual(await worldStatus(shard, '100'), 'lost');
 		}));
 	});
 });
