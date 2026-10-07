@@ -47,6 +47,26 @@ describe('driver/private', () => {
 		assert.strictEqual(instance['#foo'](), '321');
 	});
 
+	test('inherited data property', () => {
+		class One {
+			'#foo' = 1;
+			declare '#bar': number;
+		}
+
+		class Two extends One {}
+
+		One.prototype['#bar'] = 1;
+		Two.prototype['#bar'] = 2;
+		assert.strictEqual(One.prototype['#bar'], 1);
+		assert.strictEqual(Two.prototype['#bar'], 2);
+		const instance = new Two();
+		assert.strictEqual(instance['#bar'], 2);
+		instance['#bar'] = 3;
+		assert.strictEqual(instance['#bar'], 3);
+		assert.strictEqual(Two.prototype['#bar'], 2);
+		assert.strictEqual(instance['#foo'], 1);
+	});
+
 	test('optional chaining', () => {
 		class Test {
 			declare '#test': undefined | number;

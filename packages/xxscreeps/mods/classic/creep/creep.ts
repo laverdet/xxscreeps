@@ -263,7 +263,13 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	 * @see https://docs.screeps.com/api/#Creep.getActiveBodyparts
 	 */
 	getActiveBodyparts(type: PartType) {
-		return Fn.accumulate(iterateActiveParts(this.body), part => part.type === type ? 1 : 0);
+		let count = 0;
+		for (const part of this.body) {
+			if (part.hits > 0 && part.type === type) {
+				++count;
+			}
+		}
+		return count;
 	}
 
 	/**

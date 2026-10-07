@@ -1,5 +1,10 @@
 import type { BufferView } from 'xxscreeps/schema/buffer-view.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { array, compose, declare, withType } from 'xxscreeps/schema/index.js';
+
+const hex8 = [ ...Fn.map(Fn.range(0x100), ii => ii.toString(16).padStart(2, '0')) ];
+const hex32 = (value: number) =>
+	hex8[value >>> 24]! + hex8[(value >>> 16) & 0xff]! + hex8[(value >>> 8) & 0xff]! + hex8[value & 0xff]!;
 
 export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 	composeFromBuffer(view: BufferView, offset: number) {
@@ -12,10 +17,10 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 			return null;
 		} else {
 			return (
-				view.uint32[offset32 + 1]!.toString(16).padStart(8, '0') +
-				view.uint32[offset32 + 2]!.toString(16).padStart(8, '0') +
-				view.uint32[offset32 + 3]!.toString(16).padStart(8, '0')
-			).slice(24 - view.int8[offset]!);
+				hex32(view.uint32[offset32 + 1]!) +
+				hex32(view.uint32[offset32 + 2]!) +
+				hex32(view.uint32[offset32 + 3]!)
+			).slice(24 - length);
 		}
 	},
 

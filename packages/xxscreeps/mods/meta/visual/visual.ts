@@ -221,10 +221,54 @@ function *extractPositions(args: unknown[], includeRoom: boolean) {
 	}
 }
 
-// Per-room visual state. `size` tracks cumulative serialized bytes for limit enforcement
-// (500 KB per room, 1000 KB for map). Shared across all RoomVisual instances for the same room.
-type RoomVisualState = { visuals: VisualEntryShape[]; size: number };
+// Per-room visual state, shared across all `RoomVisual` instances for the same room.
+interface RoomVisualState {
+	visuals: VisualEntryShape[];
+	size: number;
+}
+
 const tickVisuals = new Map<string, RoomVisualState>();
+
+// Approximates `JSON.stringify(value).length`. Accuracy isn't super important here.
+function estimateSize(value: unknown): number {
+	switch (typeof value) {
+		case 'number': {
+			if (value === (value | 0)) {
+				const magnitude = Math.abs(value);
+				const sign = value < 0 ? 1 : 0;
+				if (magnitude < 1) {
+					return sign + 1;
+				} else {
+					return sign + (Math.log10(magnitude) | 0) + 1;
+				}
+			} else {
+				return String(value).length;
+			}
+		}
+		case 'string': return value.length + 2;
+		case 'boolean': return value ? 4 : 5;
+		case 'bigint':
+		case 'function':
+		case 'symbol':
+		case 'undefined': return 4;
+		case 'object': {
+			if (value === null) {
+				return 4;
+			}
+			let size = 2;
+			if (Array.isArray(value)) {
+				for (const entry of value) {
+					size += estimateSize(entry) + 1;
+				}
+			} else {
+				for (const [ key, member ] of Object.entries(value)) {
+					size += key.length + estimateSize(member) + 3;
+				}
+			}
+			return size;
+		}
+	}
+}
 
 // Save visuals to schema blob
 export function flush() {
@@ -412,12 +456,13 @@ class VisualOf<Point extends PointParameter> {
 	}
 
 	#push(visual: VisualEntryShape) {
-		const entrySize = JSON.stringify(visual).length + 9;
-		if (this.#state.size + entrySize > this.#limit) {
+		// 9 == `"t":"c",`.length
+		const size = this.#state.size + estimateSize(visual) + 9;
+		if (size > this.#limit) {
 			throw new Error(`${this.#description} size has exceeded ${this.#limit >> 10} KB limit`);
 		}
+		this.#state.size = size;
 		this.#state.visuals.push(visual);
-		this.#state.size += entrySize;
 	}
 }
 
