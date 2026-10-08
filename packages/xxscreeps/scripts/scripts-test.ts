@@ -5,6 +5,8 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
+import * as Code from 'xxscreeps/engine/db/user/code.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -22,6 +24,7 @@ import { StructureSpawn, create as createSpawn } from 'xxscreeps/mods/classic/sp
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { describe, simulate, test } from 'xxscreeps/test/index.js';
+import { removalCommands, removeBotCode, removeUser } from './manage-user.js';
 import { exportPayload, importPayload } from './payload.js';
 import { generateRoom, generateSector, generateWorld } from './room-gen.js';
 
@@ -414,5 +417,41 @@ describe('scripts/payload', () => {
 		layout[10] = `@${' '.repeat(49)}`;
 		const room = { layout, objects: [ { id: 'deadbeef', terrain: 7 } ] };
 		assert.throws(() => importPayload({ W0N0: room }), /W0N0 holds terrain 7 under '@'/);
+	});
+});
+
+describe('scripts/manage', () => {
+	// The original defect was that `bot remove` ran the account-deleting handler. Pin the mapping
+	// itself: a regression that routes a bot removal at the account fails here.
+	test('removal verbs target code vs. account', () => {
+		assert.strictEqual(removalCommands['bot remove'], 'code');
+		assert.strictEqual(removalCommands['user remove'], 'account');
+	});
+
+	test('bot remove deletes the code and keeps the account', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '300', 'BotUser', [ { provider: User.emailProvider, id: 'bot@user.test' } ]);
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('300'), 'main'), true);
+		assert.ok(await Code.loadBlobs(db, '300', 'main'));
+		// Resolves by username, as the CLI accepts either a name or an id.
+		await removeBotCode(db, 'BotUser');
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('300'), 'main'), false);
+		assert.strictEqual(await Code.loadBlobs(db, '300', 'main'), undefined);
+		assert.strictEqual(await User.findUserByName(db, 'BotUser'), '300');
+		assert.strictEqual(await User.findUserByProvider(db, User.emailProvider, 'bot@user.test'), '300');
+	});
+
+	test('user remove deletes the account and clears its shard state', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '301', 'AccountUser', [ { provider: User.emailProvider, id: 'acct@user.test' } ]);
+		const clearedShards: string[] = [];
+		const id = await removeUser(db, 'AccountUser', async userId => { clearedShards.push(userId); });
+		assert.strictEqual(id, '301');
+		assert.deepStrictEqual(clearedShards, [ '301' ]);
+		assert.strictEqual(await User.findUserByName(db, 'AccountUser'), null);
+		assert.strictEqual(await User.findUserByProvider(db, User.emailProvider, 'acct@user.test'), null);
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('301'), 'main'), false);
 	});
 });

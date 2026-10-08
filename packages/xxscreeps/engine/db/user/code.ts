@@ -11,6 +11,22 @@ export const buffersKey = (userId: string, branchName: string) =>
 export const stringsKey = (userId: string, branchName: string) =>
 	`${User.infoKey(userId)}/code/${branchName.replace(/[^a-zA-Z0-9_]/g, char => `-${char.charCodeAt(0).toString(36)}`)}`;
 
+/**
+ * Deletes the user's code: the branch manifest and every branch's buffers and strings. The account,
+ * its providers, and its room objects are untouched. Shared by `User.remove` and `manage bot
+ * remove`, which deletes code only.
+ */
+export async function removeCode(db: Database, userId: string) {
+	const branches = await db.data.sMembers(branchManifestKey(userId));
+	await Promise.all([
+		db.data.del(branchManifestKey(userId)),
+		...Fn.transform(branches, branchName => [
+			db.data.vDel(buffersKey(userId, branchName)),
+			db.data.vDel(stringsKey(userId, branchName)),
+		]),
+	]);
+}
+
 export type UserCodeChannel = Channel<
 	{ type: 'switch'; branch: string } |
 	{ type: 'update'; branch: string }
