@@ -447,7 +447,10 @@ describe('scripts/manage', () => {
 		const { db } = testShard;
 		await User.create(db, '301', 'AccountUser', [ { provider: User.emailProvider, id: 'acct@user.test' } ]);
 		const clearedShards: string[] = [];
-		const id = await removeUser(db, 'AccountUser', async userId => { clearedShards.push(userId); });
+		const id = await removeUser(db, 'AccountUser', userId => {
+			clearedShards.push(userId);
+			return Promise.resolve();
+		});
 		assert.strictEqual(id, '301');
 		assert.deepStrictEqual(clearedShards, [ '301' ]);
 		assert.strictEqual(await User.findUserByName(db, 'AccountUser'), null);
