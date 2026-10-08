@@ -3,7 +3,7 @@ import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
-import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
+import { removeCode, saveContent } from './code.js';
 
 // Lifecycle hooks for users. Mods register handlers to tear down their own per-user state when a
 // user is deleted, so the functions below stay self-contained for every caller rather than each
@@ -130,22 +130,17 @@ export async function associateProvider(db: Database, userId: string, provider: 
  * finds the user's per-shard state.
  */
 export async function remove(db: Database, userId: string) {
-	const [ providers, branches ] = await Promise.all([
+	const [ providers ] = await Promise.all([
 		findProvidersForUser(db, userId),
-		db.data.sMembers(branchManifestKey(userId)),
 		loadRemoveHandlers(),
 	]);
 	await Promise.all([
 		db.data.sRem('users', [ userId ]),
 		db.data.del(infoKey(userId)),
 		db.data.del(userProvidersKey(userId)),
-		db.data.del(branchManifestKey(userId)),
 		...Fn.map(Object.entries(providers), ([ provider, providerId ]) =>
 			db.data.hDel(providerMembersKey(provider), [ providerId ])),
-		...Fn.transform(branches, branchName => [
-			db.data.vDel(buffersKey(userId, branchName)),
-			db.data.vDel(stringsKey(userId, branchName)),
-		]),
+		removeCode(db, userId),
 		...removeHooks(db, userId),
 	]);
 }
