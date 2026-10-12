@@ -61,6 +61,7 @@ registerRoomTickProcessor((room, context) => {
 
 			// Send the boys
 			activateNPC(room, kInvaderUserId);
+			context.setActive();
 			for (let ii = 0; ii < 3; ++ii) {
 				const role = ([ 'melee', 'healer', 'ranged' ] as const)[ii % 3]!;
 				const exit = validExits[ii];

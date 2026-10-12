@@ -1,4 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition, iterateWithRangeTo } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createWall } from 'xxscreeps/mods/classic/defense/wall.js';
@@ -35,6 +36,15 @@ describe('mods/classic/invader', () => {
 				const invaders = Game.rooms.W7N7!.find(C.FIND_HOSTILE_CREEPS);
 				assert.ok(invaders.length > 0, 'invaders should spawn when all neighbors are uncontrolled');
 			});
+		}));
+
+		// Nothing else dirties the room on the raid's tick, so the invaders only land if the trigger
+		// marks the room updated
+		test('a raid survives the tick that spawned it', () => uncontrolled(async ({ peekRoom, tick }) => {
+			await tick();
+			const invaders = await peekRoom('W7N7', room =>
+				Fn.accumulate(room['#lookFor'](C.LOOK_CREEPS), creep => creep['#user'] === kInvaderUserId ? 1 : 0));
+			assert.ok(invaders > 0, 'spawned invaders should reach the saved room blob');
 		}));
 
 		// All exits lead to owned rooms — no invaders should spawn
