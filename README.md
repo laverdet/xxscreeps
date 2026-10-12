@@ -166,6 +166,28 @@ npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --sp
 `manage` also has `user` verbs plus `bot update`/`bot remove`; run `xxscreeps manage` with no
 arguments to print the full command list.
 
+### Saving and Moving Worlds
+
+`export` writes the shard's map as a JSON payload, and `initialize <file.json>` seeds a server from
+one:
+
+```sh
+npx xxscreeps export world.json
+npx xxscreeps initialize world.json
+```
+
+A payload is the map, not a save game. It carries every room's terrain and the objects a fresh
+world needs -- controllers, sources, minerals, keeper lairs, prebuilt extractors and portals -- and
+nothing a player has done. Spawns, structures, creeps and construction sites stay behind, and
+`export` prints a count of what it dropped. Players themselves live in the global database rather
+than the shard: accounts, code, `Memory`, badges and GCL. `initialize world.json --shard-only
+--allow-overwrite` replaces the shard and keeps them, which is how to reset a map under existing
+players.
+
+To back up a running world, stop the server and copy `./screeps/` -- the database and every shard,
+including state no payload records. Moving to another machine is the same copy; only the paths in
+`.screepsrc.yaml` need to follow.
+
 ## Operator CLI
 
 `xxscreeps cli` opens a JavaScript REPL in the CLI process's host realm, and
