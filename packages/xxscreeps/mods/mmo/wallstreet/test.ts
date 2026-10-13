@@ -1,6 +1,7 @@
 import { Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { mappedPrimitiveComparator, primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
@@ -8,7 +9,8 @@ import { DeterministicClockForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
-import { incrementUserCredits, insertOrder, loadAndReadMarketOrder, loadMarketOrderIds, loadUserCredits, marketChannel, updateOrderAmount } from './model.js';
+import { indexOrders, renderOrder } from './backend.js';
+import { incrementUserCredits, insertOrder, loadActiveOrders, loadAndReadMarketOrder, loadMarketOrderIds, loadUserCredits, loadUserOrders, marketChannel, updateOrderAmount } from './model.js';
 import { Order } from './order.js';
 
 async function loadMarketOrderBookForTesting(shard: Shard) {
@@ -275,6 +277,50 @@ describe('mods/mmo/wallstreet', () => {
 			assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: 1.5 }), C.OK);
 			assert.strictEqual(Game.market.createOrder({ ...sellOptions, totalAmount: -5 }), C.ERR_INVALID_ARGS);
 		});
+	}));
+
+	test('the backend indexes the active book by resource and lists your own orders', () => sim(async ({ player, shard, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.market.createOrder(sellOptions), C.OK);
+			// Credits, not stock, back a buy order: 22,250 remain after all three fees, so 44 at 0.5
+			assert.strictEqual(Game.market.createOrder({ ...buyOptions, resourceType: C.RESOURCE_HYDROGEN }), C.OK);
+			// Nothing to sell, so this one stays inactive
+			assert.strictEqual(Game.market.createOrder({ ...sellOptions, resourceType: C.RESOURCE_HYDROGEN, totalAmount: 10 }), C.OK);
+		});
+		// Create, then activate
+		await tick(2);
+
+		// The index covers active orders only, one entry per resource
+		const active = await loadActiveOrders(shard);
+		assert.strictEqual(active.length, 2);
+		assert.deepStrictEqual(indexOrders(active).sort(mappedPrimitiveComparator(entry => entry._id)), [
+			{ _id: C.RESOURCE_HYDROGEN, buying: 1, count: 1, selling: 0 },
+			{ _id: C.RESOURCE_ENERGY, buying: 0, count: 1, selling: 1 },
+		]);
+
+		// The client reads the runtime's public fields under `_id`, and never the owner
+		const energy = active.find(order => order.resourceType === C.RESOURCE_ENERGY);
+		assert.ok(energy);
+		assert.deepStrictEqual(renderOrder(energy), {
+			_id: energy.id,
+			active: true,
+			amount: 1000,
+			created: energy.created,
+			createdTimestamp: energy.createdTimestamp,
+			price: 0.5,
+			remainingAmount: 1000,
+			resourceType: C.RESOURCE_ENERGY,
+			roomName: 'W1N1',
+			totalAmount: 1000,
+			type: C.ORDER_SELL,
+		});
+
+		// Your own orders include the inactive one; another user has none
+		const mine = await loadUserOrders(shard, '100');
+		assert.deepStrictEqual(
+			mine.map(order => `${order.resourceType} ${order.type} ${order.amount}`).sort(primitiveComparator),
+			[ 'H buy 44', 'H sell 0', 'energy sell 1000' ]);
+		assert.deepStrictEqual(await loadUserOrders(shard, '101'), []);
 	}));
 
 	test('createOrder reaches the book; the connector ships the active book and your orders', async () => {

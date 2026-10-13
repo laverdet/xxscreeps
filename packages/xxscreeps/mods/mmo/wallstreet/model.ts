@@ -96,6 +96,22 @@ export async function loadAndReadMarketOrder(shard: Shard, id: string) {
 	}
 }
 
+// Load the readable orders among `ids`; an id whose blob is gone is skipped.
+async function loadAndReadMarketOrders(shard: Shard, ids: Iterable<string>) {
+	const orders = await Fn.mapAwait(ids, id => loadAndReadMarketOrder(shard, id));
+	return [ ...Fn.filter(orders) ];
+}
+
+// Load the active book.
+export async function loadActiveOrders(shard: Shard) {
+	return loadAndReadMarketOrders(shard, await shard.data.sMembers(activeOrdersKey));
+}
+
+// Load a user's orders, active and inactive.
+export async function loadUserOrders(shard: Shard, userId: string) {
+	return loadAndReadMarketOrders(shard, await shard.data.sMembers(userOrdersKey(userId)));
+}
+
 // Write a new order and index it.
 export async function insertOrder(shard: Shard, order: Order) {
 	const orderId = order.id;
