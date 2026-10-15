@@ -9,6 +9,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import { expiresNextTick, saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { Room } from 'xxscreeps/game/room/index.js';
 import { ConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { release, reserve } from 'xxscreeps/mods/classic/controller/processor.js';
@@ -24,13 +25,21 @@ import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
 import { kSourceKeeperUserId } from 'xxscreeps/mods/classic/source/game.js';
 import { birthSpawnCreep } from 'xxscreeps/mods/classic/spawn/processor.js';
 import { Spawning } from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { Ruin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
-import { registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { Nuke } from 'xxscreeps/mods/modern/nuker/nuke.js';
+import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { shuffle } from 'xxscreeps/utility/random.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { strongholdBehavior } from './behavior.js';
-import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
-import { calcReward, containerAmounts, containerRewards, templates } from './templates.js';
+import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController, create as createInvaderCore } from './invader-core.js';
+import { holdsStronghold, loadSectorKeeperRooms, requestSweeps } from './model.js';
+import { calcReward, containerAmounts, containerRewards, coreDepositTypes, templates } from './templates.js';
+
+// Ticks a placed stronghold spends invulnerable before it deploys. It isn't a `C.*` constant since
+// players read it only through `ticksToDeploy`.
+export const kDeployTime = 5000;
 
 // A room with an invader core is a stronghold; its creeps are defenders driven by the core's
 // behavior rather than the raid logic. This registration replaces the raid loop registered by
@@ -65,7 +74,7 @@ registerNPC(kInvaderUserId, Game => {
 });
 
 export type StrongholdIntents = typeof intents;
-// The five invader-core actions driven by the NPC loop.
+// The five invader-core actions driven by the NPC loop, and the world policy's placement intent.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureInvaderCore, 'reserveController', {}, (core, context, id: string) => {
@@ -161,6 +170,27 @@ const intents = [
 			}
 		}
 	}),
+
+	// Places the core of a stronghold at the position main chose. It sits invulnerable until its deploy
+	// timer elapses, and then the core's own tick processor raises the bunker. Two sweeps can each find
+	// a sector free before the first one's core lands, so a sector already held takes none.
+	registerIntentProcessor(
+		Room, 'placeStronghold', { internal: true },
+		(room, context, templateName: keyof typeof templates, posId: number) => {
+			context.task(loadSectorKeeperRooms(context.shard, context.state.world, room.name), rooms => {
+				if (rooms.some(keeperRoom => holdsStronghold(keeperRoom))) {
+					return;
+				}
+				const core = createInvaderCore(RoomPosition['#create'](posId), templates[templateName].rewardLevel, Game.time + kDeployTime);
+				core['#templateName'] = templateName;
+				core['#depositType'] = Fn.first(shuffle(coreDepositTypes));
+				room['#insertObject'](core);
+				// The invader NPC is woken at deploy, not here: a deploying core takes no actions, and an
+				// active NPC would hold the room awake for the whole deploy timer to run a loop that does
+				// nothing. The core's own tick processor wakes the room to deploy it.
+				context.setActive();
+			});
+		}),
 ];
 
 // A stronghold destroyed early leaves its spoils lying for as long as it would have stood, so the
@@ -182,15 +212,36 @@ registerObjectPreTickProcessor(Structure, (structure, context) => {
 });
 
 // The core shadows that removal to first reset any owned controller in its room to neutral. A
-// level-0 controller short-circuits so its reservation, if any, expires on its own.
+// level-0 controller short-circuits so its reservation, if any, expires on its own. The collapse
+// frees the core's sector, so it requests the sector's sweep.
 registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
 	if (expiresNextTick(core['#collapseTime'])) {
 		const controller = core.room.controller;
 		if (controller && controller.level > 0) {
 			release(context, controller);
 		}
+		context.task(requestSweeps(context.shard, context.state.world, core.room.name));
 		next();
 	}
+});
+
+// A core leaves its sector three ways, and each requests the sector's sweep: it collapses (above),
+// damage destroys it and its ruin decays (here), or a nuke destroys it without a ruin (below). Damage
+// destroys the core without a processor context, so its ruin is what reports it.
+registerObjectTickProcessor(Ruin, (ruin, context, next) => {
+	if (ruin.structureType === C.STRUCTURE_INVADER_CORE && expiresNextTick(ruin['#decayTime'])) {
+		context.task(requestSweeps(context.shard, context.state.world, ruin.room.name));
+	}
+	next();
+});
+
+// The sweep reads rooms as its tick began, so a core destroyed by the impact only shows a tick later,
+// as the nuke is removed. A core which survived the blast cancels the sweep again.
+registerObjectTickProcessor(Nuke, (nuke, context, next) => {
+	if (nuke.timeToLand === 0) {
+		context.task(requestSweeps(context.shard, context.state.world, nuke.room.name));
+	}
+	next();
 });
 
 registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
@@ -309,6 +360,7 @@ function deployStronghold(core: StructureInvaderCore, context: ProcessorContext)
 			core['#ownedNeutralStructureIds'].push(peer.id);
 		}
 	}
+	activateNPC(core.room, kInvaderUserId);
 	context.wakeAt(collapseTime);
 	context.didUpdate();
 }
