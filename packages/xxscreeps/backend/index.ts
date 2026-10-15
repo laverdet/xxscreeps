@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
-/// <reference path="xx.d.ts" />
+/// <reference path="xx.d.ts" preserve="true" />
 import type { BackendContext } from './context.js';
 import type { JSONSchemaType } from 'ajv';
 import type Koa from 'koa';
