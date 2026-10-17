@@ -6,11 +6,12 @@
 // processed until it owns an object in a room — `bot add --spawn` covers that by acquiring the game
 // mutex and applying the same claim/spawn mutation the `placeSpawn` intent performs, in between ticks,
 // so it works whether or not the server is running (a running server hands off the mutex between ticks).
-// Code saves are picked up by the runner on the next tick via the code channel. `remove` deletes
-// records only — owned room objects are left alone — and is safe for inactive users; pause the
-// engine first if the user is live. Users are shared by every shard, so `--shard` matters only to
-// what is stored per shard: the game verbs, `--spawn`, and the memory that `show` reads. `remove`
-// clears every shard.
+// Code saves are picked up by the runner on the next tick via the code channel. `user remove`
+// deletes records only — owned room objects are left alone — and is safe for inactive users; pause
+// the engine first if the user is live. `bot remove` deletes only the bot's code, leaving the
+// account (and its rooms) intact. Users are shared by every shard, so `--shard` matters only to
+// what is stored per shard: the game verbs, `--spawn`, and the memory that `show` reads. `user
+// remove` clears every shard.
 
 import * as fs from 'node:fs/promises';
 import * as nodePath from 'node:path';
@@ -41,6 +42,7 @@ import { catalog } from 'xxscreeps/mods/meta/decorations/catalog.js';
 import * as Decorations from 'xxscreeps/mods/meta/decorations/model.js';
 import { loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import * as C from 'xxscreeps:mods/constants';
+import { removalCommands, removeBotCode, removeUser, resolveUserId as resolveUser } from './manage-user.js';
 
 import 'xxscreeps:mods/game';
 
@@ -73,17 +75,7 @@ async function pauseTick(count: number) {
 	}
 }
 
-// Accepts either a raw user id or a username.
-async function resolveUserId(who: string) {
-	if (await db.data.sIsMember('users', who)) {
-		return who;
-	}
-	const byName = await User.findUserByName(db, who);
-	if (byName !== null) {
-		return byName;
-	}
-	throw new Error(`No such user: ${who}`);
-}
+const resolveUserId = (who: string) => resolveUser(db, who);
 
 async function userList() {
 	const ids = await db.data.sMembers('users');
@@ -136,17 +128,27 @@ async function userCreate(name: string, email?: string) {
 	out(`Created user ${name} (${id}).`);
 }
 
-async function userRemove(who: string) {
-	const id = await resolveUserId(who);
-	// Every shard before the user record, which is what finds them again if one of these fails
+// Every shard before the user record, which is what finds them again if one of these fails.
+async function removeShardState(id: string) {
 	await Fn.mapAwait(config.shards, async info => {
 		await using target = await Shard.connectWith(db, info);
 		await User.removeFromShard(target, id);
 		await target.save();
 	});
-	await User.remove(db, id);
-	await save();
-	out(`Removed user ${who} (${id}).`);
+}
+
+// Route a removal verb to its target: `user remove` deletes the whole account, `bot remove` only
+// the bot's code. The mapping lives in `manage-user.ts` so it can be unit-tested.
+async function removeCommand(command: keyof typeof removalCommands, who: string) {
+	if (removalCommands[command] === 'account') {
+		const id = await removeUser(db, who, removeShardState);
+		await save();
+		out(`Removed user ${who} (${id}).`);
+	} else {
+		const id = await removeBotCode(db, who);
+		await save();
+		out(`Removed code for ${who} (${id}); the account is unchanged.`);
+	}
 }
 
 // `source` is inline JSON or a path to a `.json` file holding a badge object (the same shape the
@@ -450,6 +452,7 @@ function usage(): never {
   bot  add    <name> [codeDir [branch]] [--spawn <room> [x,y]]
   bot  update <name|id> <codeDir> [branch]
   bot  remove <name|id>
+'user remove' deletes the account; 'bot remove' deletes only the bot's code.
 A value which starts with '-' goes after '--': user password <name|id> -- <password>
 `);
 	process.exit(2);
@@ -469,7 +472,12 @@ try {
 		case 'user list': await userList(); break;
 		case 'user show': if (rest[0] === undefined) usage(); await userShow(rest[0]); break;
 		case 'user create': if (rest[0] === undefined) usage(); await userCreate(rest[0], rest[1]); break;
-		case 'user remove': if (rest[0] === undefined) usage(); await userRemove(rest[0]); break;
+		case 'user remove':
+		case 'bot remove': {
+			if (rest[0] === undefined) usage();
+			await removeCommand(`${noun} ${verb}` as keyof typeof removalCommands, rest[0]);
+			break;
+		}
 		case 'user badge': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBadge(rest[0], rest[1]); break;
 		case 'user password': if (rest[0] === undefined || rest[1] === undefined) usage(); await userPassword(rest[0], rest[1]); break;
 		case 'user branch': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBranch(rest[0], rest[1]); break;
@@ -489,7 +497,6 @@ try {
 			break;
 		}
 		case 'bot update': if (rest[0] === undefined || rest[1] === undefined) usage(); await botSave(rest[0], rest[1], rest[2], false); break;
-		case 'bot remove': if (rest[0] === undefined) usage(); await userRemove(rest[0]); break;
 		default: usage();
 	}
 } catch (err) {

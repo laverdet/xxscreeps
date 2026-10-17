@@ -1,6 +1,7 @@
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import * as Badge from './badge.js';
+import * as Code from './code.js';
 import * as User from './index.js';
 
 describe('engine/db/user', () => {
@@ -55,5 +56,21 @@ describe('engine/db/user', () => {
 		await User.remove(db, '200');
 		assert.strictEqual(await User.findUserByName(db, 'RemoveMe'), null);
 		assert.strictEqual(await User.findUserByProvider(db, 'email', 'remove@me.test'), null);
+		// `remove` must still delete the code, not just stop finding the account.
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('200'), 'main'), false);
+	});
+
+	test('removing code leaves the account and its providers intact', async () => {
+		await using testShard = await instantiateTestShard();
+		const { db } = testShard;
+		await User.create(db, '201', 'CodeOnly', [ { provider: 'email', id: 'code@only.test' } ]);
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('201'), 'main'), true);
+		assert.ok(await Code.loadBlobs(db, '201', 'main'));
+		await Code.removeCode(db, '201');
+		assert.strictEqual(await db.data.sIsMember(Code.branchManifestKey('201'), 'main'), false);
+		assert.strictEqual(await Code.loadBlobs(db, '201', 'main'), undefined);
+		// `manage bot remove` deletes code only: the account and its providers must survive.
+		assert.strictEqual(await User.findUserByName(db, 'CodeOnly'), '201');
+		assert.strictEqual(await User.findUserByProvider(db, 'email', 'code@only.test'), '201');
 	});
 });
