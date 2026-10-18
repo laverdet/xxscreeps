@@ -12,10 +12,10 @@ import { ConstructionSite } from 'xxscreeps/mods/classic/construction/constructi
 import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
 import { getControlledRooms } from 'xxscreeps/mods/classic/controller/model.js';
 import { renderStore } from 'xxscreeps/mods/classic/resource/backend.js';
-import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/meta/flag/model.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
+import { hasSpawnIn } from './model.js';
 import * as Spawn from './spawn.js';
 
 bindRenderer(StructureExtension, (extension, next) => ({
@@ -215,12 +215,7 @@ export async function worldStatus(shard: Shard, userId: string) {
 		shard.scratch.sCard(userToPresenceRoomsSetKey(userId)),
 	]);
 	if (presence > 0) {
-		const rooms = await Fn.mapAwait(controlled, roomName => shard.loadRoom(roomName));
-		if (rooms.some(room => lookForStructures(room, C.STRUCTURE_SPAWN).some(spawn => spawn['#user'] === userId))) {
-			return 'normal';
-		} else {
-			return 'lost';
-		}
+		return await hasSpawnIn(shard, userId, controlled) ? 'normal' : 'lost';
 	} else {
 		return 'empty';
 	}

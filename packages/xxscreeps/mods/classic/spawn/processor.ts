@@ -1,7 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
@@ -18,7 +18,33 @@ import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/m
 import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from 'xxscreeps:mods/constants';
 import { StructureExtension } from './extension.js';
+import { insertSpawn, refreshSpawns, removeSpawn } from './model.js';
 import { Spawning, StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
+
+// Index the rooms each user has a spawn in. The hooks are attached here rather than on the class so
+// the scratch writes stay out of the player sandbox.
+StructureSpawn.prototype['#afterInsert'] = function(afterInsert) {
+	return function(this: StructureSpawn, context) {
+		afterInsert.call(this, context);
+		if (context) {
+			context.task(insertSpawn(context.shard, this['#user']!, this.room.name));
+		}
+	};
+}(StructureSpawn.prototype['#afterInsert']);
+
+StructureSpawn.prototype['#afterRemove'] = function(afterRemove) {
+	return function(this: StructureSpawn, context) {
+		if (context) {
+			context.task(removeSpawn(context.shard, this['#user']!, this.room.name));
+		}
+		afterRemove.call(this, context);
+	};
+}(StructureSpawn.prototype['#afterRemove']);
+
+hooks.register('refreshRoom', async (shard, room) => {
+	const spawnsByUser = Fn.groupBy(lookForStructures(room, C.STRUCTURE_SPAWN), spawn => [ spawn['#user']!, spawn ]);
+	await Fn.mapAwait(spawnsByUser, ([ userId, spawns ]) => refreshSpawns(shard, userId, room.name, spawns.length));
+});
 
 type EnergyStructure = StructureExtension | StructureSpawn;
 function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
@@ -97,8 +123,8 @@ const intents = [
 				context.didUpdate();
 			} else if (object['#user'] === me) {
 				if (object instanceof OwnedStructure) {
-					object['#user'] = '1';
 					const ruin = createRuin(object, 500000);
+					ruin['#structure'].user = '1';
 					room['#insertObject'](ruin);
 				}
 				room['#removeObject'](object);
