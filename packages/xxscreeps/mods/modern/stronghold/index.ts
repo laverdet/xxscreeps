@@ -16,8 +16,9 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/modern/effects',
 		'xxscreeps/mods/modern/factory',
 		'xxscreeps/mods/modern/nuker',
+		'xxscreeps/mods/modern/sector',
 		'xxscreeps/mods/npc',
 	],
-	provides: [ 'backend', 'constants', 'game', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'game', 'main', 'processor', 'schema', 'test' ],
 	types,
 };

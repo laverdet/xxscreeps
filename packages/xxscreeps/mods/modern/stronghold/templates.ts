@@ -79,6 +79,10 @@ export const templates = {
 	`),
 } satisfies Record<string, StrongholdTemplate>;
 
+// `Object.entries` widens the key to `string`; the record is a literal, so its key type is exact.
+export const templateEntries =
+	Object.entries(templates) as [ keyof typeof templates, StrongholdTemplate ][];
+
 // Weighted resource table for the loot in a stronghold's containers; `containerAmounts` maps a
 // template's reward level to the total density distributed across the rolled resources.
 export const containerRewards: Record<string, number> = {
@@ -107,6 +111,8 @@ export const coreRewards = {
 	[C.RESOURCE_BIOMASS]: [ C.RESOURCE_CELL, C.RESOURCE_PHLEGM, C.RESOURCE_TISSUE, C.RESOURCE_MUSCLE, C.RESOURCE_ORGANOID, C.RESOURCE_ORGANISM ],
 	[C.RESOURCE_MIST]: [ C.RESOURCE_CONDENSATE, C.RESOURCE_CONCENTRATE, C.RESOURCE_EXTRACT, C.RESOURCE_SPIRIT, C.RESOURCE_EMANATION, C.RESOURCE_ESSENCE ],
 } satisfies Record<string, ResourceType[]>;
+
+export const coreDepositTypes = Object.keys(coreRewards) as (keyof typeof coreRewards)[];
 
 export const coreAmounts = [ 0, 1000, 16000, 60000, 400000, 3000000 ];
 
