@@ -20,6 +20,10 @@ type ShardGameChannel = Channel<
 const shardGameChannel =
 	(pubsub: PubSubProvider): ShardGameChannel => new Channel(pubsub, 'channel/game');
 
+export function getShardGameChannel(shard: Shard) {
+	return shardGameChannel(shard.pubsub);
+}
+
 export class Shard extends AsyncDisposableResource {
 	time = -1;
 	readonly db;

@@ -1,7 +1,9 @@
 import type { JSONSchemaType } from 'ajv';
+import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import type { AnyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
+import { getShardGameChannel } from 'xxscreeps/engine/db/shard.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -180,6 +182,32 @@ hooks.register('route', {
 	}),
 });
 
+/**
+ * Removes the user from the world and resolves once they are gone, since the client requests
+ * world-status as soon as the map loads. Returns `false` when they have nothing to remove.
+ */
+export async function respawnUser(shard: Shard, userId: string) {
+	const roomNames = await shard.scratch.sMembers(userToPresenceRoomsSetKey(userId));
+	if (roomNames.length === 0) {
+		return false;
+	}
+	using disposable = new DisposableStack();
+	// A sleeping room wakes for the intents on the next tick, and that tick's completion is
+	// published as the tick after
+	const time = shard.time + 2;
+	const [ effect, removed ] = getShardGameChannel(shard).listenFor(message => message.type === 'tick' && message.time >= time);
+	disposable.defer(effect);
+	await Promise.all([
+		...roomNames.map(roomName => pushIntentsForRoomNextTick(shard, roomName, userId, {
+			local: { unspawn: [ [] ] },
+			internal: true,
+		})),
+		saveUserFlagBlobForNextTick(shard, userId, undefined),
+	]);
+	await removed;
+	return true;
+}
+
 hooks.register('route', {
 	path: '/api/user/respawn',
 	method: 'post',
@@ -189,15 +217,10 @@ hooks.register('route', {
 		if (userId == null) {
 			return;
 		}
-		const roomNames = await context.shard.scratch.sMembers(userToPresenceRoomsSetKey(userId));
-		if (roomNames.length === 0) {
+		if (await respawnUser(context.shard, userId)) {
+			return { ok: 1 };
+		} else {
 			return { error: 'invalid status' };
 		}
-		await Promise.all(roomNames.map(roomName => pushIntentsForRoomNextTick(context.shard, roomName, userId, {
-			local: { unspawn: [ [] ] },
-			internal: true,
-		})));
-		await saveUserFlagBlobForNextTick(context.shard, userId, undefined);
-		return { ok: 1 };
 	},
 });
