@@ -1,10 +1,12 @@
 import type { StructureExtension } from './extension.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { respawnUser } from './backend.js';
 import { create as createExtension } from './extension.js';
 import { StructureSpawn, create } from './spawn.js';
 
@@ -474,6 +476,28 @@ describe('mods/classic/spawn', () => {
 				assert.ok(structure instanceof MySpawn);
 				assert.strictEqual(structure.doubleHits(), original.hits! * 2);
 			});
+		}));
+	});
+
+	describe('respawn', () => {
+		// A lost player's leftover site in a room nothing keeps awake
+		const sim = simulate({
+			W1N1: room => {
+				room['#insertObject'](createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('replies once the player is gone', () => sim(async ({ shard, tick }) => {
+			// Let the room fall asleep
+			await tick();
+			const [ again ] = await Promise.all([
+				async function() {
+					await respawnUser(shard, '100');
+					return respawnUser(shard, '100');
+				}(),
+				tick(2),
+			]);
+			assert.strictEqual(again, false);
 		}));
 	});
 });
