@@ -25,7 +25,7 @@ const intents = [
 				// checkCreateConstructionSite guarantees checkPlacement returned a number (not null).
 				const progressTotal = structureFactories.get(structureType)!.checkPlacement(room, pos)!;
 				const site = create(pos, structureType, me, progressTotal, name);
-				room['#insertObject'](site, true);
+				room['#insertObject'](site, true, context);
 				context.didUpdate();
 			}
 		}),
@@ -145,7 +145,7 @@ registerObjectTickProcessor(ConstructionSite, (site, context) => {
 		const structure = structureFactories.get(site.structureType)?.create(site, site.name);
 		site.room['#removeObject'](site);
 		if (structure) {
-			room['#insertObject'](structure, true);
+			room['#insertObject'](structure, true, context);
 		}
 		context.didUpdate();
 	}

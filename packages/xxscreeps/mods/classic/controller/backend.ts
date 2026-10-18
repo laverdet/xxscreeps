@@ -1,7 +1,6 @@
 import type { JSONSchemaType } from 'ajv';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { isStatInterval, readRoomPunchcard, readUserTotals } from 'xxscreeps/mods/meta/stats/model.js';
 import { isStatName } from 'xxscreeps/mods/meta/stats/schema.js';
@@ -134,30 +133,5 @@ hooks.register('route', {
 			statsMax,
 			totals,
 		};
-	},
-});
-
-hooks.register('route', {
-	path: '/api/user/world-status',
-
-	async execute(context) {
-		const { userId } = context.state;
-		if (userId == null) {
-			return { ok: 1, status: 'normal' };
-		}
-		const [ controlled, intents, presence ] = await Promise.all([
-			context.shard.scratch.sCard(controlledRoomsKey(userId)),
-			context.shard.scratch.sCard(userToIntentRoomsSetKey(userId)),
-			context.shard.scratch.sCard(userToPresenceRoomsSetKey(userId)),
-		]);
-		if (presence > 0) {
-			if (intents > 0 && controlled > 0) {
-				return { ok: 1, status: 'normal' };
-			} else {
-				return { ok: 1, status: 'lost' };
-			}
-		} else {
-			return { ok: 1, status: 'empty' };
-		}
 	},
 });

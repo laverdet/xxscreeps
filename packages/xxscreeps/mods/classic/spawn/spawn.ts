@@ -1,4 +1,5 @@
 import type { StructureExtension } from './extension.js';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -148,7 +149,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 		game.spawns[this.name] = this;
 	}
 
-	override '#afterRemove'() {
+	override '#afterRemove'(context?: ProcessorContext) {
 		const { spawning } = this;
 		if (spawning) {
 			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
@@ -156,7 +157,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 				creep.room['#removeObject'](creep);
 			}
 		}
-		super['#afterRemove']();
+		super['#afterRemove'](context);
 	}
 
 	override '#applyNukeImpact'() {

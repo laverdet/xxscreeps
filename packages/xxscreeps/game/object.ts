@@ -2,6 +2,7 @@ import type { GameConstructor } from './index.js';
 import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
 import type { InspectContext } from 'node:util';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import type { ActionLogSchema } from 'xxscreeps:mods/game';
 import * as Id from 'xxscreeps/engine/schema/id.js';
@@ -139,7 +140,11 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 
 	'#addToMyGame'(_game: GameConstructor) {}
 
-	'#afterRemove'() {
+	// `context` is the processor flushing the room, and is absent when a script or test mutates a room
+	// outside of a tick.
+	'#afterInsert'(_context?: ProcessorContext) {}
+
+	'#afterRemove'(_context?: ProcessorContext) {
 		this.room = undefined as never;
 	}
 

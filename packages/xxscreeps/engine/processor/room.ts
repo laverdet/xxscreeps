@@ -115,13 +115,13 @@ export class RoomProcessor implements ProcessorContext {
 					invokeHandler(object, PreTick, this);
 				}
 			}
-			this.room['#flushObjects'](this.state);
+			this.room['#flushObjects'](this.state, this);
 
 			// Run `registerRoomTickProcessor` hooks
 			for (const process of roomTickProcessors) {
 				process(this.room, this);
 			}
-			this.room['#flushObjects'](this.state);
+			this.room['#flushObjects'](this.state, this);
 
 			// Process user intents
 			for (const [ user, intents ] of this.intents) {
@@ -167,7 +167,7 @@ export class RoomProcessor implements ProcessorContext {
 					}
 				});
 			}
-			this.room['#flushObjects'](this.state);
+			this.room['#flushObjects'](this.state, this);
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
@@ -179,7 +179,7 @@ export class RoomProcessor implements ProcessorContext {
 					invokeHandler(object, Tick, this);
 				}
 			}
-			this.room['#flushObjects'](this.state);
+			this.room['#flushObjects'](this.state, this);
 		});
 
 		// Run async tasks
@@ -220,8 +220,10 @@ export class RoomProcessor implements ProcessorContext {
 		// Flush extra tasks
 		await this.flushTasks();
 
-		// Finalize room object
-		this.room['#flushObjects'](this.state);
+		// Finalize room object. Tasks queued by this flush's object hooks must not finalize into
+		// further inserts or removes, since nothing flushes the room again before it saves.
+		this.room['#flushObjects'](this.state, this);
+		await this.flushTasks();
 		const previousUsers = flushUsers(this.room);
 		const hasNoPlayers = Fn.every(this.room['#users'].intents, userId => userId.length <= 2);
 		flushContext();

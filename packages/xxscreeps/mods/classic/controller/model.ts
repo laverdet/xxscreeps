@@ -37,6 +37,10 @@ export function removeReservedRoom(shard: Shard, userId: string, roomName: strin
 	return shard.scratch.sRem(reservedRoomsKey(userId), [ roomName ]);
 }
 
+export function getControlledRooms(shard: Shard, userId: string): Promise<string[]> {
+	return shard.scratch.sMembers(controlledRoomsKey(userId));
+}
+
 export function isRoomControlled(shard: Shard, userId: string, roomName: string): Promise<boolean> {
 	return shard.scratch.sIsMember(controlledRoomsKey(userId), roomName);
 }

@@ -1,6 +1,7 @@
 import type { FindConstants, FindType, RoomFindOptions } from './find.js';
 import type { LookConstants, TypeOfLook } from './look.js';
 import type { InspectContext } from 'node:util';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { GameState } from 'xxscreeps/game/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
@@ -113,7 +114,7 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	'#flushObjects'(this: Room, state: GameState | null) {
+	'#flushObjects'(this: Room, state: GameState | null, context?: ProcessorContext) {
 		// Bail early if there's no work
 		if (this.#insertObjects.length === 0 && this.#removeObjects.size === 0) {
 			return;
@@ -127,6 +128,7 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 			objects.push(...insertObjects as never[]);
 			for (const object of insertObjects) {
 				this.#afterInsert(object);
+				object['#afterInsert'](context);
 				state?.insertObject(object);
 			}
 		}
@@ -141,7 +143,7 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 				if (removeObjects.has(object)) {
 					this.#beforeRemove(object);
 					objects[ii] = objects[cursor--]!;
-					object['#afterRemove']();
+					object['#afterRemove'](context);
 					if (--removeCount === 0) {
 						break;
 					}
@@ -159,18 +161,19 @@ export class Room extends withStatics<RoomConstructor>()(withOverlay(BufferObjec
 			}
 		}
 		// Flush objects added/removed by #afterInsert / #beforeRemove hooks
-		this['#flushObjects'](state);
+		this['#flushObjects'](state, context);
 	}
 
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	'#insertObject'(this: Room, object: RoomObject, now = false) {
+	'#insertObject'(this: Room, object: RoomObject, now = false, context?: ProcessorContext) {
 		object['#beforeInsert'](this);
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
 			this.#afterInsert(object);
+			object['#afterInsert'](context);
 		} else {
 			this.#insertObjects.push(object);
 		}

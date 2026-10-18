@@ -414,7 +414,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 		room['#insertObject'](createSpawn(spawnPos, userId, 'Spawn1'));
 		room['#cumulativeEnergyHarvested'] = 0;
 		room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
-		room['#flushObjects'](state);
+		room['#flushObjects'](state, context);
 	}));
 	await Promise.all(tasks);
 

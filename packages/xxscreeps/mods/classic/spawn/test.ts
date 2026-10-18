@@ -1,10 +1,13 @@
 import type { StructureExtension } from './extension.js';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { Structure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as C from 'xxscreeps:mods/constants';
+import { worldStatus } from './backend.js';
 import { create as createExtension } from './extension.js';
 import { StructureSpawn, create } from './spawn.js';
 
@@ -474,6 +477,77 @@ describe('mods/classic/spawn', () => {
 				assert.ok(structure instanceof MySpawn);
 				assert.strictEqual(structure.doubleHits(), original.hits! * 2);
 			});
+		}));
+	});
+
+	describe('world status', () => {
+		// W2N1's spawn outlived its controller, so it doesn't count
+		const sim = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#insertObject'](create(new RoomPosition(27, 25, 'W1N1'), '100', 'Spawn3'));
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+			W2N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W2N1'), '100', 'Spawn2'));
+			},
+		});
+
+		test('lost without a spawn in a controlled room', () => sim(async ({ player, shard, tick }) => {
+			assert.strictEqual(await worldStatus(shard, '100'), 'normal');
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.destroy(), C.OK);
+			});
+			await tick();
+			assert.strictEqual(await worldStatus(shard, '100'), 'normal');
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn3?.destroy(), C.OK);
+			});
+			await tick();
+			assert.strictEqual(await worldStatus(shard, '100'), 'lost');
+		}));
+
+		test('lost when the last spawns die in one tick', () => sim(async ({ player, shard, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.destroy(), C.OK);
+				assert.strictEqual(Game.spawns.Spawn3?.destroy(), C.OK);
+			});
+			await tick();
+			assert.strictEqual(await worldStatus(shard, '100'), 'lost');
+		}));
+
+		test('normal once a spawn is placed', () => sim(async ({ shard, tick }) => {
+			assert.strictEqual(await worldStatus(shard, '101'), 'empty');
+			await pushIntentsForRoomNextTick(shard, 'W3N1', '101', {
+				local: { placeSpawn: [ [ 25, 25, 'Spawn1' ] ] },
+				internal: true,
+			});
+			// The cold room wakes for the intent on the tick after the push
+			await tick(2);
+			assert.strictEqual(await worldStatus(shard, '101'), 'normal');
+		}));
+
+		test('normal with only a spawn built from a site', () => sim(async ({ player, poke, shard, tick }) => {
+			await poke('W1N1', '100', (Game, room) => {
+				const site = createSite(new RoomPosition(25, 27, 'W1N1'), 'spawn', '100', C.CONSTRUCTION_COST.spawn, 'Spawn4');
+				site.progress = site.progressTotal;
+				room['#insertObject'](site);
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.destroy(), C.OK);
+				assert.strictEqual(Game.spawns.Spawn3?.destroy(), C.OK);
+			});
+			await tick();
+			assert.strictEqual(await worldStatus(shard, '100'), 'normal');
+		}));
+
+		test('empty after respawning', () => sim(async ({ shard, tick }) => {
+			await Promise.all([ 'W1N1', 'W2N1' ].map(roomName =>
+				pushIntentsForRoomNextTick(shard, roomName, '100', { local: { unspawn: [ [] ] }, internal: true })));
+			await tick(2);
+			assert.strictEqual(await worldStatus(shard, '100'), 'empty');
 		}));
 	});
 });
