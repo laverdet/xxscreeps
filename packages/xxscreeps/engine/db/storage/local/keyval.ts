@@ -88,6 +88,13 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 						case 'zset': return new SortedSet(value.$);
 						case 'uint8': return latin1ToBuffer(value.$);
 						case undefined: return value;
+						default:
+							// An entry with an unknown tag was written by something this
+							// reader does not understand. Dropping it silently loses
+							// data invisibly; dropping it with a line in the log keeps
+							// the store running and says what was lost.
+							console.error(`[keyval] dropping entry '${key}': unknown tag '${String(value['#'])}'`);
+							return undefined;
 					}
 				}
 			}) as InternalValue;
