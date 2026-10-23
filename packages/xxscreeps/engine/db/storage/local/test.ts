@@ -1,3 +1,6 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import { LocalKeyValResponder } from 'xxscreeps/engine/db/storage/local/keyval.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 
@@ -56,5 +59,34 @@ describe('engine/db/storage/local', () => {
 		assert.deepStrictEqual([ ...(await data.get(key, { blob: true }))! ], [ 4, 5, 6 ]);
 		// A now-stale prior no longer matches, so the swap is refused.
 		assert.strictEqual(await data.set(key, first, { if: { if: 'EQ', value: first } }), false);
+	});
+
+	test('an entry with an unknown tag is dropped and reported', async () => {
+		const directory = await fs.mkdtemp(`${os.tmpdir()}/keyval-unknown-`);
+		try {
+			await fs.writeFile(`${directory}/data.json`, JSON.stringify({
+				'#': 'map',
+				$: {
+					good: 'value',
+					weird: { '#': 'nonsense', $: 1 },
+				},
+			}));
+			const errors = new Array<string>();
+			const error = console.error;
+			console.error = (message: unknown) => void errors.push(String(message));
+			try {
+				await using responder = await LocalKeyValResponder.create(new URL(`file://${directory}`));
+				// The known entry loads; the unknown one must not stop the store.
+				assert.strictEqual(responder.get('good'), 'value');
+				assert.strictEqual(responder.get('weird'), null);
+			} finally {
+				console.error = error;
+			}
+			// And it must not vanish silently.
+			assert.ok(errors.some(message => message.includes('unknown tag')),
+				`expected a report of the dropped entry, got: ${errors.join(' | ')}`);
+		} finally {
+			await fs.rm(directory, { recursive: true, force: true });
+		}
 	});
 });
