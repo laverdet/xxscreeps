@@ -44,9 +44,9 @@ const processRoomsPendingKey = (time: number) =>
 	`tick${time}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
 	`tick${time}/finalizedRoomsPending`;
-const intentsListForRoomKey = (roomName: string) =>
+export const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
-const finalIntentsListForRoomKey = (roomName: string) =>
+export const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
 
 const SCardStore = new KeyvalScript(
@@ -143,16 +143,62 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 	}
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A payload that cannot be used is a broken intent, not a reason to stop the
+ * shard: this runs inside the tick loop, and a throw here stops every room.
+ * `JSON.parse` accepts `null`, `[]` and `0`, which throw one line later at the
+ * destructuring site, so the shape is checked as well as the syntax.
+ */
+export function parseIntentPayload(json: string, roomName: string):
+	{ userId: string; intents: RoomIntentPayload } | undefined {
+	try {
+		const value: unknown = JSON.parse(json);
+		if (isRecord(value) && typeof value.userId === 'string' && isRecord(value.intents)) {
+			return value as { userId: string; intents: RoomIntentPayload };
+		}
+	} catch (error) {
+		console.error(`[processor] dropping an unreadable intent payload for ${roomName}: ${(error as Error).message}`);
+		return undefined;
+	}
+	console.error(`[processor] dropping a malformed intent payload for ${roomName}`);
+	return undefined;
+}
+
+/**
+ * The same leniency for a final intent payload, which must be a list.
+ */
+export function parseFinalIntentPayload(json: string, roomName: string): SingleIntent[] | undefined {
+	try {
+		const value: unknown = JSON.parse(json);
+		if (Array.isArray(value)) {
+			return value as SingleIntent[];
+		}
+	} catch (error) {
+		console.error(`[processor] dropping an unreadable final intent payload for ${roomName}: ${(error as Error).message}`);
+		return undefined;
+	}
+	console.error(`[processor] dropping a malformed final intent payload for ${roomName}`);
+	return undefined;
+}
+
 export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
 	const key = intentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lRange(key, 0, -1),
 		shard.scratch.vDel(key),
 	]);
-	return payloads.map(json => {
-		const value = JSON.parse(json) as { userId: string; intents: RoomIntentPayload };
-		return value;
-	});
+	const envelopes: { userId: string; intents: RoomIntentPayload }[] = [];
+	for (const json of payloads) {
+		const envelope = parseIntentPayload(json, roomName);
+		if (envelope !== undefined) {
+			envelopes.push(envelope);
+		}
+	}
+	return envelopes;
 }
 
 export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string) {
@@ -161,7 +207,16 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string)
 		shard.scratch.lRange(key, 0, -1),
 		shard.scratch.vDel(key),
 	]);
-	return payloads.map(json => JSON.parse(json) as SingleIntent[]);
+	// One entry per payload: the caller iterates the outer array and then the
+	// intents inside each element.
+	const intents: SingleIntent[][] = [];
+	for (const json of payloads) {
+		const value = parseFinalIntentPayload(json, roomName);
+		if (value !== undefined) {
+			intents.push(value);
+		}
+	}
+	return intents;
 }
 
 export async function begetRoomProcessQueue(shard: Shard, time: number) {
