@@ -31,6 +31,15 @@ const createdNames = new Set<string>();
 // Mirrors vanilla's `createdConstructionSites` runtime counter. The processor runs per-room and
 // cannot enforce this shard-level constraint, so it is only checked here in the player runtime.
 let createdConstructionSites = 0;
+
+/**
+ * Mirrors vanilla's `createdSpawnNames`: several spawns auto-named within the same player tick
+ * must not collide, even though their sites are not visible in the game view yet.
+ */
+export function hasCreatedName(name: string) {
+	return createdNames.has(name);
+}
+
 hooks.register('gameInitializer', () => {
 	createdNames.clear();
 	createdConstructionSites = 0;

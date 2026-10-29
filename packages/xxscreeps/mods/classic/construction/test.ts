@@ -1,8 +1,11 @@
+import type { ConstructibleStructureType } from './construction-site.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { StructureExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
 import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -658,5 +661,196 @@ describe('mods/classic/construction', () => {
 				assert.strictEqual(Game.creeps.far?.dismantle(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
+	});
+
+	describe('structure limits per RCL', () => {
+		// The official per-RCL structure limits and extension capacity, extracted
+		// by script (not by hand) from `@screeps/common/lib/constants.js`, the
+		// package from which the constants published on docs.screeps.com are
+		// rendered. Levels are the keys, as in the official table.
+		const official: Record<string, Record<number, number>> = {
+			spawn: { 0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 8: 3 },
+			extension: { 0: 0, 1: 0, 2: 5, 3: 10, 4: 20, 5: 30, 6: 40, 7: 50, 8: 60 },
+			link: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 2, 6: 3, 7: 4, 8: 6 },
+			road: { 0: 2500, 1: 2500, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500 },
+			constructedWall: { 1: 0, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500 },
+			rampart: { 1: 0, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500 },
+			storage: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1 },
+			tower: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 6 },
+			observer: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1 },
+			powerSpawn: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1 },
+			extractor: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 1, 8: 1 },
+			terminal: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 1, 8: 1 },
+			lab: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 3, 7: 6, 8: 10 },
+			container: { 0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5 },
+			nuker: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1 },
+			factory: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1 },
+		};
+		const officialExtensionCapacity: Record<number, number> = { 0: 50, 1: 50, 2: 50, 3: 50, 4: 50, 5: 50, 6: 50, 7: 100, 8: 200 };
+		const levels = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+
+		test('CONTROLLER_STRUCTURES matches the official table', () => {
+			const types = Object.keys(official) as (keyof typeof C.CONTROLLER_STRUCTURES)[];
+			for (const type of types) {
+				for (const level of levels) {
+					const limit = official[type]?.[level];
+					if (limit === undefined) {
+						continue;
+					}
+					assert.strictEqual(
+						C.CONTROLLER_STRUCTURES[type][level],
+						limit,
+						`${type} at RCL ${level}`,
+					);
+				}
+			}
+			for (const level of levels) {
+				assert.strictEqual(
+					C.EXTENSION_ENERGY_CAPACITY[level],
+					officialExtensionCapacity[level],
+					`extension capacity at RCL ${level}`,
+				);
+			}
+		});
+
+		// One owned room per RCL, shared by the tests for every structure type at
+		// that level. Sites persist between tests, so the free-tile scan skips
+		// tiles that are already occupied. The engine caps at every level for
+		// every type should be exact, but the 2500-tile caps (road, wall, rampart)
+		// are unreachable under MAX_CONSTRUCTION_SITES, so for these the probe is
+		// buildability alone; their exact values are locked by the table test.
+		const maxSmallCap = 60;
+		for (let level = 1; level <= 8; ++level) {
+			const atLevel = simulate({
+				W1N1: room => {
+					room['#level'] = level;
+					room['#user'] = room.controller!['#user'] = '100';
+				},
+			});
+			for (const type of Object.keys(official)) {
+				test(`${type} at RCL ${level}`, () => atLevel(async ({ player, tick }) => {
+					const cap = official[type]?.[level] ?? 0;
+
+					// Room-edge tiles cannot be built on, and near-border tiles only
+					// where the neighboring border is a natural wall; the scan starts
+					// at 2 accordingly.
+					const createUpTo = (batch: number, position?: [ number, number ]) => player('100', Game => {
+						const view = Game.rooms.W1N1!;
+						const terrain = Game.map.getRoomTerrain(view.name);
+						const isFree = (xx: number, yy: number) =>
+							terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL &&
+							view.lookForAt(C.LOOK_STRUCTURES, xx, yy).length === 0 &&
+							view.lookForAt(C.LOOK_CONSTRUCTION_SITES, xx, yy).length === 0 &&
+							view.lookForAt(C.LOOK_RUINS, xx, yy).length === 0;
+						let created = 0;
+						for (let yy = position?.[1] ?? 2; yy < 48 && created < batch; ++yy) {
+							for (let xx = position?.[0] ?? 2; xx < 48 && created < batch; ++xx) {
+								if (!isFree(xx, yy)) {
+									continue;
+								}
+								assert.strictEqual(
+									view.createConstructionSite(xx, yy, type as ConstructibleStructureType),
+									C.OK,
+									`${type} at (${xx},${yy})`,
+								);
+								++created;
+							}
+						}
+						assert.strictEqual(created, batch, 'ran out of free tiles');
+					});
+
+					if (type === 'extractor') {
+						// An extractor can only be placed on a mineral.
+						let mineral!: RoomPosition;
+						if (cap >= 1) {
+							await player('100', Game => {
+								mineral = Game.rooms.W1N1!.find(C.FIND_MINERALS)[0]!.pos;
+								assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(mineral.x, mineral.y, 'extractor'), C.OK);
+							});
+							await tick();
+						} else {
+							await player('100', Game => {
+								const mineral = Game.rooms.W1N1!.find(C.FIND_MINERALS)[0]!.pos;
+								assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(mineral.x, mineral.y, 'extractor'), C.ERR_RCL_NOT_ENOUGH);
+							});
+							await tick();
+							return;
+						}
+						// Over-limit creates see the materialized sites; the RCL check
+						// runs before placement, so the position can repeat.
+						await player('100', Game => {
+							assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(mineral.x, mineral.y, 'extractor'), C.ERR_RCL_NOT_ENOUGH);
+						});
+						await tick();
+						return;
+					}
+
+					if (cap === 0) {
+						// The RCL check runs before placement, so the position does not
+						// need to be special.
+						await player('100', Game => {
+							assert.strictEqual(
+								Game.rooms.W1N1!.createConstructionSite(25, 25, type as ConstructibleStructureType),
+								C.ERR_RCL_NOT_ENOUGH,
+								`${type} unexpectedly allowed at RCL ${level}`,
+							);
+						});
+						return;
+					}
+
+					if (cap > maxSmallCap) {
+						// The 2500-tile caps (road, wall, rampart) are unreachable under
+						// MAX_CONSTRUCTION_SITES, so just check buildability; their exact
+						// values are locked by the table test.
+						await createUpTo(1);
+						return;
+					}
+
+					// Vanilla parity: createConstructionSite's synchronous RCL check only
+					// counts objects visible to the player, so within one tick the rules
+					// accept every create and the processor silently drops the intents
+					// beyond the cap. Walk through the cap two sites per tick so every
+					// create sees the sites materialized so far, then check what the
+					// next create beyond the cap reports.
+					let placed = 0;
+					while (placed < cap) {
+						await createUpTo(Math.min(2, cap - placed));
+						placed += Math.min(2, cap - placed);
+						await tick();
+					}
+
+					// The processor dropped everything beyond the cap, and the next
+					// create sees the sites from earlier ticks.
+					await player('100', Game => {
+						assert.strictEqual(
+							Object.values(Game.constructionSites).filter(site => site.structureType === type).length,
+							cap,
+						);
+						assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(2, 2, type as ConstructibleStructureType), C.ERR_RCL_NOT_ENOUGH);
+					});
+				}));
+			}
+		}
+
+		// An extension's energy capacity grows with the room's RCL at level-up.
+		for (let level = 1; level <= 8; ++level) {
+			const capacity = officialExtensionCapacity[level]!;
+			const atLevel = simulate({
+				W1N1: room => {
+					room['#level'] = level;
+					room['#user'] = room.controller!['#user'] = '100';
+					room['#insertObject'](createExtension(new RoomPosition(2, 2, 'W1N1'), level, '100'));
+				},
+			});
+			test(`extension energy capacity at RCL ${level}`, () => atLevel(async ({ player }) => {
+				await player('100', Game => {
+					const extensions = Game.rooms.W1N1!.find(C.FIND_MY_STRUCTURES, {
+						filter: object => object.structureType === 'extension',
+					});
+					assert.strictEqual(extensions.length, 1);
+					assert.strictEqual((extensions[0] as StructureExtension).store.getCapacity(C.RESOURCE_ENERGY), capacity);
+				});
+			}));
+		}
 	});
 });

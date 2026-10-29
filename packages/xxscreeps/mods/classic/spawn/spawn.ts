@@ -7,6 +7,7 @@ import { chainIntentChecks, checkDirection, checkRange, checkString, checkTarget
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
+import { hasCreatedName } from 'xxscreeps/mods/classic/construction/room.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { SingleStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -347,10 +348,11 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 					? null : name;
 			}
 		} else if (userGame) {
-			// Generate a new name
+			// Generate a new name. Vanilla's auto-namer also skips names created for spawn sites
+			// earlier in the same tick, which are not visible to `hasSpawn` yet.
 			for (let ii = 1; ; ++ii) {
 				const name = `Spawn${ii}`;
-				if (!hasSpawn(userGame, name)) {
+				if (!hasSpawn(userGame, name) && !hasCreatedName(name)) {
 					return name;
 				}
 			}
