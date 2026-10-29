@@ -9,6 +9,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
+import { writeAtomic } from './atomic.js';
 
 function bytesEqual(left: Readonly<Uint8Array> | null, right: string | Readonly<Uint8Array>) {
 	if (left === null || typeof right === 'string') {
@@ -284,9 +285,11 @@ export class BlobStorage extends AsyncDisposableResource {
 					}
 					this.knownPaths.add(dirname);
 				}
-				const tmp = Path.join(this.path!, Path.dirname(key), `.${Path.basename(key)}.swp`);
-				await fs.writeFile(tmp, value);
-				await fs.rename(tmp, path);
+				await writeAtomic(path, value, copy => {
+					if (!bytesEqual(value, copy)) {
+						throw new Error(`Staged blob ${key} does not match what was written`);
+					}
+				});
 			} else {
 				await fs.unlink(path);
 			}

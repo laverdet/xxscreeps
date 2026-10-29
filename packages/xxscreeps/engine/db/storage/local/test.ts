@@ -1,5 +1,10 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as Path from 'node:path';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import { stagingPath, writeAtomic } from './atomic.js';
+import { LocalKeyValResponder } from './keyval.js';
 
 describe('engine/db/storage/local', () => {
 	test('zUnionStore applies WEIGHTS to single-set members', async () => {
@@ -56,5 +61,67 @@ describe('engine/db/storage/local', () => {
 		assert.deepStrictEqual([ ...(await data.get(key, { blob: true }))! ], [ 4, 5, 6 ]);
 		// A now-stale prior no longer matches, so the swap is refused.
 		assert.strictEqual(await data.set(key, first, { if: { if: 'EQ', value: first } }), false);
+	});
+
+	// A shared staging name lets two writers of the same key interleave into one `.swp`, and the
+	// rename then installs whatever mixture happens to be on disk.
+	test('every write stages into its own file', () => {
+		const target = Path.join('dir', 'data.json');
+		const first = stagingPath(target);
+		const second = stagingPath(target);
+		assert.notStrictEqual(first, second);
+		assert.strictEqual(Path.dirname(first), Path.dirname(target));
+		assert.ok(Path.basename(first).endsWith('.swp'));
+	});
+
+	test('a staged write that fails verification does not replace the target', async () => {
+		const dir = await fs.mkdtemp(Path.join(os.tmpdir(), 'xxscreeps-atomic-'));
+		try {
+			const target = Path.join(dir, 'value');
+			await fs.writeFile(target, 'previous');
+			await assert.rejects(
+				writeAtomic(target, 'damaged', () => {
+					throw new Error('read-back mismatch');
+				}),
+				/read-back mismatch/,
+			);
+			// The previous value survives, and the staging file is not left behind.
+			assert.strictEqual(await fs.readFile(target, 'utf8'), 'previous');
+			assert.deepStrictEqual(
+				(await fs.readdir(dir)).filter(name => name.endsWith('.swp')),
+				[],
+			);
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('verification reads the staged bytes before the rename', async () => {
+		const dir = await fs.mkdtemp(Path.join(os.tmpdir(), 'xxscreeps-atomic-'));
+		try {
+			const target = Path.join(dir, 'value');
+			let observed: string | undefined;
+			await writeAtomic(target, 'payload', copy => {
+				observed = copy as string;
+			});
+			assert.strictEqual(observed, 'payload');
+			assert.strictEqual(await fs.readFile(target, 'utf8'), 'payload');
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('an unreadable snapshot names the file it could not parse', async () => {
+		const dir = await fs.mkdtemp(Path.join(os.tmpdir(), 'xxscreeps-snapshot-'));
+		try {
+			await fs.writeFile(Path.join(dir, 'data.json'), '{"#":"map","$":{');
+			const url = new URL(`file://${dir}`);
+			await assert.rejects(
+				LocalKeyValResponder.create(url),
+				err => err instanceof Error && err.message.includes(`${dir}/data.json`),
+			);
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
 	});
 });

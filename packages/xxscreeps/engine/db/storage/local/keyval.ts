@@ -3,11 +3,13 @@ import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { AsyncDisposableResource, clamp, getOrSet } from 'xxscreeps/utility/utility.js';
+import { writeAtomic } from './atomic.js';
 import { BlobStorage } from './blob.js';
 import { connect, makeClient, makeHost } from './responder.js';
 import { SortedSet } from './sorted-set.js';
@@ -78,19 +80,24 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		this.url = url;
 		this.blob = blob;
 		if (payload !== undefined) {
-			const map = JSON.parse(payload, (key, value: SerializedValue) => {
-				if (typeof value !== 'object' || value instanceof Array) {
-					return value;
-				} else {
-					switch (value['#']) {
-						case 'map': return new Map(Object.entries(value.$));
-						case 'set': return new Set(value.$);
-						case 'zset': return new SortedSet(value.$);
-						case 'uint8': return latin1ToBuffer(value.$);
-						case undefined: return value;
+			let map: InternalValue;
+			try {
+				map = JSON.parse(payload, (key, value: SerializedValue) => {
+					if (typeof value !== 'object' || value instanceof Array) {
+						return value;
+					} else {
+						switch (value['#']) {
+							case 'map': return new Map(Object.entries(value.$));
+							case 'set': return new Set(value.$);
+							case 'zset': return new SortedSet(value.$);
+							case 'uint8': return latin1ToBuffer(value.$);
+							case undefined: return value;
+						}
 					}
-				}
-			}) as InternalValue;
+				}) as InternalValue;
+			} catch (err) {
+				throw new Error(`Unreadable key/value snapshot at ${url?.pathname ?? 'unknown'}`, { cause: err });
+			}
 			if (map instanceof Map) {
 				this.data = map;
 			}
@@ -842,13 +849,13 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 					}
 				});
 				const original = new URL(this.url);
-				const tmp = new URL(`./.${original.pathname.slice(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
 				await Promise.all([
 					this.blob.save(),
-					async function() {
-						await fs.writeFile(tmp, payload, 'utf8');
-						await fs.rename(tmp, original);
-					}(),
+					writeAtomic(fileURLToPath(original), payload, copy => {
+						if (copy !== payload) {
+							throw new Error('Key/value snapshot does not match what was written');
+						}
+					}),
 				]);
 			} finally {
 				resolve();
